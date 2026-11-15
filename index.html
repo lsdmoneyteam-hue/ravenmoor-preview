@@ -5,7 +5,8 @@
 <meta name="viewport" content="width=device-width, initial-scale=1">
 <meta name="robots" content="noindex, nofollow">
 <title>Ravenmoor Digital</title>
-<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Cormorant+Garamond:wght@400;500;600&amp;family=Schibsted+Grotesk:wght@400;500;600&amp;display=swap">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Cormorant+Garamond:wght@400;500;600&amp;family=Schibsted+Grotesk:wght@400;500;600&amp;display=swap" media="print" onload="this.media='all'">
 <style>html{background:#0E0F11}body{margin:0;background:transparent}</style>
 <style>
 body{margin:0}
@@ -311,8 +312,21 @@ body{margin:0}
 .ba-reno .ba-img{position:absolute;inset:0;width:100%;height:100%;object-fit:cover;display:block;user-select:none;-webkit-user-drag:none}
 .view-full .view-x{z-index:2;text-shadow:0 1px 8px rgba(0,0,0,.8)}
 </style>
+<link rel="preload" as="image" href="a/8a0e4413ee47.webp">
+<style>#pre{position:fixed;inset:0;z-index:99;background:#E5D3C8}html:not(.pre-on) #pre{display:none}</style>
+<script>
+(function(){var on=true;try{on=!sessionStorage.getItem('rd-loader')&&!matchMedia('(prefers-reduced-motion: reduce)').matches}catch(e){}
+window.__ldReady=Promise.resolve();
+if(!on)return;
+document.documentElement.className+=' pre-on';
+var lo='a/7b3e931386e0.mp4',hi='a/b5a0cfd734df.mp4',M={};
+window.__rmVideo=function(p){return M[p]||null};
+window.__ldReady=Promise.race([fetch(lo).then(function(r){if(!r.ok)throw 0;return r.blob()}).then(function(b){var u=URL.createObjectURL(b);M[lo]=u;M[hi]=u}),new Promise(function(r){setTimeout(r,8000)})]).catch(function(){});
+})();
+</script>
 </head>
 <body>
+<div id="pre"><img class="ld-v" src="a/8a0e4413ee47.webp" alt=""></div>
 <div id="app"></div>
 <template id="tpl"></template>
 <script type="text/plain" id="tplsrc">
@@ -1702,7 +1716,7 @@ class Component extends DCLogic {
   }
 }
 
-mountDC(Component, { agency: new URLSearchParams(location.search).get('a') || '' });
+window.__ldReady.then(function(){ mountDC(Component, { agency: new URLSearchParams(location.search).get('a') || '' }); var p=document.getElementById('pre'); if(p) p.remove(); });
 </script>
 </body>
 </html>
