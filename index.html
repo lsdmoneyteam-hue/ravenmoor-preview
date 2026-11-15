@@ -78,6 +78,7 @@ body{margin:0}
 .proof-q{font-family:'Cormorant Garamond',Georgia,serif;font-weight:500;font-size:40px;line-height:1.06;letter-spacing:-.012em;margin:0;max-width:19ch}
 .src{margin:26px 0 0;font-size:13px;color:var(--mute)}
 .how{list-style:none;margin:0;padding:0;display:grid;border-top:1px solid var(--rule)}
+.pz-stage{width:min(100%,calc(84vh*9/16));width:min(100%,calc(84svh*9/16));aspect-ratio:9/16;margin:48px auto 64px;background:#0E0F11;border:1px solid var(--rule)}
 .how li{padding:26px 0;border-bottom:1px solid var(--rule);font-family:'Cormorant Garamond',Georgia,serif;font-weight:500;font-size:30px;line-height:1.1}
 
 .styles{padding:88px 0 72px;overflow:hidden}
@@ -481,6 +482,7 @@ window.__ldReady=Promise.race([getHi(),new Promise(function(r){setTimeout(r,1200
 <div class="wrap">
 <h2 class="h2" id="ps-h" data-rv="lines"><span class="ln"><span>Add a presenter.</span></span></h2>
 <p class="sub" data-rv="">An AI presenter who looks and sounds the way you choose, on screen in your reel.</p>
+<div class="pz-stage" ref="{{setPzRef}}" data-track="presenter-figure"></div>
 <ol class="how" data-rv="">
 <li>They open at the front door and introduce the house.</li>
 <li>They talk through the rooms and the numbers over the edit.</li>
@@ -737,6 +739,7 @@ class Component extends DCLogic {
     this.setViewUpRef = (el) => { if (el) this._viewUp = el; };
     this.setBaRef = this.attachBa.bind(this);
     this.setDevRef = this.attachDev.bind(this);
+    this.setPzRef = this.attachPz.bind(this);
     this.setViewVidRef = (el) => { if (el && this._viewVid !== el) { this._viewVid = el; el.setAttribute('playsinline', ''); setTimeout(() => this.syncViewVideo(), 0); } };
   }
 
@@ -935,6 +938,19 @@ class Component extends DCLogic {
       stop() { on = false; if (raf) cancelAnimationFrame(raf); raf = 0; },
       go(i) { const s = SPOTS[i]; let dy = s.yaw - st.yaw; dy = Math.atan2(Math.sin(dy), Math.cos(dy)); st.from = { p: st.pos.slice(), yaw: st.yaw, pitch: st.pitch, to: s, dy: dy }; st.t0 = performance.now(); }
     };
+  }
+  attachPz(el) {
+    if (!el || el === this._pzEl) return;
+    this._pzEl = el;
+    const cfg = { texModel: 'a/91bbf976299e.jpg', texReal: 'a/b7c1ec67fc34.jpg', poster: 'a/271e0e6314f5.jpg', lo: 'a/5b88051c9c80.mp4', hiParts: ['a/2a5081b91cf5.mp4', 'a/a9f8aa7832a1.mp4', 'a/147d360122cf.mp4'], hiCodec: 'video/mp4; codecs="avc1.640033, mp4a.40.2"' };
+    const run = () => { if (el.__pz || !window.RMPresenter) return; el.__pz = true; try { window.RMPresenter.mount(el, cfg); } catch (e) {} };
+    const go = () => {
+      if (window.RMPresenter) { run(); return; }
+      if (this._pzLoading) return;
+      this._pzLoading = true;
+      const s = document.createElement('script'); s.src = 'a/bd6e3b245863.js'; s.onload = run; document.head.appendChild(s);
+    };
+    if ('IntersectionObserver' in window) { const io = new IntersectionObserver((es) => { if (es.some((x) => x.isIntersecting)) { io.disconnect(); go(); } }, { rootMargin: '900px 0px' }); io.observe(el); } else go();
   }
   attachBa(el) {
     if (!el || el === this._ba) return;
@@ -1674,7 +1690,7 @@ class Component extends DCLogic {
     const oi = this.state.open, mi = oi == null ? 0 : oi;
     const m = { ...S[mi], useTrack: 'use-style:' + S[mi].id };
     return {
-      setRootRef: this.setRootRef, setHeroRef: this.setHeroRef, setFilmRef: this.setFilmRef, setSkipRef: this.setSkipRef, setCtaRef: this.setCtaRef, setStripRef: this.setStripRef, setVideoRef: this.setVideoRef, setCloseRef: this.setCloseRef, setViewVidRef: this.setViewVidRef, setViewUpRef: this.setViewUpRef, setBaRef: this.setBaRef, setDevRef: this.setDevRef,
+      setRootRef: this.setRootRef, setHeroRef: this.setHeroRef, setFilmRef: this.setFilmRef, setSkipRef: this.setSkipRef, setCtaRef: this.setCtaRef, setStripRef: this.setStripRef, setVideoRef: this.setVideoRef, setCloseRef: this.setCloseRef, setViewVidRef: this.setViewVidRef, setViewUpRef: this.setViewUpRef, setBaRef: this.setBaRef, setDevRef: this.setDevRef, setPzRef: this.setPzRef,
       heroClass: 'hero2 is-' + this.state.phase,
       loaderOn: this.state.loader !== 'gone',
       loaderClass: 'loader' + (this.state.loader === 'leaving' ? ' is-leaving' : ''),
