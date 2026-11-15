@@ -321,7 +321,27 @@ if(!on)return;
 document.documentElement.className+=' pre-on';
 var lo='a/7b3e931386e0.mp4',hi='a/b5a0cfd734df.mp4',M={};
 window.__rmVideo=function(p){return M[p]||null};
-window.__ldReady=Promise.race([fetch(lo).then(function(r){if(!r.ok)throw 0;return r.blob()}).then(function(b){var u=URL.createObjectURL(b);M[lo]=u;M[hi]=u}),new Promise(function(r){setTimeout(r,8000)})]).catch(function(){});
+function done(b){var u=URL.createObjectURL(b);M[lo]=u;M[hi]=u}
+function getLo(){return fetch(lo).then(function(r){if(!r.ok)throw 0;return r.blob()}).then(done)}
+// 4K only on a big screen with a fast line: phones, data saver, mobile data and slow links get 1080p
+var c=navigator.connection||{},phone=Math.min(screen.width,screen.height)<700||/Mobi|Android|iPhone/i.test(navigator.userAgent);
+var slow=phone||c.saveData||c.type==='cellular';
+function getHi(){
+  if(slow||!window.AbortController||!window.ReadableStream)return getLo();
+  var ac=new AbortController();
+  return fetch(hi,{signal:ac.signal}).then(function(r){
+    if(!r.ok||!r.body)throw 0;
+    var rd=r.body.getReader(),parts=[],got=0,t0=performance.now(),judged=false;
+    function step(){return rd.read().then(function(x){
+      if(x.done)return new Blob(parts,{type:'video/mp4'});
+      parts.push(x.value);got+=x.value.length;
+      // after the first second it must be arriving at 24 Mbps or better (3 MB a second)
+      if(!judged&&performance.now()-t0>1000){judged=true;if(got<3e6){ac.abort();throw 1}}
+      return step();});}
+    return step();
+  }).then(done).catch(function(){return getLo()});
+}
+window.__ldReady=Promise.race([getHi(),new Promise(function(r){setTimeout(r,12000)})]).catch(function(){});
 })();
 </script>
 </head>
