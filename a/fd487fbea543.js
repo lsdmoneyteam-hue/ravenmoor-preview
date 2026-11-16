@@ -23,6 +23,18 @@ const BRACE=[[4,7],[2,4],[2,7],[10,13],[1,10],[1,13],[4,10],[7,13],[0,2]];
 const dist0=(a,b)=>Math.hypot(J0[a][0]-J0[b][0],J0[a][1]-J0[b][1]);
 const CON=BONES.map((b,i)=>[b[0],b[1],dist0(b[0],b[1]),LIMB[i]?2:1]).concat(BRACE.map(b=>[b[0],b[1],dist0(b[0],b[1]),0]));
 const BL=BONES.map(b=>dist0(b[0],b[1]));
+// joint limits, so no part can swing round past where a body could go: [frame from, frame to, pivot, end, lo, hi] in radians from the rest angle
+const LIMS=[[-1,-1,0,1,-.7,.7],[0,1,1,2,-.9,.9],[1,2,2,3,-.8,.8],[0,1,0,10,-.55,.55],[0,1,0,13,-.55,.55],[1,2,1,4,-.55,.55],[1,2,1,7,-.55,.55],
+  [0,1,10,12,-1.6,1.6],[0,1,13,15,-1.6,1.6],[0,1,10,11,-1.8,1.8],[0,1,13,14,-1.8,1.8],[1,2,4,6,-2.85,1.7],[1,2,7,9,-1.7,2.85],[1,2,4,5,-2.95,1.9],[1,2,7,8,-1.9,2.95]];
+const ang0=(a,b)=>Math.atan2(J0[b][1]-J0[a][1],J0[b][0]-J0[a][0]);
+LIMS.forEach(l=>l.push(ang0(l[2],l[3])-(l[0]<0?Math.PI/2:ang0(l[0],l[1]))));
+const wrapA=a=>Math.atan2(Math.sin(a),Math.cos(a));
+const REACH={4:[-2.75,1.5],7:[-1.5,2.75],10:[-1.4,1.4],13:[-1.4,1.4]};
+function limit(l){const a=l[2],b=l[3],dx=jx[b]-jx[a],dy=jy[b]-jy[a];
+  let d=wrapA(Math.atan2(dy,dx)-(l[0]<0?Math.PI/2:Math.atan2(jy[l[1]]-jy[l[0]],jx[l[1]]-jx[l[0]]))-l[6]);
+  if(d>=l[4]&&d<=l[5])return;
+  const eh=Math.abs(wrapA(d-l[5])),el=Math.abs(wrapA(d-l[4]));
+  const r=(eh<el?l[5]:l[4])-d,c=Math.cos(r),s=Math.sin(r);jx[b]=jx[a]+dx*c-dy*s;jy[b]=jy[a]+dx*s+dy*c;}
 // skin binding: two nearest bones; a part may borrow its neighbours' bones near the joint (penalised) so joints stay continuous
 const CAND=[[[0,1],[1,1],[3,1],[6,1],[9,1],[12,1],[4,3],[7,3],[10,3],[13,3],[2,3]],[[2,1],[1,1],[3,2],[6,2]],[[4,1],[5,1],[3,1],[1,3]],[[7,1],[8,1],[6,1],[1,3]],[[10,1],[11,1],[9,1],[0,3]],[[13,1],[14,1],[12,1],[0,3]]];
 function makeSkin(n){return {n,b1:new Uint8Array(n),b2:new Uint8Array(n),w1:new Float32Array(n),u1:new Float32Array(n),v1:new Float32Array(n),u2:new Float32Array(n),v2:new Float32Array(n)};}
@@ -42,16 +54,17 @@ const FW=450,FH=900;
 const model=new Image(),photo=new Image();model.src=IMG.model;photo.src=IMG.photo;
 let snapM=model,snapP=photo;
 const glc=document.createElement('canvas');let gl=null,prog=null,texM=null,texR=null,M3=null,glOK=false;
-const BM=new Float32Array(15*16),jz=new Float32Array(NJ);
+const BM=new Float32Array(15*16),jz=new Float32Array(NJ),PHC=new Float32Array(15).fill(1),PHS=new Float32Array(15);
 function boneMats(rest){
   for(let i=0;i<NJ;i++)jz[i]=rest?0:uz[i];
   for(let b=0;b<15;b++){const a=BONES[b][0],e=BONES[b][1],o=b*16;
     const hx0=J0[a][0],hy0=J0[a][1];let rx=(J0[e][0]-hx0)/BL[b],ry=(J0[e][1]-hy0)/BL[b];
     let hx=rest?hx0:ux[a],hy=rest?hy0:uy[a],hz=jz[a];
     let cx_=rest?rx:ux[e]-ux[a],cy_=rest?ry:uy[e]-uy[a],cz_=jz[e]-jz[a];const cl=Math.hypot(cx_,cy_,cz_)||1e-6;cx_/=cl;cy_/=cl;cz_/=cl;
-    // rotation taking the rest direction (rx,ry,0) onto the current one
-    const vx=ry*cz_,vy=-rx*cz_,vz=rx*cy_-ry*cx_,c=rx*cx_+ry*cy_,k=1/(1+Math.max(c,-0.999));
-    const r00=c+vx*vx*k,r01=vx*vy*k-vz,r02=vx*vz*k+vy,r10=vy*vx*k+vz,r11=c+vy*vy*k,r12=vy*vz*k-vx,r20=vz*vx*k-vy,r21=vz*vy*k+vx,r22=c+vz*vz*k;
+    // turn in the picture plane first, then tip towards or away from the viewer: no half-turn flip at any angle
+    const pl=Math.hypot(cx_,cy_);if(pl>1e-4){PHC[b]=(rx*cx_+ry*cy_)/pl;PHS[b]=(rx*cy_-ry*cx_)/pl;}
+    const cf=PHC[b],sf=PHS[b],m=1-pl,t00=pl+m*ry*ry,t01=-m*rx*ry,t02=-cz_*rx,t11=pl+m*rx*rx,t12=-cz_*ry;
+    const r00=cf*t00-sf*t01,r01=cf*t01-sf*t11,r02=cf*t02-sf*t12,r10=sf*t00+cf*t01,r11=sf*t01+cf*t11,r12=sf*t02+cf*t12,r20=cz_*rx,r21=cz_*ry,r22=pl;
     BM[o]=r00;BM[o+1]=r10;BM[o+2]=r20;BM[o+3]=0;BM[o+4]=r01;BM[o+5]=r11;BM[o+6]=r21;BM[o+7]=0;BM[o+8]=r02;BM[o+9]=r12;BM[o+10]=r22;BM[o+11]=0;
     BM[o+12]=hx-(r00*hx0+r01*hy0);BM[o+13]=hy-(r10*hx0+r11*hy0);BM[o+14]=hz-(r20*hx0+r21*hy0);BM[o+15]=1;}
 }
@@ -134,6 +147,7 @@ btn.addEventListener('click',()=>{if(playing)return;playing=true;up();btn.disabl
   vid.muted=false;vid.volume=1;snd.hidden=true;
   const p=vid.play();if(p&&p.catch)p.catch(()=>{vid.muted=true;snd.hidden=false;vid.play().catch(()=>{});});
   hint.textContent='';});
+if(cfg.debug)window.__pz={state:()=>{let m=0;for(let i=0;i<NJ;i++)m=Math.max(m,Math.hypot(jx[i]-J0[i][0],jy[i]-J0[i][1]));const u=[jx[1]-jx[0],jy[1]-jy[0]],v=[jx[2]-jx[1],jy[2]-jy[1]];return {off:+m.toFixed(3),tilt:+Math.atan2(u[0],u[1]).toFixed(2),bend:+wrapA(Math.atan2(v[1],v[0])-Math.atan2(u[1],u[0])).toFixed(2),hips:+((jx[13]-jx[10])*u[1]-(jy[13]-jy[10])*u[0]).toFixed(3),sh:+((jx[7]-jx[4])*v[1]-(jy[7]-jy[4])*v[0]).toFixed(3),nan:[...jx,...jy].some(x=>x!==x)};},j:()=>[[...jx],[...jy]]};
 let last=performance.now(),acc=0,vis=true;if(window.IntersectionObserver)new IntersectionObserver(es=>{const v=es.some(e=>e.isIntersecting);if(v&&!vis){vis=true;last=performance.now();requestAnimationFrame(frame);}vis=v;}).observe(root);
 function frame(now){
   const dt=Math.min(0.033,(now-last)/1000);last=now;const tt=now/1000;
@@ -150,13 +164,16 @@ function frame(now){
       const root={4:4,5:4,7:7,8:7,10:10,11:10,13:13,14:13}[grab];let ax,ay,rad;
       if(root!==undefined){const first=(grab===4||grab===7||grab===10||grab===13);ax=J0[root][0];ay=J0[root][1];rad=(first?BL[grab]*grabT:BL[grab-1]+BL[grab]*grabT)+(root<10?0.2:0.12);}
       else{ax=J0[ga][0]*(1-grabT)+J0[gb][0]*grabT;ay=J0[ga][1]*(1-grabT)+J0[gb][1]*grabT;rad=0.28;}
-      const dx=wxp-ax,dy=wyp-ay,dd=Math.hypot(dx,dy);if(dd>rad){wxp=ax+dx/dd*rad;wyp=ay+dy/dd*rad;}}
+      let dx=wxp-ax,dy=wyp-ay,dd=Math.hypot(dx,dy);if(dd>rad){wxp=ax+dx/dd*rad;wyp=ay+dy/dd*rad;dx=wxp-ax;dy=wyp-ay;dd=rad;}
+      if(root!==undefined&&dd>1e-4){const R=REACH[root],a0=ang0(root,root+2),d=wrapA(Math.atan2(dy,dx)-a0);
+        if(d<R[0]||d>R[1]){const t=a0+(Math.abs(wrapA(d-R[1]))<Math.abs(wrapA(d-R[0]))?R[1]:R[0]);wxp=ax+Math.cos(t)*dd;wyp=ay+Math.sin(t)*dd;}}}
     for(let it=0;it<10;it++){
       if(grab>=0&&!locked){const t=grabT,w=(1-t)*(1-t)+t*t;const px=jx[ga]*(1-t)+jx[gb]*t,py=jy[ga]*(1-t)+jy[gb]*t;const dx=(wxp-px)*0.7,dy=(wyp-py)*0.7;
         jx[ga]+=dx*(1-t)/w;jy[ga]+=dy*(1-t)/w;jx[gb]+=dx*t/w;jy[gb]+=dy*t/w;}
       for(let c=0;c<CON.length;c++){const a=CON[c][0],b=CON[c][1],L=CON[c][2],ty=CON[c][3];let dx=jx[b]-jx[a],dy=jy[b]-jy[a],d=Math.hypot(dx,dy)||1e-6;
         let st=ty===1?1:(ty===0?0.35:(d>L?1:0.02));
         const f=(d-L)/d*st,wa=INV[a],wb=INV[b],ws=wa+wb;jx[a]+=dx*f*wa/ws;jy[a]+=dy*f*wa/ws;jx[b]-=dx*f*wb/ws;jy[b]-=dy*f*wb/ws;}
+      for(let l=0;l<LIMS.length;l++)limit(LIMS[l]);
       if(jy[12]<-0.9)jy[12]=-0.9;if(jy[15]<-0.9)jy[15]=-0.9;
     }
   }
