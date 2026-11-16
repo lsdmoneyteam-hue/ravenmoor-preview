@@ -4,7 +4,19 @@
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
 <meta name="robots" content="noindex, nofollow">
-<title>Ravenmoor Digital</title>
+<title>Ravenmoor Digital: listing reels from the photos you already have</title>
+<meta name="description" content="Send the listing photos you already have, pick a style and post the reel tomorrow. Property reels for estate agents by Ravenmoor Digital.">
+<meta name="theme-color" content="#0E0F11">
+<link rel="icon" href="favicon.svg" type="image/svg+xml">
+<meta property="og:type" content="website">
+<meta property="og:site_name" content="Ravenmoor Digital">
+<meta property="og:title" content="Ravenmoor Digital: listing reels from the photos you already have">
+<meta property="og:description" content="Send the listing photos you already have, pick a style and post the reel tomorrow.">
+<meta property="og:url" content="https://lsdmoneyteam-hue.github.io/ravenmoor-preview/">
+<meta property="og:image" content="https://lsdmoneyteam-hue.github.io/ravenmoor-preview/og.jpg">
+<meta property="og:image:width" content="1200">
+<meta property="og:image:height" content="630">
+<meta name="twitter:card" content="summary_large_image">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Cormorant+Garamond:wght@400;500;600&amp;family=Schibsted+Grotesk:wght@400;500;600&amp;display=swap" media="print" onload="this.media='all'">
 <style>html{background:#0E0F11}body{margin:0;background:transparent}</style>
@@ -319,7 +331,7 @@ body{margin:0}
 .rd .d3-spot:focus-visible{outline:2px solid var(--bone);outline-offset:2px}
 .d3-hint{position:absolute;right:14px;top:14px;padding:6px 10px;background:rgba(14,15,17,.74);color:var(--bone);font-size:13px;pointer-events:none}
 .d3-steps{display:flex;flex-wrap:wrap;gap:4px 28px;margin-top:14px}
-.d3-step{background:none;border:0;border-bottom:2px solid transparent;padding:0;min-height:44px;font:500 15px/1 'Schibsted Grotesk',system-ui,sans-serif;color:inherit;opacity:.55;cursor:pointer}
+.d3-step{background:none;border:0;border-bottom:2px solid transparent;padding:0;min-height:44px;font:500 15px/1 'Schibsted Grotesk',system-ui,sans-serif;color:inherit;opacity:.72;cursor:pointer}
 .d3-step.on{opacity:1;border-bottom-color:var(--amber)}
 .d3-step:hover{opacity:1}
 .rd .d3-step:focus-visible{outline:2px solid var(--amber);outline-offset:4px}
@@ -795,7 +807,7 @@ class Component extends DCLogic {
     try {
       const a = new URLSearchParams(window.location.search).get('a');
       if (a) {
-        const name = a.replace(/[-_+]+/g, ' ').replace(/\s+/g, ' ').trim().slice(0, 60).replace(/\b\w/g, (ch) => ch.toUpperCase());
+        const name = this.cleanAgency(a).replace(/[-_+]+/g, ' ').replace(/\s+/g, ' ').trim().slice(0, 60).replace(/\b\w/g, (ch) => ch.toUpperCase());
         if (name) this.setState({ agency: name });
       }
     } catch (e) {}
@@ -972,6 +984,7 @@ class Component extends DCLogic {
       go(i) { const s = SPOTS[i]; let dy = s.yaw - st.yaw; dy = Math.atan2(Math.sin(dy), Math.cos(dy)); st.from = { p: st.pos.slice(), yaw: st.yaw, pitch: st.pitch, to: s, dy: dy }; st.t0 = performance.now(); }
     };
   }
+  cleanAgency(s) { return String(s || '').replace(/[^\p{L}\p{N} &'.,_+-]/gu, '').replace(/\s+/g, ' ').trim().slice(0, 60); }
   attachCar(el) {
     if (!el || el === this._carEl) return;
     this._carEl = el;
@@ -1740,7 +1753,7 @@ class Component extends DCLogic {
   close() { this.leaveFull(); this.setState({ open: null }, () => { if (this._lastFocus && this._lastFocus.focus) this._lastFocus.focus(); }); }
   renderVals() {
     const S = this.styleList(), n = S.length;
-    const agency = (this.state.agency || (this.props.agency || '')).trim();
+    const agency = this.cleanAgency(this.state.agency || this.props.agency || '');
     const plans = this.state.kind === 'plans';
     const styles = S.map((s, i) => ({ ...s, track: 'style-card:' + s.id, open: () => { if (this._dragged) return; this.openAt(i); }, hin: (e) => this.cardPlay(e.currentTarget), hout: (e) => this.cardStop(e.currentTarget) }));
     const oi = this.state.open, mi = oi == null ? 0 : oi;
