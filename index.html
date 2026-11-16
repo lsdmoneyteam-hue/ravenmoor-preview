@@ -32,7 +32,7 @@ body{margin:0}
 .skip:focus{top:12px}
 .wrap{max-width:1320px;margin:0 auto;padding:0 22px}
 .sec{padding:88px 0}
-.h2{font-family:'Cormorant Garamond',Georgia,serif;font-weight:500;font-size:46px;line-height:1;letter-spacing:-.015em;margin:0}
+.h2{font-family:'Cormorant Garamond',Georgia,serif;font-weight:500;font-size:min(46px,12.6vw);line-height:1;letter-spacing:-.015em;margin:0}
 .sub{color:var(--mute);margin:18px 0 0;max-width:44ch}
 .sc{font-variant-caps:all-small-caps;letter-spacing:.14em;font-size:15px;font-weight:500}
 .btn{display:inline-flex;align-items:center;justify-content:center;min-height:54px;padding:0 30px;background:var(--amber);color:var(--ink);font:600 16px/1 'Schibsted Grotesk',system-ui,sans-serif;text-decoration:none;border:0;border-radius:2px;cursor:pointer;transition:background-color .3s ease-out}
@@ -99,13 +99,17 @@ body{margin:0}
 .pz-play span{width:84px;height:84px;border-radius:50%;background:rgba(14,15,17,.62);border:1px solid rgba(237,232,223,.55);display:flex;align-items:center;justify-content:center}
 .pz-play svg{margin-left:5px}
 .pz-play:focus-visible{outline:2px solid var(--amber);outline-offset:-6px}
-.pz-stage{width:min(100%,calc(84vh*9/16));width:min(100%,calc(84svh*9/16));aspect-ratio:9/16;margin:48px auto 64px;background:#0E0F11;border:1px solid var(--rule)}
+.pz-stage{width:min(100%,calc(76vh*9/16));width:min(100%,calc(76svh*9/16));margin:48px auto 64px;background:#0E0F11;border:1px solid var(--rule)}
+.pz-stage:not(.pz){aspect-ratio:9/16;margin-bottom:176px}
 .how li{padding:26px 0;border-bottom:1px solid var(--rule);font-family:'Cormorant Garamond',Georgia,serif;font-weight:500;font-size:30px;line-height:1.1}
 
 .styles{padding:88px 0 72px;overflow:hidden}
-.strip{position:relative;list-style:none;margin:36px 0 0;padding:44px calc(50% - 38vw);display:flex;gap:18px;overflow-x:auto;scroll-snap-type:x mandatory;perspective:1500px;scrollbar-width:none}
+.strip{position:relative;list-style:none;margin:36px 0 0;padding:26px calc(50% - min(34vw,150px));display:flex;gap:14px;overflow-x:auto;scroll-snap-type:x mandatory;scrollbar-width:none}
 .strip::-webkit-scrollbar{display:none}
-.strip li{flex:none;width:76vw;scroll-snap-align:center;transform:translateZ(calc(var(--ad,0) * 150px)) rotateY(calc(var(--d,0) * -38deg))}
+.strip li{flex:none;width:min(68vw,300px);scroll-snap-align:center;transform:scale(calc(1 - var(--ad,0) * .06));opacity:calc(1 - var(--ad,0) * .42)}
+.strip-n{margin:4px 0 0;text-align:center;font-size:13px;color:var(--mute);min-height:20px}
+.if-touch{display:none}
+@media (hover:none){.if-hover{display:none}.if-touch{display:inline}}
 .sc-card{position:relative;display:block;width:100%;padding:0;border:0;background:none;color:inherit;font:inherit;text-align:left;cursor:pointer}
 .still{position:relative;display:block;aspect-ratio:9/16;overflow:hidden;background:#1a1612;border-radius:3px}
 .still .art{position:absolute;inset:0;width:100%;height:100%;animation:kb 9s ease-in-out infinite alternate;animation-play-state:paused}
@@ -157,10 +161,10 @@ body{margin:0}
 .menu{list-style:none;margin:44px 0 0;padding:0;border-top:1px solid var(--rule)}
 .menu a{display:grid;grid-template-columns:minmax(0,1fr) auto;gap:6px 24px;align-items:baseline;padding:28px 0;border-bottom:1px solid var(--rule);text-decoration:none;transition:padding .6s cubic-bezier(.16,1,.3,1)}
 .menu a:hover{padding-left:14px}
-.m-name{font-family:'Cormorant Garamond',Georgia,serif;font-weight:500;font-size:34px;line-height:1}
+.m-name{font-family:'Cormorant Garamond',Georgia,serif;font-weight:500;font-size:min(34px,8.6vw);line-height:1}
 .m-tag{display:block;color:var(--amber);margin-top:8px}
 .m-desc{grid-column:1;color:var(--mute);font-size:15px}
-.m-price{grid-row:1/3;grid-column:2;align-self:center;font-family:'Cormorant Garamond',Georgia,serif;font-weight:500;font-size:34px;line-height:1;text-align:right;white-space:nowrap;transition:color .3s}
+.m-price{grid-row:1/3;grid-column:2;align-self:center;font-family:'Cormorant Garamond',Georgia,serif;font-weight:500;font-size:min(34px,8.6vw);line-height:1;text-align:right;white-space:nowrap;transition:color .3s}
 .menu a:hover .m-price{color:var(--amber)}
 .m-price small{font-family:'Schibsted Grotesk',system-ui,sans-serif;font-size:14px;color:var(--mute);margin-left:6px}
 
@@ -185,7 +189,7 @@ body{margin:0}
 .ftr-meta{display:flex;flex-wrap:wrap;gap:8px 28px;font-size:14px;color:var(--mute);list-style:none;margin:0;padding:0}
 .ftr-meta a{color:var(--bone);text-underline-offset:4px;display:inline-flex;min-height:44px;align-items:center}
 .ftr-meta li{display:inline-flex;min-height:44px;align-items:center}
-.giant{font-family:'Cormorant Garamond',Georgia,serif;font-weight:500;font-size:19.6vw;line-height:.74;letter-spacing:.02em;margin:40px 0 -.2em;white-space:nowrap;text-align:center;user-select:none}
+.giant{font-family:'Cormorant Garamond',Georgia,serif;font-weight:500;font-size:14.4vw;line-height:.74;letter-spacing:.02em;margin:40px 0 -.2em;white-space:nowrap;text-align:center;user-select:none}
 
 .cookie{position:fixed;left:0;right:0;bottom:0;z-index:40;background:var(--bone);color:var(--ink);padding:10px 22px;display:flex;flex-wrap:wrap;gap:8px 24px;align-items:center;justify-content:space-between;font-size:14px}
 .cookie p{margin:0;flex:1 1 260px}
@@ -193,7 +197,7 @@ body{margin:0}
 .ck{min-height:44px;min-width:104px;padding:0 16px;border:1px solid var(--ink);background:transparent;color:var(--ink);font:600 14px/1 'Schibsted Grotesk',system-ui,sans-serif;border-radius:2px;cursor:pointer}
 .ck:hover{background:var(--ink);color:var(--bone)}
 
-.view{position:fixed;left:0;right:0;top:0;height:min(100vh,1100px);z-index:60;background:rgba(14,15,17,.97);display:grid;place-items:center;padding:76px 22px 28px;overflow:auto}
+.view{position:fixed;left:0;right:0;top:0;height:min(100vh,1100px);height:min(100dvh,1100px);z-index:60;background:rgba(14,15,17,.97);display:grid;place-items:center;padding:76px 22px 28px;overflow:auto}
 .view-in{display:grid;gap:28px;justify-items:center;width:100%;max-width:980px}
 .view-x{position:absolute;top:16px;right:22px}
 .v-body{width:100%;max-width:420px}
@@ -233,9 +237,11 @@ body{margin:0}
 .how li+li{padding-left:40px}
 .how li:last-child{border-right:0}
 .styles{padding:150px 0 110px}
-.strip{padding:56px calc(50% - 125px);gap:28px;scroll-snap-type:none;cursor:grab}
+.strip{padding:56px calc(50% - 125px);gap:28px;scroll-snap-type:none;cursor:grab;perspective:1500px}
+.strip-n{display:none}
+.giant{font-size:19.6vw}
 .strip.is-drag{cursor:grabbing}
-.strip li{width:250px}
+.strip li{width:250px;opacity:1;transform:translateZ(calc(var(--ad,0) * 150px)) rotateY(calc(var(--d,0) * -38deg))}
 .ba{aspect-ratio:16/8;margin-top:64px}
 .dev-grid{grid-template-columns:minmax(0,5fr) minmax(0,7fr);gap:88px}
 .pl h3{font-size:34px}
@@ -294,8 +300,9 @@ body{margin:0}
 @keyframes ldsnd{from{opacity:0}to{opacity:1}}
 .rd.hero-on .grain{display:none}
 .ld-v{position:absolute;left:50%;top:50%;width:min(100vw,177.78vh);height:min(56.25vw,100vh);width:min(100vw,177.78dvh);height:min(56.25vw,100dvh);transform:translate(-50%,-50%);display:block;margin:0;border:0;border-radius:0;box-shadow:none;object-fit:contain;background:#E5D3C8;pointer-events:none;-webkit-mask-image:linear-gradient(to bottom,transparent 0,#000 8%,#000 92%,transparent 100%),linear-gradient(to right,transparent 0,#000 2.5%,#000 97.5%,transparent 100%);-webkit-mask-composite:source-in;mask-image:linear-gradient(to bottom,transparent 0,#000 8%,#000 92%,transparent 100%),linear-gradient(to right,transparent 0,#000 2.5%,#000 97.5%,transparent 100%);mask-composite:intersect}
+@media (max-aspect-ratio:3/4){.ld-v{width:150vw;height:84.375vw}}
 
-@media (max-aspect-ratio: 4/5){.is-ended .film{object-fit:contain;background:#020308;animation:endfit .6s ease-out both}}
+@media (max-aspect-ratio: 4/5){.hero2 .film{bottom:auto;height:100cqh;transition:opacity .15s linear,height .9s cubic-bezier(.6,0,.2,1)}.hero2.is-outro .film,.hero2.is-ended .film{height:58cqh}.hero2.is-outro,.hero2.is-ended{background-image:none}}
 @keyframes endfit{from{opacity:0}to{opacity:1}}
 .view-full{padding:0;background:#000;display:block;overflow:hidden}
 .view-full:fullscreen{height:100%}
@@ -303,7 +310,7 @@ body{margin:0}
 .view-full .phone{position:absolute;inset:0;width:auto;aspect-ratio:auto;border-radius:0;padding:0;box-shadow:none;background:#000}
 .view-full .phone .still{border-radius:0;background:#000}
 .view-full .rv{object-fit:contain;background:#000}
-.view-full .v-body{position:absolute;left:0;right:0;bottom:0;width:auto;max-width:none;padding:70px 28px 22px;background:linear-gradient(rgba(0,0,0,0),rgba(0,0,0,.8));display:flex;flex-wrap:wrap;align-items:center;gap:10px 28px;pointer-events:none}
+.view-full .v-body{position:absolute;left:0;right:0;bottom:0;width:auto;max-width:none;padding:70px 28px max(22px,env(safe-area-inset-bottom));background:linear-gradient(rgba(0,0,0,0),rgba(0,0,0,.8));display:flex;flex-wrap:wrap;align-items:center;gap:10px 28px;pointer-events:none}
 .view-full .v-body>*{pointer-events:auto}
 .view-full .v-name{font-size:34px}
 .view-full .v-meta{margin-top:0}
@@ -458,13 +465,14 @@ window.__ldReady=Promise.race([getHi(),new Promise(function(r){setTimeout(r,1200
 <section class="styles" id="styles" aria-labelledby="styles-h">
 <div class="wrap">
 <h2 class="h2" id="styles-h" data-rv="lines"><span class="ln"><span>Ten ways</span></span><span class="ln"><span>to show a house.</span></span></h2>
-<p class="sub" data-rv="">Hover to preview. Tap to open one full screen.</p>
+<p class="sub" data-rv=""><span class="if-hover">Hover to preview. Click to open one full screen.</span><span class="if-touch">Swipe through them. Tap one to open it full screen.</span></p>
 </div>
 <ul class="strip" ref="{{setStripRef}}">
 <sc-for list="{{styles}}" as="s" hint-placeholder-count="7">
 <li><button type="button" class="sc-card" onClick="{{s.open}}" onMouseEnter="{{s.hin}}" onMouseLeave="{{s.hout}}" onFocus="{{s.hin}}" onBlur="{{s.hout}}" data-track="{{s.track}}" data-video-slot="{{s.slot}}"><span class="still"><sc-if value="{{s.isVid}}" hint-placeholder-val="{{false}}"><video class="rv" data-src="{{s.src}}" poster="{{s.poster}}" muted="{{true}}" loop="{{true}}" playsInline="{{true}}" preload="none" aria-hidden="true"></video></sc-if><sc-if value="{{s.isPlain}}" hint-placeholder-val="{{true}}"><svg class="art" viewBox="{{s.vb}}" preserveAspectRatio="xMidYMid slice" aria-hidden="true"><use href="#houseArt"></use></svg></sc-if><sc-if value="{{s.isMosaic}}" hint-placeholder-val="{{false}}"><span class="mosaic"><svg viewBox="560 780 260 260" preserveAspectRatio="xMidYMid slice" aria-hidden="true"><use href="#houseArt"></use></svg><svg viewBox="790 790 260 260" preserveAspectRatio="xMidYMid slice" aria-hidden="true"><use href="#houseArt"></use></svg><svg viewBox="600 950 300 300" preserveAspectRatio="xMidYMid slice" aria-hidden="true"><use href="#houseArt"></use></svg><svg viewBox="350 480 900 900" preserveAspectRatio="xMidYMid slice" aria-hidden="true"><use href="#houseArt"></use></svg></span></sc-if><sc-if value="{{s.isWord}}" hint-placeholder-val="{{false}}"><span class="word">Arrive.</span></sc-if><sc-if value="{{s.isTalk}}" hint-placeholder-val="{{false}}"><svg class="pres" viewBox="0 0 100 178" preserveAspectRatio="xMidYMax slice" aria-hidden="true"><circle cx="50" cy="116" r="10" fill="#0E0F11"></circle><path d="M27 178c0-28 9-46 23-46s23 18 23 46z" fill="#0E0F11"></path></svg></sc-if></span><span class="cap"><b>{{s.name}}</b><span class="sc">{{s.meta}}</span></span></button></li>
 </sc-for>
 </ul>
+<p class="strip-n" ref="{{setStripNRef}}" aria-hidden="true"></p>
 </section>
 
 <section class="sec" style="padding-top: 40px" aria-labelledby="ba-h">
@@ -777,6 +785,7 @@ class Component extends DCLogic {
     this.setSkipRef = (el) => { if (el && this._skipEl !== el) { this._skipEl = el; try { el.focus({ preventScroll: true }); } catch (e) {} } };
     this.setCtaRef = (el) => { if (el && this._ctaEl !== el) { this._ctaEl = el; try { el.focus({ preventScroll: true }); } catch (e) {} } };
     this.setStripRef = this.attachStrip.bind(this);
+    this.setStripNRef = (el) => { this._stripN = el || null; this._stripNT = ''; if (el) this.curve(); };
     this.setVideoRef = this.attachVideo.bind(this);
     this.setCloseRef = (el) => { if (el && this._closeEl !== el) { this._closeEl = el; try { el.focus(); } catch (e) {} } };
     this.setViewUpRef = (el) => { if (el) this._viewUp = el; };
@@ -1016,7 +1025,7 @@ class Component extends DCLogic {
       if (window.RMPresenter) { run(); return; }
       if (this._pzLoading) return;
       this._pzLoading = true;
-      const s = document.createElement('script'); s.src = 'a/fd487fbea543.js'; s.onload = run; document.head.appendChild(s);
+      const s = document.createElement('script'); s.src = 'a/08eba8ebbf71.js'; s.onload = run; document.head.appendChild(s);
     };
     if ('IntersectionObserver' in window) { const io = new IntersectionObserver((es) => { if (es.some((x) => x.isIntersecting)) { io.disconnect(); go(); } }, { rootMargin: '900px 0px' }); io.observe(el); } else go();
   }
@@ -1468,6 +1477,8 @@ class Component extends DCLogic {
       if (this.state.phase !== 'idle') this.filmBack();
     });
     v.addEventListener('timeupdate', () => {
+      const o = this.state.phase === 'playing' && v.currentTime >= 36.5;
+      if (o !== !!this.state.outro) this.setState({ outro: o });
       if (this.state.hasAudio) return;
       let has = false;
       try { has = !!(v.mozHasAudio || v.webkitAudioDecodedByteCount > 0 || (v.audioTracks && v.audioTracks.length > 0)); } catch (e) {}
@@ -1558,12 +1569,15 @@ class Component extends DCLogic {
     const el = this._strip;
     if (!el) return;
     const half = Math.max(1, el.clientWidth / 2);
+    let near = 0, nd = 9;
     for (let i = 0; i < el.children.length; i++) {
       const li = el.children[i];
       const d = Math.max(-1.5, Math.min(1.5, (li.offsetLeft + li.offsetWidth / 2 - el.scrollLeft - half) / half));
+      if (Math.abs(d) < nd) { nd = Math.abs(d); near = i; }
       li.style.setProperty('--d', d.toFixed(3));
       li.style.setProperty('--ad', Math.abs(d).toFixed(3));
     }
+    if (this._stripN && el.children.length) { const t = 'Swipe \u00b7 ' + (near + 1) + ' of ' + el.children.length; if (t !== this._stripNT) { this._stripNT = t; this._stripN.textContent = t; } }
   }
   attachStrip(el) {
     if (!el || el === this._strip) return;
@@ -1759,8 +1773,8 @@ class Component extends DCLogic {
     const oi = this.state.open, mi = oi == null ? 0 : oi;
     const m = { ...S[mi], useTrack: 'use-style:' + S[mi].id };
     return {
-      setRootRef: this.setRootRef, setHeroRef: this.setHeroRef, setFilmRef: this.setFilmRef, setSkipRef: this.setSkipRef, setCtaRef: this.setCtaRef, setStripRef: this.setStripRef, setVideoRef: this.setVideoRef, setCloseRef: this.setCloseRef, setViewVidRef: this.setViewVidRef, setViewUpRef: this.setViewUpRef, setBaRef: this.setBaRef, setDevRef: this.setDevRef, setPzRef: this.setPzRef, setCarRef: this.setCarRef,
-      heroClass: 'hero2 is-' + this.state.phase,
+      setRootRef: this.setRootRef, setHeroRef: this.setHeroRef, setFilmRef: this.setFilmRef, setSkipRef: this.setSkipRef, setCtaRef: this.setCtaRef, setStripRef: this.setStripRef, setStripNRef: this.setStripNRef, setVideoRef: this.setVideoRef, setCloseRef: this.setCloseRef, setViewVidRef: this.setViewVidRef, setViewUpRef: this.setViewUpRef, setBaRef: this.setBaRef, setDevRef: this.setDevRef, setPzRef: this.setPzRef, setCarRef: this.setCarRef,
+      heroClass: 'hero2 is-' + this.state.phase + (this.state.outro && this.state.phase === 'playing' ? ' is-outro' : ''),
       loaderOn: this.state.loader !== 'gone',
       loaderClass: 'loader' + (this.state.loader === 'leaving' ? ' is-leaving' : ''),
       ldStill: !!this._reduce,
