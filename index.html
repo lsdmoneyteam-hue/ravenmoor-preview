@@ -23,7 +23,8 @@
 <style>
 body{margin:0}
 @media (prefers-reduced-motion: no-preference){html{scroll-behavior:smooth}}
-.rd{--ink:#0E0F11;--bone:#EDE8DF;--amber:#C8913A;--mute:rgba(237,232,223,.68);--rule:rgba(237,232,223,.18);--mute-d:rgba(14,15,17,.74);--rule-d:rgba(14,15,17,.22);position:relative;background:var(--ink);color:var(--bone);font-family:'Schibsted Grotesk',system-ui,sans-serif;font-size:17px;line-height:1.55;-webkit-font-smoothing:antialiased;overflow-x:clip}
+.rd{--ink:#0E0F11;--bone:#EDE8DF;--amber:#C8913A;--mute:rgba(237,232,223,.68);--rule:rgba(237,232,223,.18);--mute-d:rgba(14,15,17,.74);--rule-d:rgba(14,15,17,.22);position:relative;background:var(--ink);color:var(--bone);font-family:'Schibsted Grotesk',system-ui,sans-serif;font-size:17px;line-height:1.55;-webkit-font-smoothing:antialiased;overflow-x:clip;isolation:isolate}
+.sky{position:fixed;left:0;top:0;width:100%;height:min(100vh,1200px);z-index:-1;pointer-events:none}
 .rd *,.rd *::before,.rd *::after{box-sizing:border-box}
 .rd a{color:inherit}
 .rd :focus-visible{outline:2px solid var(--amber);outline-offset:4px}
@@ -387,6 +388,7 @@ window.__ldReady=Promise.race([getHi(),new Promise(function(r){setTimeout(r,1200
 <template id="tpl"></template>
 <script type="text/plain" id="tplsrc">
 <div class="rd" id="top" ref="{{setRootRef}}">
+<canvas class="sky" ref="{{setSkyRef}}" aria-hidden="true"></canvas>
 <a class="skip" href="#main">Skip to content</a>
 <svg width="0" height="0" style="position: absolute" aria-hidden="true" focusable="false"><defs>
 <linearGradient id="hSky" x1="0" y1="0" x2="0" y2="1"><stop offset="0" stop-color="#121318"></stop><stop offset=".3" stop-color="#3b2b22"></stop><stop offset=".5" stop-color="#8f5d32"></stop><stop offset=".6" stop-color="#d79a4f"></stop><stop offset=".66" stop-color="#f2d49a"></stop><stop offset="1" stop-color="#f2d49a"></stop></linearGradient>
@@ -792,6 +794,7 @@ class Component extends DCLogic {
     this.setBaRef = this.attachBa.bind(this);
     this.setDevRef = this.attachDev.bind(this);
     this.setPzRef = this.attachPz.bind(this);
+    this.setSkyRef = this.attachSky.bind(this);
     this.setCarRef = this.attachCar.bind(this);
     this.setViewVidRef = (el) => { if (el && this._viewVid !== el) { this._viewVid = el; el.setAttribute('playsinline', ''); setTimeout(() => this.syncViewVideo(), 0); } };
   }
@@ -994,6 +997,62 @@ class Component extends DCLogic {
     };
   }
   cleanAgency(s) { return String(s || '').replace(/[^\p{L}\p{N} &'.,_+-]/gu, '').replace(/\s+/g, ' ').trim().slice(0, 60); }
+  attachSky(cv) {
+    if (!cv || cv === this._skyEl) return;
+    this._skyEl = cv;
+    const ctx = cv.getContext && cv.getContext('2d'); if (!ctx) return;
+    const reduce = !!(window.matchMedia && window.matchMedia('(prefers-reduced-motion: reduce)').matches);
+    const fine = !!(window.matchMedia && window.matchMedia('(hover:hover) and (pointer:fine)').matches);
+    let W = 0, H = 0, dpr = 1, stars = [], px = -1, py = -1, raf = 0, s = 7;
+    const rnd = () => (s = (s * 16807) % 2147483647) / 2147483647;
+    const build = () => {
+      const r = cv.getBoundingClientRect(); if (!r.width || !r.height) return;
+      W = r.width; H = r.height; dpr = Math.min(2, window.devicePixelRatio || 1);
+      cv.width = Math.round(W * dpr); cv.height = Math.round(H * dpr);
+      const n = Math.round(Math.min(200, Math.max(70, W * H / 6500)));
+      s = 7; stars = [];
+      for (let i = 0; i < n; i++) stars.push({ x: rnd(), y: rnd(), z: .2 + rnd() * .8, r: .45 + rnd() * .9, p: rnd() * 6.283, a: .25 + rnd() * .5 });
+    };
+    const draw = (t) => {
+      raf = 0;
+      if (!W) build(); if (!W) return;
+      const sy = window.scrollY || window.pageYOffset || 0, vh = window.innerHeight || H;
+      const max = Math.max(1, document.documentElement.scrollHeight - vh), prog = Math.min(1, Math.max(0, sy / max));
+      ctx.setTransform(dpr, 0, 0, dpr, 0, 0); ctx.clearRect(0, 0, W, H);
+      if (sy < vh * .15 || document.hidden) return;
+      // the descent goes on down the page: stars thin out, and a dusk glow rises from the horizon
+      const g = Math.max(0, (prog - .3) / .7);
+      if (g > 0) {
+        const gr = ctx.createRadialGradient(W / 2, H * 1.3, 0, W / 2, H * 1.3, Math.max(W, H));
+        gr.addColorStop(0, 'rgba(200,145,58,' + (.42 * g).toFixed(3) + ')'); gr.addColorStop(.5, 'rgba(140,74,36,' + (.16 * g).toFixed(3) + ')'); gr.addColorStop(1, 'rgba(14,15,17,0)');
+        ctx.fillStyle = gr; ctx.fillRect(0, 0, W, H);
+      }
+      const fade = 1 - .7 * prog, span = H * 1.3, near = [];
+      ctx.fillStyle = '#EDE8DF';
+      for (let i = 0; i < stars.length; i++) {
+        const st = stars[i], x = st.x * W, y = (((st.y * span - sy * st.z * .25) % span) + span) % span - H * .15;
+        let a = st.a * fade * (reduce || !fine ? 1 : .7 + .3 * Math.sin(t * .0012 * (.5 + st.z) + st.p)), r = st.r * (.55 + .7 * st.z);
+        if (px >= 0) { const d = Math.hypot(x - px, y - py); if (d < 180) { const k = 1 - d / 180; a = Math.min(1, a + k * .8); r += k * 1.3; near.push(x, y, k); } }
+        ctx.globalAlpha = a; ctx.beginPath(); ctx.arc(x, y, r, 0, 6.2832); ctx.fill();
+      }
+      ctx.lineWidth = .7; ctx.strokeStyle = '#EDE8DF';
+      for (let i = 0; i < near.length; i += 3) for (let j = i + 3; j < near.length; j += 3) {
+        const d = Math.hypot(near[i] - near[j], near[i + 1] - near[j + 1]);
+        if (d < 130) { ctx.globalAlpha = Math.min(near[i + 2], near[j + 2]) * (1 - d / 130) * .55; ctx.beginPath(); ctx.moveTo(near[i], near[i + 1]); ctx.lineTo(near[j], near[j + 1]); ctx.stroke(); }
+      }
+      ctx.globalAlpha = 1;
+      if (fine && !reduce) req();
+    };
+    const req = () => { if (!raf) raf = requestAnimationFrame(draw); };
+    window.addEventListener('scroll', req, { passive: true });
+    window.addEventListener('resize', () => { W = 0; req(); });
+    document.addEventListener('visibilitychange', req);
+    if (fine) {
+      window.addEventListener('pointermove', (e) => { if (e.pointerType && e.pointerType !== 'mouse') return; px = e.clientX; py = e.clientY; req(); }, { passive: true });
+      document.addEventListener('pointerleave', () => { px = -1; py = -1; req(); });
+    }
+    req();
+  }
   attachCar(el) {
     if (!el || el === this._carEl) return;
     this._carEl = el;
@@ -1773,7 +1832,7 @@ class Component extends DCLogic {
     const oi = this.state.open, mi = oi == null ? 0 : oi;
     const m = { ...S[mi], useTrack: 'use-style:' + S[mi].id };
     return {
-      setRootRef: this.setRootRef, setHeroRef: this.setHeroRef, setFilmRef: this.setFilmRef, setSkipRef: this.setSkipRef, setCtaRef: this.setCtaRef, setStripRef: this.setStripRef, setStripNRef: this.setStripNRef, setVideoRef: this.setVideoRef, setCloseRef: this.setCloseRef, setViewVidRef: this.setViewVidRef, setViewUpRef: this.setViewUpRef, setBaRef: this.setBaRef, setDevRef: this.setDevRef, setPzRef: this.setPzRef, setCarRef: this.setCarRef,
+      setRootRef: this.setRootRef, setHeroRef: this.setHeroRef, setFilmRef: this.setFilmRef, setSkipRef: this.setSkipRef, setCtaRef: this.setCtaRef, setStripRef: this.setStripRef, setStripNRef: this.setStripNRef, setVideoRef: this.setVideoRef, setCloseRef: this.setCloseRef, setViewVidRef: this.setViewVidRef, setViewUpRef: this.setViewUpRef, setBaRef: this.setBaRef, setDevRef: this.setDevRef, setPzRef: this.setPzRef, setSkyRef: this.setSkyRef, setCarRef: this.setCarRef,
       heroClass: 'hero2 is-' + this.state.phase + (this.state.outro && this.state.phase === 'playing' ? ' is-outro' : ''),
       loaderOn: this.state.loader !== 'gone',
       loaderClass: 'loader' + (this.state.loader === 'leaving' ? ' is-leaving' : ''),
