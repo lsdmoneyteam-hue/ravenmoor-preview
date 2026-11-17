@@ -25,6 +25,7 @@ body{margin:0}
 @media (prefers-reduced-motion: no-preference){html{scroll-behavior:smooth}}
 .rd{--ink:#0E0F11;--bone:#EDE8DF;--amber:#C8913A;--mute:rgba(237,232,223,.68);--rule:rgba(237,232,223,.18);--mute-d:rgba(14,15,17,.74);--rule-d:rgba(14,15,17,.22);position:relative;background:var(--ink);color:var(--bone);font-family:'Schibsted Grotesk',system-ui,sans-serif;font-size:17px;line-height:1.55;-webkit-font-smoothing:antialiased;overflow-x:clip;isolation:isolate}
 .sky{position:fixed;left:0;top:0;width:100%;height:min(100vh,1200px);z-index:-1;pointer-events:none}
+.earth{position:fixed;left:0;bottom:0;width:100%;height:min(52vh,640px);z-index:-1;pointer-events:none}
 .rd *,.rd *::before,.rd *::after{box-sizing:border-box}
 .rd a{color:inherit}
 .rd :focus-visible{outline:2px solid var(--amber);outline-offset:4px}
@@ -389,6 +390,7 @@ window.__ldReady=Promise.race([getHi(),new Promise(function(r){setTimeout(r,1200
 <script type="text/plain" id="tplsrc">
 <div class="rd" id="top" ref="{{setRootRef}}">
 <canvas class="sky" ref="{{setSkyRef}}" aria-hidden="true"></canvas>
+<canvas class="earth" ref="{{setEarthRef}}" aria-hidden="true"></canvas>
 <a class="skip" href="#main">Skip to content</a>
 <svg width="0" height="0" style="position: absolute" aria-hidden="true" focusable="false"><defs>
 <linearGradient id="hSky" x1="0" y1="0" x2="0" y2="1"><stop offset="0" stop-color="#121318"></stop><stop offset=".3" stop-color="#3b2b22"></stop><stop offset=".5" stop-color="#8f5d32"></stop><stop offset=".6" stop-color="#d79a4f"></stop><stop offset=".66" stop-color="#f2d49a"></stop><stop offset="1" stop-color="#f2d49a"></stop></linearGradient>
@@ -795,6 +797,7 @@ class Component extends DCLogic {
     this.setDevRef = this.attachDev.bind(this);
     this.setPzRef = this.attachPz.bind(this);
     this.setSkyRef = this.attachSky.bind(this);
+    this.setEarthRef = this.attachEarth.bind(this);
     this.setCarRef = this.attachCar.bind(this);
     this.setViewVidRef = (el) => { if (el && this._viewVid !== el) { this._viewVid = el; el.setAttribute('playsinline', ''); setTimeout(() => this.syncViewVideo(), 0); } };
   }
@@ -1029,10 +1032,10 @@ class Component extends DCLogic {
       const max = Math.max(1, document.documentElement.scrollHeight - vh), prog = Math.min(1, Math.max(0, sy / max));
       ctx.setTransform(dpr, 0, 0, dpr, 0, 0); ctx.clearRect(0, 0, W, H);
       if (sy < vh * .15 || document.hidden) return;
-      // scrolling tilts the view down from overhead to the southern horizon, where a dusk glow rises
+      // scrolling tilts the view down from overhead to the southern horizon (the dusk glow is only a fallback where the Earth cannot be drawn)
       const dec0 = (64 - 74 * prog) * D; sd0 = Math.sin(dec0); cd0 = Math.cos(dec0);
       const g = Math.max(0, (prog - .3) / .7);
-      if (g > 0) {
+      if (g > 0 && !this._earthOK) {
         const gr = ctx.createRadialGradient(W / 2, H * 1.3, 0, W / 2, H * 1.3, Math.max(W, H));
         gr.addColorStop(0, 'rgba(200,145,58,' + (.42 * g).toFixed(3) + ')'); gr.addColorStop(.5, 'rgba(140,74,36,' + (.16 * g).toFixed(3) + ')'); gr.addColorStop(1, 'rgba(14,15,17,0)');
         ctx.fillStyle = gr; ctx.fillRect(0, 0, W, H);
@@ -1090,6 +1093,80 @@ class Component extends DCLogic {
       document.addEventListener('pointerleave', () => { px = -1; py = -1; req(); });
     }
     req();
+  }
+  attachEarth(cv) {
+    if (!cv || cv === this._earthEl) return;
+    this._earthEl = cv;
+    // The planet under the page: the real Earth at night, seen from orbit looking north. Scrolling crosses the Atlantic and arrives over Britain.
+    // Night-lights map: NASA Earth at Night imagery, as shipped with three-globe (MIT, (c) 2019 Vasco Asturiano).
+    let gl = null;
+    try { gl = cv.getContext('webgl', { alpha: true, premultipliedAlpha: true, antialias: false, powerPreference: 'low-power' }); } catch (e) {}
+    if (!gl) return;
+    const sh = (type, src) => { const s = gl.createShader(type); gl.shaderSource(s, src); gl.compileShader(s); return gl.getShaderParameter(s, gl.COMPILE_STATUS) ? s : null; };
+    const vs = sh(gl.VERTEX_SHADER, 'attribute vec2 p;void main(){gl_Position=vec4(p,0.,1.);}');
+    const fs = sh(gl.FRAGMENT_SHADER, [
+      '#ifdef GL_FRAGMENT_PRECISION_HIGH', 'precision highp float;', '#else', 'precision mediump float;', '#endif',
+      'uniform vec2 uC;uniform float uR,uLon,uTilt,uA;uniform sampler2D uT;',
+      'void main(){',
+      'vec2 q=(gl_FragCoord.xy-uC)/uR;float d=length(q),px=1.5/uR;',
+      'float inside=smoothstep(1.+px,1.-px,d);vec3 col=vec3(0.);',
+      'if(d<1.+px){float z=sqrt(max(0.,1.-d*d));float ct=cos(uTilt),st=sin(uTilt);',
+      'vec3 m=vec3(q.x,q.y*ct-z*st,q.y*st+z*ct);',
+      'float lat=degrees(asin(clamp(m.y,-1.,1.))),lon=degrees(atan(m.x,m.z))+uLon;',
+      'vec2 uv=clamp(vec2((lon+140.)/198.,(80.-lat)/60.),0.,1.);vec3 t=texture2D(uT,uv).rgb;',
+      'vec2 o=vec2(1.6/2252.,1.6/683.);',
+      'vec3 b=(texture2D(uT,uv+vec2(o.x,0.)).rgb+texture2D(uT,uv-vec2(o.x,0.)).rgb+texture2D(uT,uv+vec2(0.,o.y)).rgb+texture2D(uT,uv-vec2(0.,o.y)).rgb)*.25;',
+      'float lm=smoothstep(.04,.42,t.r-t.b*.8),lg=smoothstep(.02,.4,b.r-b.b*.8);',
+      'col=t*vec3(.42,.6,.95)*.5+vec3(1.,.76,.38)*(lm*1.7+lg*.9);',
+      'col*=mix(.62,1.,smoothstep(.0,.55,1.-z));',
+      'col+=vec3(.1,.34,1.)*pow(1.-z,7.)*.95;}',
+      'float line=exp(-abs(d-1.)*uR/2.2),halo=exp(-max(d-1.,0.)*uR/28.);',
+      'vec3 air=vec3(.5,.78,1.)*line*.9+vec3(.1,.36,1.)*halo*.55*(1.-inside);',
+      'float a=max(inside,min(1.,line*.9+halo*.5*(1.-inside)));',
+      'gl_FragColor=vec4((col*inside+air)*uA,a*uA);}'
+    ].join('\n'));
+    if (!vs || !fs) return;
+    const pr = gl.createProgram(); gl.attachShader(pr, vs); gl.attachShader(pr, fs); gl.linkProgram(pr);
+    if (!gl.getProgramParameter(pr, gl.LINK_STATUS)) return;
+    gl.useProgram(pr);
+    const buf = gl.createBuffer(); gl.bindBuffer(gl.ARRAY_BUFFER, buf);
+    gl.bufferData(gl.ARRAY_BUFFER, new Float32Array([-1, -1, 1, -1, -1, 1, -1, 1, 1, -1, 1, 1]), gl.STATIC_DRAW);
+    const loc = gl.getAttribLocation(pr, 'p'); gl.enableVertexAttribArray(loc); gl.vertexAttribPointer(loc, 2, gl.FLOAT, false, 0, 0);
+    const U = {}; ['uC', 'uR', 'uLon', 'uTilt', 'uA', 'uT'].forEach((n) => { U[n] = gl.getUniformLocation(pr, n); });
+    let W = 0, H = 0, dpr = 1, raf = 0, ready = false, mx = 0;
+    const fine = !!(window.matchMedia && window.matchMedia('(hover:hover) and (pointer:fine)').matches);
+    const size = () => {
+      const r = cv.getBoundingClientRect(); if (!r.width || !r.height) return;
+      W = r.width; H = r.height; dpr = Math.min(1.5, window.devicePixelRatio || 1);
+      cv.width = Math.round(W * dpr); cv.height = Math.round(H * dpr);
+    };
+    const draw = () => {
+      raf = 0; if (!ready) return;
+      if (!W) size(); if (!W) return;
+      const sy = window.scrollY || window.pageYOffset || 0, vh = window.innerHeight || H;
+      const max = Math.max(1, document.documentElement.scrollHeight - vh), prog = Math.min(1, Math.max(0, sy / max));
+      gl.viewport(0, 0, cv.width, cv.height); gl.clearColor(0, 0, 0, 0); gl.clear(gl.COLOR_BUFFER_BIT);
+      const A = Math.min(1, Math.max(0, (sy - vh * .15) / (vh * .5)));
+      if (A <= 0 || document.hidden) return;
+      const e = prog * prog * (3 - 2 * prog), R = Math.max(W, vh) * 1.05, rise = vh * (.07 + .35 * e);
+      gl.uniform2f(U.uC, (W / 2 + mx * 16) * dpr, (rise - R) * dpr);
+      gl.uniform1f(U.uR, R * dpr); gl.uniform1f(U.uLon, -82 + 80 * e + mx * 2.5); gl.uniform1f(U.uTilt, 12 * Math.PI / 180); gl.uniform1f(U.uA, A);
+      gl.drawArrays(gl.TRIANGLES, 0, 6);
+    };
+    const req = () => { if (!raf) raf = requestAnimationFrame(draw); };
+    const img = new Image();
+    img.onload = () => {
+      const tx = gl.createTexture(); gl.bindTexture(gl.TEXTURE_2D, tx);
+      gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_WRAP_S, gl.CLAMP_TO_EDGE); gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_WRAP_T, gl.CLAMP_TO_EDGE);
+      gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_MIN_FILTER, gl.LINEAR); gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_MAG_FILTER, gl.LINEAR);
+      try { gl.texImage2D(gl.TEXTURE_2D, 0, gl.RGB, gl.RGB, gl.UNSIGNED_BYTE, img); } catch (e) { return; }
+      gl.uniform1i(U.uT, 0); ready = true; this._earthOK = true; req();
+    };
+    img.src = 'a/3269279759af.jpg';
+    window.addEventListener('scroll', req, { passive: true });
+    window.addEventListener('resize', () => { W = 0; req(); });
+    document.addEventListener('visibilitychange', req);
+    if (fine) window.addEventListener('pointermove', (ev) => { if (ev.pointerType && ev.pointerType !== 'mouse') return; mx = ev.clientX / Math.max(1, window.innerWidth) - .5; req(); }, { passive: true });
   }
   attachCar(el) {
     if (!el || el === this._carEl) return;
@@ -1870,7 +1947,7 @@ class Component extends DCLogic {
     const oi = this.state.open, mi = oi == null ? 0 : oi;
     const m = { ...S[mi], useTrack: 'use-style:' + S[mi].id };
     return {
-      setRootRef: this.setRootRef, setHeroRef: this.setHeroRef, setFilmRef: this.setFilmRef, setSkipRef: this.setSkipRef, setCtaRef: this.setCtaRef, setStripRef: this.setStripRef, setStripNRef: this.setStripNRef, setVideoRef: this.setVideoRef, setCloseRef: this.setCloseRef, setViewVidRef: this.setViewVidRef, setViewUpRef: this.setViewUpRef, setBaRef: this.setBaRef, setDevRef: this.setDevRef, setPzRef: this.setPzRef, setSkyRef: this.setSkyRef, setCarRef: this.setCarRef,
+      setRootRef: this.setRootRef, setHeroRef: this.setHeroRef, setFilmRef: this.setFilmRef, setSkipRef: this.setSkipRef, setCtaRef: this.setCtaRef, setStripRef: this.setStripRef, setStripNRef: this.setStripNRef, setVideoRef: this.setVideoRef, setCloseRef: this.setCloseRef, setViewVidRef: this.setViewVidRef, setViewUpRef: this.setViewUpRef, setBaRef: this.setBaRef, setDevRef: this.setDevRef, setPzRef: this.setPzRef, setSkyRef: this.setSkyRef, setEarthRef: this.setEarthRef, setCarRef: this.setCarRef,
       heroClass: 'hero2 is-' + this.state.phase + (this.state.outro && this.state.phase === 'playing' ? ' is-outro' : ''),
       loaderOn: this.state.loader !== 'gone',
       loaderClass: 'loader' + (this.state.loader === 'leaving' ? ' is-leaving' : ''),
