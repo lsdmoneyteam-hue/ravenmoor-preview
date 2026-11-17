@@ -1012,7 +1012,7 @@ class Component extends DCLogic {
     const N = S.length / 4, sSd = new Float32Array(N), sCd = new Float32Array(N), sCr = new Float32Array(N), sSr = new Float32Array(N), sM = new Float32Array(N), sPh = new Float32Array(N);
     for (let i = 0; i < N; i++) { const ra = S[i * 4] / 100 * D - RA0, de = S[i * 4 + 1] / 100 * D; sSd[i] = Math.sin(de); sCd[i] = Math.cos(de); sCr[i] = Math.cos(ra); sSr[i] = Math.sin(ra); sM[i] = S[i * 4 + 2] / 10; sPh[i] = (i * 2.399) % 6.283; }
     const pre = (ra10, de10) => { const ra = ra10 / 10 * D - RA0, de = de10 / 10 * D; return [Math.sin(de), Math.cos(de), Math.cos(ra), Math.sin(ra)]; };
-    const CN = C.map((c) => ({ name: c[0], lab: pre(c[1], c[2]), segs: c[3].map((s) => { const o = []; for (let i = 0; i < s.length; i += 2) o.push(pre(s[i], s[i + 1])); return o; }), h: 0 }));
+    const CN = C.map((c) => ({ segs: c[3].map((s) => { const o = []; for (let i = 0; i < s.length; i += 2) o.push(pre(s[i], s[i + 1])); return o; }) }));
     let W = 0, H = 0, dpr = 1, R = 1, px = -1, py = -1, raf = 0, sd0 = 0, cd0 = 1, X = 0, Y = 0;
     const size = () => {
       const r = cv.getBoundingClientRect(); if (!r.width || !r.height) return;
@@ -1050,30 +1050,36 @@ class Component extends DCLogic {
         if (m < 1.6) { ctx.globalAlpha = a * .16; ctx.beginPath(); ctx.arc(x, y, r * 3.2, 0, 6.2832); ctx.fill(); }
         ctx.globalAlpha = a; ctx.beginPath(); ctx.arc(x, y, r, 0, 6.2832); ctx.fill();
       }
-      // constellations show their figure and name under the mouse; on a phone, the one nearest the middle of the screen
-      let best = -1, bd = Math.min(W, H) * .34, pbest = 120, moving = false;
-      const cx = W / 2, cy = H * .42;
-      for (let ci = 0; ci < CN.length; ci++) {
-        const cn = CN[ci]; let md = 1e9, pd = 1e9, n = 0, ax = 0, ay = 0;
-        cn.pts = cn.segs.map((sg) => sg.map((p) => { if (!proj(p)) return null; if (X > -40 && X < W + 40 && Y > -40 && Y < H + 40) { n++; ax += X; ay += Y; const d = Math.hypot(X - cx, Y - cy); if (d < md) md = d; if (px >= 0) { const q = Math.hypot(X - px, Y - py); if (q < pd) pd = q; } } return [X, Y]; }));
-        cn.on = n; cn.ax = n ? ax / n : 0; cn.ay = n ? ay / n : 0;
-        if (fine) { if (n > 1 && pd < pbest) { pbest = pd; best = ci; } } else if (n > 1 && md < bd) { bd = md; best = ci; }
-      }
-      ctx.lineWidth = .9; ctx.lineJoin = 'round'; ctx.strokeStyle = '#EDE8DF'; ctx.textAlign = 'center';
-      ctx.font = "italic 500 17px 'Cormorant Garamond', Georgia, serif";
-      for (let ci = 0; ci < CN.length; ci++) {
-        const cn = CN[ci], target = ci === best ? 1 : 0;
-        cn.h += (target - cn.h) * (reduce ? 1 : .14);
-        if (Math.abs(target - cn.h) > .01) moving = true; else cn.h = target;
-        if (cn.h < .01 || !cn.on) continue;
-        ctx.globalAlpha = cn.h * (fine ? .5 : .32);
-        for (const sg of cn.pts) { ctx.beginPath(); let pen = false; for (const p of sg) { if (!p) { pen = false; continue; } if (pen) ctx.lineTo(p[0], p[1]); else { ctx.moveTo(p[0], p[1]); pen = true; } } ctx.stroke(); }
-        let lx = cn.ax, ly = cn.ay;
-        if (proj(cn.lab) && X > 50 && X < W - 50 && Y > 24 && Y < H - 16) { lx = X; ly = Y; }
-        ctx.globalAlpha = cn.h * (fine ? .85 : .6); ctx.fillStyle = '#EDE8DF'; ctx.fillText(cn.name, Math.min(W - 60, Math.max(60, lx)), ly);
+      // constellation lines grow out of their stars and join as the pointer nears them, the way the stars brighten;
+      // on a phone, with no pointer, they do it as they cross the middle of the screen
+      const qx = fine ? px : W / 2, qy = fine ? py : H * .42, rad = fine ? 210 : Math.min(W, H) * .42, la = fine ? .62 : .36;
+      if (qx >= 0) {
+        ctx.lineWidth = .9; ctx.lineCap = 'round'; ctx.strokeStyle = '#EDE8DF';
+        for (let ci = 0; ci < CN.length; ci++) {
+          const segs = CN[ci].segs;
+          for (let si = 0; si < segs.length; si++) {
+            const sg = segs[si]; let ok0 = proj(sg[0]), x0 = X, y0 = Y;
+            for (let i = 1; i < sg.length; i++) {
+              const ok1 = proj(sg[i]), x1 = X, y1 = Y;
+              if (ok0 && ok1) {
+                const dx = x1 - x0, dy = y1 - y0, l2 = dx * dx + dy * dy || 1, u = Math.max(0, Math.min(1, ((qx - x0) * dx + (qy - y0) * dy) / l2));
+                const d = Math.hypot(x0 + dx * u - qx, y0 + dy * u - qy);
+                if (d < rad) {
+                  const k = 1 - d / rad, f = Math.min(1, k * 2.4) / 2;
+                  ctx.globalAlpha = k * k * (3 - 2 * k) * la;
+                  ctx.beginPath();
+                  if (f >= .5) { ctx.moveTo(x0, y0); ctx.lineTo(x1, y1); }
+                  else { ctx.moveTo(x0, y0); ctx.lineTo(x0 + dx * f, y0 + dy * f); ctx.moveTo(x1, y1); ctx.lineTo(x1 - dx * f, y1 - dy * f); }
+                  ctx.stroke();
+                }
+              }
+              ok0 = ok1; x0 = x1; y0 = y1;
+            }
+          }
+        }
       }
       ctx.globalAlpha = 1;
-      if (tw || moving) req();
+      if (tw) req();
     };
     const req = () => { if (!raf) raf = requestAnimationFrame(draw); };
     window.addEventListener('scroll', req, { passive: true });
