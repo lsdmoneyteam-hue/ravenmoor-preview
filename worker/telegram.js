@@ -229,6 +229,28 @@ function when(iso) {
   return Number.isFinite(t) ? WHEN.format(new Date(t)) : String(iso);
 }
 
+/* ---------- hourly cron: chase enquiries left on "new" ---------- */
+
+const UK_HOUR = new Intl.DateTimeFormat('en-GB', { timeZone: 'Europe/London', hour: '2-digit', hour12: false });
+
+export async function hourly(env) {
+  if (!telegramReady(env)) return;
+  const hour = Number(UK_HOUR.format(new Date()));
+  if (!(hour >= 8 && hour < 21)) return; // not at night
+  await ready(env);
+  const now = Date.now();
+  const r = await env.DB.prepare(
+    "SELECT id, created_at, name, agency FROM leads WHERE status = 'new' AND nudged = 0 AND created_at < ?1 AND created_at > ?2 ORDER BY id LIMIT 5"
+  ).bind(new Date(now - 2 * 3600000).toISOString(), new Date(now - 7 * 86400000).toISOString()).all();
+  for (const l of r.results) {
+    const hours = Math.max(2, Math.round((now - Date.parse(l.created_at)) / 3600000));
+    const sent = await sendOwner(env, '\u23F0 <b>Lead #' + l.id + ' is still marked new</b>\n' + esc(l.name) + ', ' + esc(l.agency) + '. Sent ' + hours + ' hours ago.\nSend /lead ' + l.id + ' for the details.', {
+      reply_markup: { inline_keyboard: [[{ text: 'Mark contacted', callback_data: 'c:' + l.id }]] },
+    });
+    if (sent) await env.DB.prepare('UPDATE leads SET nudged = 1 WHERE id = ?1').bind(l.id).run();
+  }
+}
+
 /* ---------- daily cron ---------- */
 
 export async function daily(env) {

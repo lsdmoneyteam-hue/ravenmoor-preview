@@ -8,6 +8,7 @@
 //   GET  /admin            private dashboard, signed in through the bot            (admin.js)
 //   GET  /a/*.mp4          video with byte ranges                                  (media.js)
 //   cron 08:00 UTC         yesterday's digest to Telegram, old data removed        (telegram.js)
+//   cron hourly            reminder for an enquiry left on "new" for two hours      (telegram.js)
 //
 // Secrets (Cloudflare dashboard -> Worker -> Settings -> Variables and Secrets). All optional:
 // a missing one switches that feature off, it never breaks the form.
@@ -18,7 +19,7 @@
 
 import { lead } from './leads.js';
 import { collect } from './track.js';
-import { tgRegister, tgHook, daily } from './telegram.js';
+import { tgRegister, tgHook, daily, hourly } from './telegram.js';
 import { admin } from './admin.js';
 import { media } from './media.js';
 import { json, log, errText } from './util.js';
@@ -43,6 +44,7 @@ export default {
   },
 
   async scheduled(controller, env, ctx) {
-    ctx.waitUntil(daily(env).catch((err) => log('error', 'daily', { error: errText(err) })));
+    const job = controller.cron === '0 8 * * *' ? daily : hourly;
+    ctx.waitUntil(job(env).catch((err) => log('error', 'cron', { cron: controller.cron, error: errText(err) })));
   },
 };

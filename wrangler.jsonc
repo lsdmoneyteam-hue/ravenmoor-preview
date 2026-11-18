@@ -13,7 +13,8 @@
   },
   "d1_databases": [{ "binding": "DB", "database_name": "ravenmoor", "database_id": "fffb178d-a88f-4e4b-9ce5-a4fa6f4b1276" }],
   // 08:00 UTC every day: yesterday's digest to Telegram, and old tracking data removed.
-  "triggers": { "crons": ["0 8 * * *"] },
+  // Half past every hour: a reminder for any enquiry left on "new" for two hours (daytime only).
+  "triggers": { "crons": ["0 8 * * *", "30 * * * *"] },
   "observability": {
     "enabled": true,
     "logs": { "enabled": true },

@@ -23,6 +23,8 @@ const STEPS = [
     // One-time dashboard login links (only a hash of the token is kept).
     'CREATE TABLE IF NOT EXISTS logins (hash TEXT PRIMARY KEY, expires INTEGER NOT NULL)',
   ],
+  // 3: one reminder per enquiry that is left on "new"
+  ['ALTER TABLE leads ADD COLUMN nudged INTEGER NOT NULL DEFAULT 0'],
 ];
 
 let readyPromise = null;
