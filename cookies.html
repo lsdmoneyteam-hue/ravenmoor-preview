@@ -1,0 +1,86 @@
+<!doctype html>
+<html lang="en-GB">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<meta name="robots" content="noindex, nofollow">
+<title>Cookies: Ravenmoor Digital</title>
+<meta name="description" content="What this site stores in your browser, what it counts, and how to switch it off.">
+<link rel="icon" href="favicon.svg" type="image/svg+xml">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Cormorant+Garamond:wght@400;500;600&amp;family=Schibsted+Grotesk:wght@400;500;600&amp;display=swap">
+<link rel="stylesheet" href="legal.css">
+</head>
+<body>
+<a class="skip" href="#main">Skip to content</a>
+<header class="top"><a class="brand" href="/">Ravenmoor Digital</a><a href="/">Back to the site</a></header>
+<main id="main">
+<h1>Cookies</h1>
+<p class="lede">What this site stores in your browser, what it counts, and how to switch it off.</p>
+<p class="meta">Last updated 18 November 2026</p>
+
+<h2>Your settings</h2>
+<div class="panel">
+<p id="state-stats" class="state" role="status">Checking your settings.</p>
+<p><button type="button" class="btn" id="btn-stats">Turn statistics off</button></p>
+</div>
+<div class="panel">
+<p id="state-track" class="state" role="status"></p>
+<p class="row"><button type="button" class="btn ghost" id="btn-accept">Accept</button><button type="button" class="btn ghost" id="btn-reject">Reject</button></p>
+</div>
+<noscript><p>These buttons need JavaScript. Without it, this site sends no statistics at all.</p></noscript>
+
+<h2>What we store in your browser</h2>
+<p>This site sets no cookies. It uses your browser's local storage for three things.</p>
+<div class="table">
+<table>
+<thead><tr><th scope="col">Name</th><th scope="col">What it is for</th><th scope="col">When it is set</th></tr></thead>
+<tbody>
+<tr><td><code>rd-cookie</code></td><td>Remembers whether you pressed Accept or Reject, so the banner does not come back.</td><td>When you answer the banner</td></tr>
+<tr><td><code>rd-vid</code></td><td>A random ID that lets us join up your visits and see which reels you watched.</td><td>Only if you press Accept</td></tr>
+<tr><td><code>rd-stats</code></td><td>Remembers that you turned statistics off.</td><td>Only if you turn statistics off</td></tr>
+</tbody>
+</table>
+</div>
+
+<h2>What we count without asking</h2>
+<p>We count visits, the sections people reach, the reels they open, the kind of device and the site they came from. These are totals only. They are not linked to you and nothing is stored on your device to make them. While a page is open we also know that someone is viewing a section; that is not stored on your device and is deleted within minutes.</p>
+<p>UK rules allow this kind of anonymous counting without consent, as long as you can switch it off. The button at the top of this page does that. If your browser sends a Global Privacy Control signal, we already send nothing.</p>
+
+<h2>What changes if you accept</h2>
+<p>We store the random ID above and record what your browser does on this site: return visits, reels opened, time on prices, and whether you started the form. If you send the form, that history is linked to your enquiry. We delete it after 90 days. Pressing Reject on this page removes the ID straight away.</p>
+
+<p>More detail is on the <a href="/privacy">Privacy page</a>.</p>
+</main>
+<footer class="foot"><a href="/">Home</a><a href="/privacy">Privacy</a><a href="/cookies">Cookies</a></footer>
+<script>
+(function () {
+  'use strict';
+  function get(k) { try { return window.localStorage.getItem(k); } catch (e) { return null; } }
+  function set(k, v) { try { window.localStorage.setItem(k, v); return true; } catch (e) { return false; } }
+  function del(k) { try { window.localStorage.removeItem(k); } catch (e) {} }
+  var sStats = document.getElementById('state-stats'), sTrack = document.getElementById('state-track');
+  var bStats = document.getElementById('btn-stats'), bAccept = document.getElementById('btn-accept'), bReject = document.getElementById('btn-reject');
+  function show() {
+    var off = get('rd-stats') === 'off', gpc = !!navigator.globalPrivacyControl, choice = get('rd-cookie');
+    sStats.textContent = gpc ? 'Statistics are off because your browser sends a Global Privacy Control signal.' : off ? 'Statistics are off. This site sends nothing about your visit.' : 'Statistics are on. Your visits are counted anonymously.';
+    bStats.textContent = off ? 'Turn statistics on' : 'Turn statistics off';
+    bStats.hidden = gpc;
+    sTrack.textContent = off || gpc ? 'Joining up your visits is off.' : choice === 'accepted' ? 'You pressed Accept. This browser is remembered between visits.' : choice === 'rejected' ? 'You pressed Reject. This browser is not remembered between visits.' : 'You have not chosen yet. This browser is not remembered between visits.';
+    bAccept.hidden = off || gpc || choice === 'accepted';
+    bReject.hidden = choice === 'rejected' && !get('rd-vid');
+  }
+  bStats.addEventListener('click', function () {
+    if (get('rd-stats') === 'off') del('rd-stats');
+    else if (set('rd-stats', 'off')) { del('rd-vid'); set('rd-cookie', 'rejected'); }
+    else sStats.textContent = 'Your browser blocked that setting. Statistics could not be turned off here.';
+    show();
+  });
+  bAccept.addEventListener('click', function () { set('rd-cookie', 'accepted'); show(); });
+  bReject.addEventListener('click', function () { set('rd-cookie', 'rejected'); del('rd-vid'); show(); });
+  show();
+})();
+</script>
+</body>
+</html>

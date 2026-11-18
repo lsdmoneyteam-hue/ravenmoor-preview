@@ -12,8 +12,8 @@
 <meta property="og:site_name" content="Ravenmoor Digital">
 <meta property="og:title" content="Ravenmoor Digital: listing reels from the photos you already have">
 <meta property="og:description" content="Send the listing photos you already have, pick a style and post the reel tomorrow.">
-<meta property="og:url" content="https://lsdmoneyteam-hue.github.io/ravenmoor-preview/">
-<meta property="og:image" content="https://lsdmoneyteam-hue.github.io/ravenmoor-preview/og.jpg">
+<meta property="og:url" content="https://ravenmoor-digital.com/">
+<meta property="og:image" content="https://ravenmoor-digital.com/og.jpg">
 <meta property="og:image:width" content="1200">
 <meta property="og:image:height" content="630">
 <meta name="twitter:card" content="summary_large_image">
@@ -609,7 +609,7 @@ window.__ldReady=Promise.race([getHi(),new Promise(function(r){setTimeout(r,1200
 <div class="wrap">
 <ul class="ftr-meta">
 <li>Ravenmoor Digital Ltd, company no. [TBC]</li>
-<li><a href="mailto:hello@ravenmoordigital.co.uk">hello@ravenmoordigital.co.uk</a></li>
+<li><a href="mailto:hello@ravenmoor-digital.com">hello@ravenmoor-digital.com</a></li>
 <li><a href="/privacy">Privacy</a></li>
 <li><a href="/cookies">Cookies</a></li>
 </ul>
@@ -621,7 +621,7 @@ window.__ldReady=Promise.race([getHi(),new Promise(function(r){setTimeout(r,1200
 
 <sc-if value="{{showCookie}}" hint-placeholder-val="{{true}}">
 <div class="cookie" role="region" aria-label="Cookie choices">
-<p>We'd like to use analytics cookies to see which reels get watched. <a href="/cookies">Cookies</a></p>
+<p>We count visits without identifying you. Accept and we'll also remember this browser, so we can see which reels get watched. <a href="/cookies">Cookies</a></p>
 <div class="ck-btns"><button type="button" class="ck" onClick="{{rejectCookies}}" data-track="cookie-reject">Reject</button><button type="button" class="ck" onClick="{{acceptCookies}}" data-track="cookie-accept">Accept</button></div>
 </div>
 </sc-if>
@@ -2024,11 +2024,11 @@ class Component extends DCLogic {
         this._sending = true;
         if (note) note.textContent = '';
         if (btn) btn.textContent = 'Sending\u2026';
-        const body = { kind: plans ? 'plans' : 'reel', name: val('name'), agency: val('agency'), email: val('email'), phone: val('phone'), listing: val('listing'), style: val('style'), website: val('website'), ref: this.state.agency || '' };
+        const body = { kind: plans ? 'plans' : 'reel', name: val('name'), agency: val('agency'), email: val('email'), phone: val('phone'), listing: val('listing'), style: val('style'), website: val('website'), ref: this.state.agency || '', vid: (() => { try { return window.localStorage.getItem('rd-cookie') === 'accepted' ? (window.localStorage.getItem('rd-vid') || '') : ''; } catch (err) { return ''; } })() };
         fetch('/api/lead', { method: 'POST', headers: { 'content-type': 'application/json' }, body: JSON.stringify(body) })
           .then((r) => r.json().catch(() => null).then((j) => ({ r: r, j: j })))
           .then((o) => {
-            if (o.r.ok && o.j && o.j.ok) { this._sending = false; this.setState({ sent: true, doneName: nm }); }
+            if (o.r.ok && o.j && o.j.ok) { this._sending = false; this.setState({ sent: true, doneName: nm }); try { window.dispatchEvent(new Event('rd:lead')); } catch (err) {} }
             else fail(why(o.j));
           })
           .catch(() => fail("That didn't send. Check your connection and try again."));
@@ -2046,5 +2046,6 @@ class Component extends DCLogic {
 
 window.__ldReady.then(function(){ mountDC(Component, { agency: new URLSearchParams(location.search).get('a') || '' }); var p=document.getElementById('pre'); if(p) p.remove(); });
 </script>
+<script src="t.js" defer></script>
 </body>
 </html>

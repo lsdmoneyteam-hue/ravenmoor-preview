@@ -1,0 +1,249 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<meta name="robots" content="noindex, nofollow">
+<title>Ravenmoor dashboard</title>
+<style nonce="__NONCE__">
+:root{--ink:#0E0F11;--panel:#17191C;--bone:#EDE8DF;--amber:#C8913A;--mute:rgba(237,232,223,.68);--rule:rgba(237,232,223,.16);--good:#8FCB9B}
+*{box-sizing:border-box}
+body{margin:0;background:var(--ink);color:var(--bone);font:16px/1.5 system-ui,-apple-system,"Segoe UI",sans-serif;-webkit-font-smoothing:antialiased}
+header{display:flex;align-items:center;justify-content:space-between;gap:8px 16px;flex-wrap:wrap;padding:14px 18px;border-bottom:1px solid var(--rule);position:sticky;top:0;background:var(--ink);z-index:2}
+h1{font-size:18px;margin:0;font-weight:600}
+h2{font-size:13px;font-weight:600;letter-spacing:.02em;color:var(--mute);margin:0 0 12px}
+main{max-width:1100px;margin:0 auto;padding:18px;display:grid;gap:16px}
+@media (min-width:860px){main{grid-template-columns:1fr 1fr}.wide{grid-column:1/-1}}
+section{background:var(--panel);border:1px solid var(--rule);border-radius:6px;padding:16px;min-width:0}
+a{color:var(--bone);text-underline-offset:3px}
+.small{font-size:13px;color:var(--mute)}
+.stamp{font-size:13px;color:var(--mute);white-space:nowrap}
+.tiles{display:grid;grid-template-columns:repeat(4,1fr);gap:10px}
+.tile{border:1px solid var(--rule);border-radius:4px;padding:10px 12px}
+.tile b{display:block;font-size:26px;line-height:1.1;font-weight:600}
+.tile span{font-size:13px;color:var(--mute)}
+.big{font-size:40px;font-weight:600;line-height:1}
+.dot{display:inline-block;width:9px;height:9px;border-radius:50%;background:var(--good);margin-right:8px}
+.dot.off{background:var(--rule)}
+ul{list-style:none;margin:0;padding:0}
+.rows li{display:flex;justify-content:space-between;gap:12px;padding:7px 0;border-top:1px solid var(--rule);font-size:15px}
+.rows li:first-child{border-top:0}
+.rows .k{min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.rows .v{color:var(--mute);white-space:nowrap}
+.bars li{display:grid;grid-template-columns:52px 1fr 150px;gap:10px;align-items:center;padding:4px 0;font-size:13px}
+.bar{height:10px;background:var(--rule);border-radius:2px;overflow:hidden}
+.bar i{display:block;height:100%;background:var(--amber);width:0}
+.bars .n{color:var(--mute);text-align:right;white-space:nowrap}
+.lead{border-top:1px solid var(--rule);padding:14px 0}
+.lead:first-child{border-top:0;padding-top:0}
+.lead-top{display:flex;justify-content:space-between;gap:10px;align-items:flex-start}
+.lead-name{font-weight:600}
+.lead-meta{font-size:14px;color:var(--mute);overflow-wrap:anywhere}
+.lead-links{display:flex;flex-wrap:wrap;gap:6px 16px;font-size:14px;margin-top:6px;overflow-wrap:anywhere}
+.lead-j{font-size:14px;margin-top:6px;color:var(--bone)}
+select,button{font:inherit;color:var(--bone);background:var(--ink);border:1px solid var(--rule);border-radius:4px;min-height:40px;padding:0 10px}
+button{cursor:pointer}
+select.new{border-color:var(--amber);color:var(--amber)}
+:focus-visible{outline:2px solid var(--amber);outline-offset:2px}
+.trail{margin-top:10px;font-size:13px;color:var(--mute);max-height:240px;overflow:auto;border-left:2px solid var(--rule);padding-left:10px}
+.trail div{padding:2px 0}
+.empty{color:var(--mute);font-size:15px}
+.err{background:#3a1d17;border:1px solid #7a3a2c;border-radius:4px;padding:10px 12px;font-size:14px}
+[hidden]{display:none!important}
+@media (max-width:520px){.tiles{grid-template-columns:repeat(2,1fr)}.bars li{grid-template-columns:44px 1fr 118px}}
+</style>
+</head>
+<body>
+<header>
+<h1>Ravenmoor dashboard</h1>
+<span class="stamp"><span id="stamp">Loading</span> &nbsp; <a href="/admin/logout">Sign out</a></span>
+</header>
+<main>
+<div class="err wide" id="err" role="alert" hidden></div>
+
+<section aria-labelledby="h-live">
+<h2 id="h-live">On the site now</h2>
+<p class="big"><span class="dot off" id="live-dot"></span><span id="live-n">0</span></p>
+<ul class="rows" id="live-by"></ul>
+<ul class="rows" id="live-people"></ul>
+<p class="small">Updates every 10 seconds. "Visitor" rows are people who accepted tracking.</p>
+</section>
+
+<section aria-labelledby="h-today">
+<h2 id="h-today">Today</h2>
+<div class="tiles">
+<div class="tile"><b id="t-visits">0</b><span>Visits</span></div>
+<div class="tile"><b id="t-plays">0</b><span>Reel plays</span></div>
+<div class="tile"><b id="t-starts">0</b><span>Form starts</span></div>
+<div class="tile"><b id="t-leads">0</b><span>Leads</span></div>
+</div>
+<h2 id="h-warm">Warm visitors, no form yet</h2>
+<ul class="rows" id="warm"></ul>
+</section>
+
+<section class="wide" aria-labelledby="h-leads">
+<h2 id="h-leads">Enquiries</h2>
+<div id="leads"></div>
+</section>
+
+<section class="wide" aria-labelledby="h-days">
+<h2 id="h-days">Last 14 days</h2>
+<ul class="bars" id="days"></ul>
+</section>
+
+<section aria-labelledby="h-reels"><h2 id="h-reels">Most opened reels, 7 days</h2><ul class="rows" id="reels"></ul></section>
+<section aria-labelledby="h-exits"><h2 id="h-exits">Where people left, 7 days</h2><ul class="rows" id="exits"></ul></section>
+<section aria-labelledby="h-refs"><h2 id="h-refs">Where they came from, 7 days</h2><ul class="rows" id="refs"></ul></section>
+<section aria-labelledby="h-devices"><h2 id="h-devices">Devices, 7 days</h2><ul class="rows" id="devices"></ul></section>
+</main>
+
+<script nonce="__NONCE__">
+(function () {
+  'use strict';
+  var SECTIONS = { hero: 'The film', proof: 'Why video', how: 'How it works', styles: 'Styles', before: 'Before and after', plans: 'Plans to life', presenter: 'Presenter', prices: 'Prices', sample: 'The form', footer: 'Footer', '': 'The top' };
+  var STATUS = [['new', 'New'], ['contacted', 'Contacted'], ['won', 'Won'], ['lost', 'Lost']];
+  var open = {};      // lead id -> journey trail is expanded
+  var trails = {};    // lead id -> loaded journey
+  var busy = false;
+
+  function $(id) { return document.getElementById(id); }
+  // Every piece of data goes in as text, never as HTML.
+  function el(tag, cls, txt) { var e = document.createElement(tag); if (cls) e.className = cls; if (txt != null) e.textContent = String(txt); return e; }
+  function clear(node) { while (node.firstChild) node.removeChild(node.firstChild); }
+  function sec(id) { return SECTIONS[id] || id; }
+  // One step of a journey, in plain words.
+  function step(name, detail) {
+    var m;
+    if ((m = /^section:(.*)$/.exec(name))) return 'Reached ' + sec(m[1]);
+    if ((m = /^dwell:(.*)$/.exec(name))) return (detail || '?') + 's on ' + sec(m[1]);
+    if ((m = /^exit:(.*)$/.exec(name))) return 'Left from ' + sec(m[1]);
+    if ((m = /^click:style-card:(.*)$/.exec(name))) return 'Opened reel: ' + m[1];
+    if ((m = /^click:use-style:(.*)$/.exec(name))) return 'Chose style: ' + m[1];
+    if ((m = /^click:pricing:(.*)$/.exec(name))) return 'Tapped price: ' + m[1];
+    if (name === 'click:form-start') return 'Started the form';
+    if (name === 'click:form-submit') return 'Pressed send';
+    if (name === 'click:cookie-accept') return 'Accepted tracking';
+    if (name === 'click:hero-cta') return 'Tapped the main button';
+    if (name === 'lead') return 'Enquiry saved';
+    if ((m = /^click:(.*)$/.exec(name))) return 'Tapped: ' + m[1];
+    return name + (detail ? ' (' + detail + ')' : '');
+  }
+  function when(iso) {
+    var d = new Date(iso);
+    if (isNaN(d)) return String(iso);
+    return d.toLocaleString('en-GB', { timeZone: 'Europe/London', day: 'numeric', month: 'short', hour: '2-digit', minute: '2-digit', hour12: false });
+  }
+  function rows(node, items, empty) {
+    clear(node);
+    if (!items.length) { node.appendChild(el('li', 'empty', empty)); return; }
+    items.forEach(function (it) { var li = el('li'); li.appendChild(el('span', 'k', it[0])); li.appendChild(el('span', 'v', it[1])); node.appendChild(li); });
+  }
+
+  function render(d) {
+    $('stamp').textContent = 'Updated ' + new Date(d.now).toLocaleTimeString('en-GB', { timeZone: 'Europe/London', hour12: false });
+    $('live-n').textContent = d.live.total;
+    $('live-dot').className = 'dot' + (d.live.total ? '' : ' off');
+    rows($('live-by'), Object.keys(d.live.by_section).map(function (k) { return [sec(k), d.live.by_section[k]]; }).sort(function (a, b) { return b[1] - a[1]; }), 'Nobody right now.');
+    rows($('live-people'), d.live.people.filter(function (p) { return p.known; }).map(function (p) {
+      return [p.who + (p.lead_id ? ' (lead #' + p.lead_id + ')' : ''), sec(p.section) + (p.visits > 1 ? ' · visit ' + p.visits : '') + (p.device ? ' · ' + p.device : '')];
+    }), '');
+    if (!d.live.people.some(function (p) { return p.known; })) clear($('live-people'));
+
+    $('t-visits').textContent = d.today.visits;
+    $('t-plays').textContent = d.today.plays;
+    $('t-starts').textContent = d.today.form_starts;
+    $('t-leads').textContent = d.today.leads;
+    rows($('warm'), d.warm.map(function (w) { return [w.who + ': ' + w.journey, when(w.last_seen)]; }), 'None in the last 7 days.');
+
+    var max = Math.max.apply(null, d.days.map(function (x) { return x.visits; }).concat([1]));
+    var days = $('days'); clear(days);
+    d.days.forEach(function (x) {
+      var li = el('li');
+      li.appendChild(el('span', null, x.day.slice(8) + '/' + x.day.slice(5, 7)));
+      var bar = el('span', 'bar'), fill = el('i'); fill.style.width = Math.round(100 * x.visits / max) + '%'; bar.appendChild(fill); li.appendChild(bar);
+      li.appendChild(el('span', 'n', x.visits + ' visits · ' + x.plays + ' plays · ' + x.leads + (x.leads === 1 ? ' lead' : ' leads')));
+      days.appendChild(li);
+    });
+
+    var pair = function (r) { return [r.id, r.n]; };
+    rows($('reels'), d.week.reels.map(pair), 'No reel plays yet.');
+    rows($('exits'), d.week.exits.map(function (r) { return [sec(r.id), r.n]; }), 'Nothing yet.');
+    rows($('refs'), d.week.refs.map(function (r) { return [r.id === 'direct' ? 'Typed or direct link' : r.id, r.n]; }), 'Nothing yet.');
+    rows($('devices'), d.week.devices.map(function (r) { return [r.id.charAt(0).toUpperCase() + r.id.slice(1), r.n]; }), 'Nothing yet.');
+    leads(d.leads);
+  }
+
+  function leads(list) {
+    var box = $('leads');
+    // Do not rebuild while someone has a status menu open.
+    if (document.activeElement && document.activeElement.tagName === 'SELECT' && box.contains(document.activeElement)) return;
+    clear(box);
+    if (!list.length) { box.appendChild(el('p', 'empty', 'No enquiries yet. They will appear here as soon as someone sends the form.')); return; }
+    list.forEach(function (l) {
+      var card = el('div', 'lead');
+      var top = el('div', 'lead-top');
+      var left = el('div');
+      left.appendChild(el('div', 'lead-name', '#' + l.id + ' ' + l.name + ', ' + l.agency));
+      left.appendChild(el('div', 'lead-meta', (l.kind === 'plans' ? 'Plans to life quote' : 'Free sample reel') + (l.style ? ' · ' + l.style : '') + ' · ' + when(l.created_at) + (l.ref ? ' · link: ' + l.ref : '')));
+      top.appendChild(left);
+      var sel = el('select', l.status === 'new' ? 'new' : null);
+      sel.setAttribute('aria-label', 'Status of enquiry ' + l.id);
+      STATUS.forEach(function (s) { var o = el('option', null, s[1]); o.value = s[0]; if (s[0] === l.status) o.selected = true; sel.appendChild(o); });
+      sel.addEventListener('change', function () { setStatus(l.id, sel.value, sel); });
+      top.appendChild(sel);
+      card.appendChild(top);
+
+      var links = el('div', 'lead-links');
+      var mail = el('a', null, l.email); mail.href = 'mailto:' + encodeURIComponent(l.email).replace(/%40/g, '@'); links.appendChild(mail);
+      var tel = el('a', null, l.phone); tel.href = 'tel:' + l.phone.replace(/[^0-9+]/g, ''); links.appendChild(tel);
+      if (/^https?:\/\//i.test(l.listing)) { var a = el('a', null, 'Listing'); a.href = l.listing; a.target = '_blank'; a.rel = 'noopener noreferrer'; links.appendChild(a); }
+      else links.appendChild(el('span', null, 'Ref: ' + l.listing));
+      if (l.tracked) {
+        var b = el('button', null, open[l.id] ? 'Hide journey' : 'Show journey');
+        b.type = 'button';
+        b.addEventListener('click', function () { open[l.id] = !open[l.id]; if (open[l.id] && !trails[l.id]) loadTrail(l.id); else refresh(true); });
+        links.appendChild(b);
+      }
+      card.appendChild(links);
+      if (open[l.id] && trails[l.id]) {
+        var t = trails[l.id];
+        if (t.journey_line) card.appendChild(el('div', 'lead-j', 'Before sending: ' + t.journey_line));
+        var trail = el('div', 'trail');
+        t.events.forEach(function (e) { trail.appendChild(el('div', null, when(e.ts) + '  ' + step(e.name, e.detail))); });
+        if (!t.events.length) trail.appendChild(el('div', null, 'No recorded steps.'));
+        card.appendChild(trail);
+      }
+      box.appendChild(card);
+    });
+  }
+
+  function fail(msg) { var e = $('err'); e.textContent = msg; e.hidden = !msg; }
+  function get(path) {
+    return fetch(path, { credentials: 'same-origin', headers: { accept: 'application/json' } }).then(function (r) {
+      if (r.status === 401) { location.href = '/admin'; throw new Error('signed out'); }
+      if (!r.ok) throw new Error('HTTP ' + r.status);
+      return r.json();
+    });
+  }
+  var last = null;
+  function refresh(local) {
+    if (local && last) { render(last); return; }
+    if (busy) return;
+    busy = true;
+    get('/admin/api/summary').then(function (d) { last = d; fail(''); render(d); }).catch(function (e) { if (String(e.message) !== 'signed out') fail('Could not refresh. Retrying.'); }).then(function () { busy = false; });
+  }
+  function loadTrail(id) {
+    get('/admin/api/lead?id=' + id).then(function (d) { trails[id] = d; refresh(true); }).catch(function () { fail('Could not load that journey.'); });
+  }
+  function setStatus(id, status, sel) {
+    fetch('/admin/api/status', { method: 'POST', credentials: 'same-origin', headers: { 'content-type': 'application/json', 'x-rm': '1' }, body: JSON.stringify({ id: id, status: status }) })
+      .then(function (r) { if (!r.ok) throw new Error('HTTP ' + r.status); sel.className = status === 'new' ? 'new' : ''; sel.blur(); fail(''); refresh(); })
+      .catch(function () { fail('Could not save that status. Try again.'); });
+  }
+  refresh();
+  setInterval(function () { if (!document.hidden) refresh(); }, 10000);
+  document.addEventListener('visibilitychange', function () { if (!document.hidden) refresh(); });
+})();
+</script>
+</body>
+</html>
