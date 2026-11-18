@@ -179,6 +179,8 @@ body{margin:0}
 .f input:focus,.f select:focus{border-bottom-color:var(--amber)}
 .f select option{color:#0E0F11}
 .note{font-size:14px;color:var(--mute);margin:0}
+.note.err{color:#EDAE96}.note.err:empty{display:none}
+.hp{position:absolute;left:-9999px;width:1px;height:1px;overflow:hidden}
 .done h3{font-family:'Cormorant Garamond',Georgia,serif;font-weight:500;font-size:44px;line-height:1;margin:0 0 16px}
 .done p{margin:0;color:var(--mute);max-width:40ch}
 .phone{width:min(64vw,290px);aspect-ratio:9/16;border-radius:38px;padding:8px;background:#000;box-shadow:0 0 0 1px rgba(237,232,223,.3),0 0 120px rgba(200,145,58,.18)}
@@ -591,6 +593,8 @@ window.__ldReady=Promise.race([getHi(),new Promise(function(r){setTimeout(r,1200
 <option data-for="styles" data-as="o" value="{{o.id}}">{{o.name}}</option>
 </select></div>
 </sc-if>
+<div class="hp" aria-hidden="true"><label for="f-web">Website</label><input id="f-web" name="website" type="text" tabindex="-1" autocomplete="off"></div>
+<p class="note err" role="alert"></p>
 <div><button type="submit" class="btn" data-track="form-submit">{{sendLabel}}</button></div>
 <sc-if value="{{notPlans}}" hint-placeholder-val="{{true}}"><p class="note">Free, watermarked, yours to keep.</p></sc-if>
 <sc-if value="{{isPlans}}" hint-placeholder-val="{{false}}"><p class="note"><button type="button" class="tlink" onClick="{{askReel}}" data-track="form-switch-reel">I want a free sample reel instead</button></p></sc-if>
@@ -2005,9 +2009,29 @@ class Component extends DCLogic {
       doneTitle: this.state.doneName ? 'Thank you, ' + this.state.doneName + '.' : 'Thank you.',
       submit: (e) => {
         if (e && e.preventDefault) e.preventDefault();
-        let nm = '';
-        try { nm = (e.currentTarget.elements.name.value || '').trim().split(/\s+/)[0].slice(0, 30); } catch (err) {}
-        this.setState({ sent: true, doneName: nm });
+        const f = e && e.currentTarget;
+        if (!f || !f.elements || this._sending) return;
+        const val = (n) => { try { return ((f.elements[n] && f.elements[n].value) || '').trim(); } catch (err) { return ''; } };
+        const nm = val('name').split(/\s+/)[0].slice(0, 30);
+        const btn = f.querySelector('button[type="submit"]'), note = f.querySelector('.err'), label = btn ? btn.textContent : '';
+        const fail = (m) => { this._sending = false; if (btn) btn.textContent = label; if (note) note.textContent = m; };
+        const why = (j) => {
+          const field = { name: 'your name', agency: plans ? 'the company name' : 'the agency name', email: 'the email address', phone: 'the phone number', listing: plans ? 'the planning reference' : 'the listing link. It should start with https://' };
+          if (j && j.error === 'invalid' && field[j.field]) return 'Please check ' + field[j.field] + '.';
+          if (j && j.error === 'already') return 'We already have your request. There is no need to send it again.';
+          return "That didn't send. Please try again in a minute.";
+        };
+        this._sending = true;
+        if (note) note.textContent = '';
+        if (btn) btn.textContent = 'Sending\u2026';
+        const body = { kind: plans ? 'plans' : 'reel', name: val('name'), agency: val('agency'), email: val('email'), phone: val('phone'), listing: val('listing'), style: val('style'), website: val('website'), ref: this.state.agency || '' };
+        fetch('/api/lead', { method: 'POST', headers: { 'content-type': 'application/json' }, body: JSON.stringify(body) })
+          .then((r) => r.json().catch(() => null).then((j) => ({ r: r, j: j })))
+          .then((o) => {
+            if (o.r.ok && o.j && o.j.ok) { this._sending = false; this.setState({ sent: true, doneName: nm }); }
+            else fail(why(o.j));
+          })
+          .catch(() => fail("That didn't send. Check your connection and try again."));
       },
       showCookie: !this.state.cookie,
       acceptCookies: () => this.saveCookie('accepted'),
