@@ -408,19 +408,23 @@ void main(){
     col = mix(lo, hi, k);
   }
 
-  /* city lights: a touch dimmer at rest, brighter and livelier near the pointer */
+  /* city lights: held back to about 40% at rest; near the pointer they come up past full strength, brightest right
+     under it and fading smoothly outwards (a tight core inside a wide, soft surround) */
   float peak = max(col.r, max(col.g, col.b));
   float warm = smoothstep(0.02, 0.16, col.r - col.b) * (1.0 - day);
   float lit = smoothstep(0.22, 0.62, peak) * warm;
+  float glow = smoothstep(0.06, 0.50, peak) * warm;      // every lit pixel, faint road glow included
   float nearPtr = 0.0;
-  if (uPtr.w > 0.0) { float a = acos(clamp(dot(p, uPtr.xyz), -1.0, 1.0)) / uPtrR; nearPtr = uPtr.w * exp(-a * a); }
+  if (uPtr.w > 0.0) { float a = acos(clamp(dot(p, uPtr.xyz), -1.0, 1.0)) / uPtrR; nearPtr = uPtr.w * (0.55 * exp(-a * a / 0.25) + 0.45 * exp(-a * a / 1.6)); }
   float fp = exp2(${TOP}.0 - zf);
   float glowing = lit * (1.0 - 0.8 * smoothstep(0.82, 1.0, peak));
-  float gain = 1.0 - 0.14 * lit;
+  /* roads and the faint glow between towns are held back hardest (to about 25%), bright city centres least (about 60%) */
+  float hold = mix(0.75, 0.40, smoothstep(0.45, 0.85, peak));
+  float gain = 1.0 - hold * glow * (1.0 - nearPtr) + nearPtr * glow * 0.9;
   if (uLife > 0.5 && glowing > 0.0) gain += glowing * shimmer(g * ${TILE * (1 << TOP)}.0 + float(f) * 977.0, fp, t) * (0.75 + 1.6 * nearPtr);
   gain += nearPtr * warm * smoothstep(0.05, 0.30, peak) * 0.55;
-  col *= min(gain, max(1.0, 1.06 / max(peak, 0.001)));     // never far past full brightness, so the gold never bleaches to white
-  col += vec3(1.0, 0.74, 0.36) * lit * nearPtr * 0.05;
+  col *= min(gain, max(1.0, mix(1.06, 1.7, nearPtr) / max(peak, 0.001)));     // only under the pointer may it go past full brightness
+  col += vec3(1.0, 0.74, 0.36) * (glow * nearPtr * 0.12 + warm * nearPtr * nearPtr * 0.035);
 
   /* clouds: grey-blue under the moon, white in daylight, a warm edge along the line between them */
   if (uClouds > 0.0) {
@@ -802,7 +806,7 @@ function draw(time, dt) {
   gl.uniform1f(U.uHasWisp, loaded.wisp ? 1 : 0);
   planes(cloudClock); gl.uniform4fv(U.uPl, PLANE_P); gl.uniform4fv(U.uPd, PLANE_D);
   gl.uniform4f(U.uPtr, ptr.p[0], ptr.p[1], ptr.p[2], ptr.amt);
-  gl.uniform1f(U.uPtrR, clamp(0.55 * view.dist * Math.min(tanH, tanV), 0.012, 0.30));
+  gl.uniform1f(U.uPtrR, clamp(0.70 * view.dist * Math.min(tanH, tanV), 0.012, 0.30));
   let mp = -1;
   if (life && frozenTime === null) {
     if (!meteor && time > nextMeteor) {
