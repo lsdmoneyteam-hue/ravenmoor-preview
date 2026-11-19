@@ -440,7 +440,7 @@ window.__ldReady=Promise.race([getHi(),new Promise(function(r){setTimeout(r,1200
 <button type="button" class="phone-btn" aria-label="Play the Ravenmoor film" onClick="{{playFilm}}" onPointerEnter="{{preloadFilm}}" onFocus="{{preloadFilm}}" data-track="hero-play-film"><span class="tap"></span></button>
 <p class="{{hintClass}}" aria-hidden="true">Tap the phone</p>
 </div>
-<video class="film" ref="{{setFilmRef}}" data-hi="" data-parts="a/ee052b28c97a.mp4|a/8b120c7bd9bb.mp4|a/0b8346c4280e.mp4|a/85dd1fb731d5.mp4" data-dur="40.416" data-lo="a/c7e4d5d51e34.mp4" poster="a/d36f0d674979.webp" playsInline="{{true}}" preload="none" tabIndex="-1" aria-label="The Ravenmoor film: the camera dives through the phone into a house at sunset, tours the rooms and ends on the house at night with the Ravenmoor Digital logo"></video>
+<video class="film" ref="{{setFilmRef}}" data-hi="" data-parts="a/d11eb401eb58.mp4|a/4c06cc9c09b8.mp4|a/e64287722230.mp4|a/823d6357dda5.mp4|a/05594fe9b68d.mp4" data-dur="40.416" data-lo="a/af3a87cb4076.mp4" poster="a/d36f0d674979.webp" playsInline="{{true}}" preload="none" tabIndex="-1" aria-label="The Ravenmoor film: the camera dives through the phone into a house at sunset, tours the rooms and ends on the house at night with the Ravenmoor Digital logo"></video>
 <sc-if value="{{filmPlaying}}" hint-placeholder-val="{{false}}">
 <div class="film-ui">
 <sc-if value="{{hasAudio}}" hint-placeholder-val="{{false}}"><button type="button" class="tlink" onClick="{{toggleMute}}" aria-pressed="{{mutePressed}}" data-track="hero-film-mute">{{muteLabel}}</button></sc-if>
@@ -1699,12 +1699,12 @@ class Component extends DCLogic {
       pl.set(p0[0], p0[1], fade, 1); pd.set(dx, dy, Rr.st, 0);
     });
     let cov = { x: 1, y: 1, ox: 0, oy: 0 }, wpc = 1;
-    /* On a computer the Earth under the phone is the live globe (globe/?hero=1, the same engine as the globe page) seen
+    /* The Earth under the phone is the live globe (globe/?hero=1, the same engine as the globe page) seen
        through the camera this picture was drawn with: it starts exactly where the picture is, then travels slowly east
        round the world, and can be dragged. The picture stays underneath until the globe has everything it needs. */
     H.fr = q('.gl-live'); H.G = null; H.live = 0; H.liveT = 0;
     let fine = false; try { fine = window.matchMedia('(hover: hover) and (pointer: fine)').matches; } catch (e) {}
-    if (H.fr && fine && hi) {
+    if (H.fr && !this._reduce) {   // computers and phones; only computers can drag it (on a phone a swipe scrolls the page)
       const startLive = () => {
         if (H.fr.src) return;
         H.fr.addEventListener('load', () => { try { const G = H.fr.contentWindow.__globe; if (G && G.hero) { G.hero.hold(true); H.G = G.hero; H.liveT = performance.now(); if (H.measure) H.measure(); } } catch (e) {} });
