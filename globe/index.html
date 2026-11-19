@@ -263,7 +263,7 @@ float wispAt(vec3 q, vec3 w, float sc, float rho){   // laid on from three sides
   return textureLod(uWisp, q.yz * sc, lod).r * w.x + textureLod(uWisp, q.zx * sc + 0.37, lod).r * w.y + textureLod(uWisp, q.xy * sc + 0.71, lod).r * w.z;
 }
 float cloudAt(vec3 p, float rho){
-  float base = smoothstep(0.22, 0.78, cloudMap(p, rho));
+  float base = smoothstep(0.22, 0.78, cloudMap(p, rho)) * (1.0 - 0.6 * smoothstep(0.87, 0.985, abs(p.z)));   // thinner towards the poles, where the cloud map is stretched
   if (base <= 0.0) return 0.0;
   vec3 w = abs(p); w = w * w * w; w /= (w.x + w.y + w.z);
   mat2 r = mat2(cos(uCloudTurn), sin(uCloudTurn), -sin(uCloudTurn), cos(uCloudTurn));   // the detail travels with the weather
@@ -359,7 +359,7 @@ void main(){
     float sunlit = 0.30 + 0.70 * smoothstep(-0.05, 0.50, mu);
     col *= 1.0 - 0.30 * shadow * day;
     vec3 cloudCol = mix(vec3(0.085, 0.115, 0.170), vec3(0.93, 0.95, 0.98) * sunlit, day);
-    cloudCol += vec3(0.30, 0.13, 0.03) * day * (1.0 - smoothstep(0.10, 0.40, mu));
+    cloudCol += vec3(0.15, 0.065, 0.015) * day * (1.0 - smoothstep(0.10, 0.40, mu));
     float cover = c * mix(0.58, 0.92, day);
     col = col * (1.0 - cover * mix(0.55, 1.0, day)) + cloudCol * cover;
   }
