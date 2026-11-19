@@ -48,7 +48,10 @@ export async function drop(request, env, url) {
   if (body.byteLength > kind.max) return json({ ok: false, error: 'size' }, 413);
   const head = new Uint8Array(body, 0, kind.magic.length);
   if (!kind.magic.every((b, i) => head[i] === b)) return json({ ok: false, error: 'type' }, 415);
-  await env.DROP.put(name, body, { expirationTtl: kind.keep });
+  // The home page's own pictures (g1_x_s*, g1_x_h*: the scroll Earth and the hero Earth) are kept until replaced,
+  // so the home page does not lose them when the tile packs expire.
+  const keep = /^g1_x_[sh]\d\.bin$/.test(name);
+  await env.DROP.put(name, body, keep ? {} : { expirationTtl: kind.keep });
   return json({ ok: true, name, bytes: body.byteLength });
 }
 

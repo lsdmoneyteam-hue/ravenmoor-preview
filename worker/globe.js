@@ -7,6 +7,8 @@
 //   GET /globe/t/wisp.jpg                     the fine cloud picture (pack g1_x_wisp, slot 0)
 //   GET /globe/t/s_<n>.webp or .jpg           the home page's scroll Earth, cut from the same artwork (pack g1_x_s<n>, slot 0):
 //                                             0 upright phones, 1 wide screens, 2 wide screens at half size, 3 cloud wisps
+//   GET /globe/t/h_<n>.webp                   the home page hero's Earth, drawn from the same artwork (pack g1_x_h<n>):
+//                                             0 picture, 1 picture at half size, 2 its city lights, 3 lights at half size
 //   anything else under /globe/t/             a static file (tiles.json, clouds.jpg)
 //
 // Pack layout: 'RMG1', count (u32), count x (offset u32, length u32), then the JPEGs. Length 0 = no tile.
@@ -17,7 +19,7 @@
 import { text } from './util.js';
 
 const TILE = /^\/globe\/t\/([0-5])\/([0-5])\/(\d{1,2})_(\d{1,2})\.jpg$/;
-const SCROLL = /^\/globe\/t\/s_([0-3])\.(?:webp|jpg)$/;
+const SCROLL = /^\/globe\/t\/([sh])_([0-3])\.(?:webp|jpg)$/;
 const MAGIC = 0x524d4731;
 
 export async function globeTile(request, env) {
@@ -34,7 +36,7 @@ export async function globeTile(request, env) {
     key = 'g1_x_wisp.bin';
     slot = 0;
   } else if (scroll) {
-    key = `g1_x_s${scroll[1]}.bin`;
+    key = `g1_x_${scroll[1]}${scroll[2]}.bin`;
     slot = 0;
   } else {
     const f = Number(m[1]), z = Number(m[2]), x = Number(m[3]), y = Number(m[4]), n = 1 << z;
