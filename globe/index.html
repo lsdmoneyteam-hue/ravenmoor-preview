@@ -445,12 +445,20 @@ function place(key, f, z, x, y, img) {
   slotKey[slot] = key; slotSeen[slot] = pass; where.set(key, slot); mark(f, z, x, y, slot);
   return true;
 }
-async function bitmap(url) {
-  const res = await fetch(url);
-  if (!res.ok) throw new Error(url + ' ' + res.status);
-  const blob = await res.blob();
-  try { return await createImageBitmap(blob, { colorSpaceConversion: 'none', premultiplyAlpha: 'none' }); }
-  catch (err) { return createImageBitmap(blob); }
+const pause = ms => new Promise(r => setTimeout(r, ms));
+async function bitmap(url, tries = 3) {
+  for (let n = 1; ; n++) {                                // a poor connection gets a second and third go
+    try {
+      const res = await fetch(url);
+      if (!res.ok) throw new Error(url + ' ' + res.status);
+      const blob = await res.blob();
+      try { return await createImageBitmap(blob, { colorSpaceConversion: 'none', premultiplyAlpha: 'none' }); }
+      catch (err) { return await createImageBitmap(blob); }
+    } catch (err) {
+      if (n >= tries) throw err;
+      await pause(900 * n);
+    }
+  }
 }
 function fetchTile(key, f, z, x, y) {
   const mine = epoch;
