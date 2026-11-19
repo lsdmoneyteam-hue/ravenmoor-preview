@@ -413,7 +413,7 @@ void main(){
   float peak = max(col.r, max(col.g, col.b));
   float warm = smoothstep(0.02, 0.16, col.r - col.b) * (1.0 - day);
   float lit = smoothstep(0.22, 0.62, peak) * warm;
-  float glow = smoothstep(0.06, 0.50, peak) * warm;      // every lit pixel, faint road glow included
+  float glow = smoothstep(0.06, 0.50, peak) * max(warm, smoothstep(0.25, 0.60, peak) * (1.0 - day));   // every lit pixel, road glow and pale city cores included
   float nearPtr = 0.0;
   if (uPtr.w > 0.0) { float a = acos(clamp(dot(p, uPtr.xyz), -1.0, 1.0)) / uPtrR; nearPtr = uPtr.w * (0.55 * exp(-a * a / 0.25) + 0.45 * exp(-a * a / 1.6)); }
   float fp = exp2(${TOP}.0 - zf);

@@ -1230,7 +1230,7 @@ class Component extends DCLogic {
         'float peak=max(col.r,max(col.g,col.b));',
         'float warm=smoothstep(.02,.16,col.r-col.b)*(1.-day);',
         'float lit=smoothstep(.22,.62,peak)*warm;',
-        'float glw=smoothstep(.06,.5,peak)*warm;',     // every lit pixel, faint road glow included
+        'float glw=smoothstep(.06,.5,peak)*max(warm,smoothstep(.25,.6,peak)*(1.-day));',     // every lit pixel, faint road glow included
         'vec2 pd=(gl_FragCoord.xy-uPtr.xy)*uPtr.z;float r2=dot(pd,pd),nearP=uPtr.w*(.55*exp(-r2/.25)+.45*exp(-r2/1.6));',
         'float glowing=lit*(1.-.8*smoothstep(.82,1.,peak));',
         'vec4 nf=noiseAt(vec2(lon,lat)*22.7),nc=noiseAt(vec2(lon,lat)*2.93+13.);',
