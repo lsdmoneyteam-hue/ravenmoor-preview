@@ -214,7 +214,8 @@ uniform sampler2D uInd;           // which layer of uTiles holds the tile for ea
 uniform sampler2D uNoise, uCloud, uWisp;
 uniform vec3 uC0, uE0, uN0, uSun;
 uniform float uLife, uTime, uMeteorP, uBias, uDebug;
-uniform float uClouds, uCloudTurn, uHasWisp;
+uniform float uClouds, uHasWisp, uWave;
+uniform vec3 uWind;               // how far each belt of weather has turned: tropics, north, south
 uniform vec4 uMeteor;
 uniform vec4 uPtr;                // xyz: the spot on the globe under the pointer; w: strength
 uniform float uPtrR;
@@ -252,28 +253,64 @@ vec3 tileAt(int z, vec2 g, ivec4 L, vec3 q){
   return textureLod(uCube, q, 0.0).rgb;
 }
 
-/* how much cloud there is over a spot: the real cloud map says where the weather is, a fine picture of wisps gives it texture */
-float cloudMap(vec3 p, float rho){
-  float lon = atan(p.y, p.x) + uCloudTurn;
-  vec2 uv = vec2(lon / (2.0 * PI) + 0.5, 0.5 - asin(clamp(p.z, -1.0, 1.0)) / PI);
+/* the weather. Cloud sits in three belts that each turn round the globe on their own: the tropics drift west with the
+   trade winds, the middle latitudes of each half drift east, as real weather does. A slow wave runs along each belt and
+   carries the cloud north and south in small loops, and cloud thickens and thins as it travels. */
+float cloudMap(vec3 q, float rho){
+  vec2 uv = vec2(atan(q.y, q.x) / (2.0 * PI) + 0.5, 0.5 - asin(clamp(q.z, -1.0, 1.0)) / PI);
   return textureLod(uCloud, uv, max(log2(max(rho, 1e-7) * 652.0), 0.0)).r;
+}
+vec3 belt(vec3 p, float lon, float turn, float kw, float ph){   // where on the cloud map this belt's weather over p comes from
+  float s = p.z, c2 = max(1.0 - s * s, 1e-4), c = sqrt(c2);
+  float amp = (0.016 + 0.176 * s * s) * c2;                // gentle in the tropics, strongest in the middle latitudes, nothing at the poles
+  float th = kw * lon + 2.5 * s + ph;
+  float a = turn + amp * 0.8 * cos(th);
+  float ca = cos(a), sa = sin(a);
+  vec3 q = vec3(ca * p.x - sa * p.y, sa * p.x + ca * p.y, s);
+  return normalize(q + vec3(-q.xy * s / c, c) * amp * sin(th));
+}
+float thick(vec3 p, float lon){                            // where cloud is building and where it is clearing, slowly changing
+  return 0.045 * sin(3.0 * lon + 5.0 * p.z + uWave * 0.6);
+}
+float coverOf(vec3 q, float grow, float rho){
+  return smoothstep(0.11 + grow, 0.64 + grow, cloudMap(q, rho));
 }
 float wispAt(vec3 q, vec3 w, float sc, float rho){   // laid on from three sides, so it has no pole and no edge
   float lod = max(log2(max(rho, 1e-7) * sc * 1536.0), 0.0);
   return textureLod(uWisp, q.yz * sc, lod).r * w.x + textureLod(uWisp, q.zx * sc + 0.37, lod).r * w.y + textureLod(uWisp, q.xy * sc + 0.71, lod).r * w.z;
 }
-float cloudAt(vec3 p, float rho){
-  float base = smoothstep(0.22, 0.78, cloudMap(p, rho)) * (1.0 - 0.6 * smoothstep(0.87, 0.985, abs(p.z)));   // thinner towards the poles, where the cloud map is stretched
+float beltCloud(vec3 q, float grow, float rho){
+  float base = coverOf(q, grow, rho);
   if (base <= 0.0) return 0.0;
-  vec3 w = abs(p); w = w * w * w; w /= (w.x + w.y + w.z);
-  mat2 r = mat2(cos(uCloudTurn), sin(uCloudTurn), -sin(uCloudTurn), cos(uCloudTurn));   // the detail travels with the weather
-  vec3 q = vec3(r * p.xy, p.z);
   if (uHasWisp < 0.5) return base * 0.5;
+  vec3 w = abs(q); w = w * w * w; w /= (w.x + w.y + w.z);
   /* broad streaks and clusters first, finer wisps inside them; from far away only the weather map is left */
   float big = wispAt(q.zxy, w.zxy, 1.7, rho), fine = wispAt(q, w, 5.3, rho);
   float d = big * 0.72 + fine * 0.28 + big * fine * 0.6;
   float far = smoothstep(2.5, 5.0, log2(max(rho, 1e-7) * 2611.0));
-  return clamp(base * mix(smoothstep(0.10, 0.62, d) * 1.15, 0.55, far), 0.0, 1.0);
+  return base * mix(smoothstep(0.04, 0.52, d) * 1.15, 0.58, far);
+}
+/* detail = 1: the cloud itself.  detail = 0: just its outline, for the shadow it casts */
+float cloudAt(vec3 p, float rho, float detail){
+  float lon = atan(p.y, p.x), s = p.z;
+  /* tropics below about 20 degrees, middle latitudes above about 33. The line between them wanders and has a ragged
+     edge, so one belt's cloud gives way to the other's the way a cloud bank ends, never along a ruled line */
+  float edge = abs(s) + 0.07 * sin(2.0 * lon + (s > 0.0 ? 0.6 : 3.4) + uWave * 0.25) + 0.035 * sin(5.0 * lon - uWave * 0.5)
+             + 0.11 * (noiseAt(vec2(lon * 10.18592, s * 14.0) + 7.0).r - 0.5);
+  float k = smoothstep(0.30, 0.58, edge);
+  /* towards the line a belt's cloud thins from its edges inward, the way cloud clears, and does not turn to haze */
+  float grow = thick(p, lon), c = 0.0;
+  if (k < 1.0) {
+    vec3 q = belt(p, lon, uWind.x, 5.0, 2.1 + uWave * 0.8);
+    float g = grow + 0.5 * k;
+    c = (detail > 0.5 ? beltCloud(q, g, rho) : coverOf(q, g, rho)) * (1.0 - smoothstep(0.65, 1.0, k));
+  }
+  if (k > 0.0) {
+    vec3 q = s > 0.0 ? belt(p, lon, uWind.y, 4.0, 1.3 - uWave) : belt(p, lon, uWind.z, 3.0, 4.0 - uWave * 0.85);
+    float g = grow + 0.5 * (1.0 - k);
+    c = max(c, (detail > 0.5 ? beltCloud(q, g, rho) : coverOf(q, g, rho)) * smoothstep(0.0, 0.35, k));
+  }
+  return clamp(c * (1.0 - 0.6 * smoothstep(0.87, 0.985, abs(s))), 0.0, 1.0);   // thinner towards the poles, where the cloud map is stretched
 }
 
 void main(){
@@ -353,19 +390,20 @@ void main(){
 
   /* clouds: grey-blue under the moon, white in daylight, a warm edge along the line between them */
   if (uClouds > 0.0) {
-    float c = cloudAt(p, rho) * uClouds;
+    float c = cloudAt(p, rho, 1.0) * uClouds;
     vec3 toSun = normalize(uSun - p * mu);
-    float shadow = smoothstep(0.22, 0.78, cloudMap(normalize(p + toSun * 0.006), rho)) * 0.8 * uClouds;
+    float shadow = cloudAt(normalize(p + toSun * 0.006), rho, 0.0) * 0.8 * uClouds;
     float sunlit = 0.30 + 0.70 * smoothstep(-0.05, 0.50, mu);
     col *= 1.0 - 0.30 * shadow * day;
-    vec3 cloudCol = mix(vec3(0.085, 0.115, 0.170), vec3(0.93, 0.95, 0.98) * sunlit, day);
+    vec3 cloudCol = mix(vec3(0.105, 0.140, 0.200), vec3(0.93, 0.95, 0.98) * sunlit, day);
     cloudCol += vec3(0.15, 0.065, 0.015) * day * (1.0 - smoothstep(0.10, 0.40, mu));
-    float cover = c * mix(0.58, 0.92, day);
+    float cover = c * mix(0.64, 0.92, day);
     col = col * (1.0 - cover * mix(0.55, 1.0, day)) + cloudCol * cover;
   }
 
   if (uDebug > 0.5 && uDebug < 1.5) col = mix(col, 0.5 + 0.5 * cos(6.2832 * (clamp(zf, 0.0, 5.0) / 6.0 + vec3(0.0, 0.33, 0.67))), 0.35);
-  if (uDebug > 1.5) col = abs(textureLod(uCube, q, 0.0).rgb - tileAt(${TOP}, g, L, q)) * 6.0;
+  if (uDebug > 1.5 && uDebug < 2.5) col = abs(textureLod(uCube, q, 0.0).rgb - tileAt(${TOP}, g, L, q)) * 6.0;
+  if (uDebug > 2.5) col = vec3(cloudAt(p, rho, uDebug > 3.5 ? 0.0 : 1.0));
 
   /* haze toward the horizon */
   float nv = clamp(dot(p, -rd), 0.0, 1.0);
@@ -582,7 +620,7 @@ function initGL() {
   gl.bindVertexArray(gl.createVertexArray());
   for (const n of ['uRes', 'uCam', 'uRight', 'uUp', 'uFwd', 'uTan', 'uShift', 'uCube', 'uTiles', 'uInd', 'uNoise', 'uCloud', 'uWisp',
                    'uC0', 'uE0', 'uN0', 'uSun', 'uLife', 'uTime', 'uMeteor', 'uMeteorP', 'uBias', 'uDebug',
-                   'uClouds', 'uCloudTurn', 'uHasWisp', 'uPtr', 'uPtrR']) U[n] = gl.getUniformLocation(prog, n);
+                   'uClouds', 'uWind', 'uWave', 'uHasWisp', 'uPtr', 'uPtrR']) U[n] = gl.getUniformLocation(prog, n);
   gl.pixelStorei(gl.UNPACK_FLIP_Y_WEBGL, false);
   gl.pixelStorei(gl.UNPACK_PREMULTIPLY_ALPHA_WEBGL, false);
   gl.pixelStorei(gl.UNPACK_COLORSPACE_CONVERSION_WEBGL, gl.NONE);
@@ -704,7 +742,10 @@ function draw(time, dt) {
   gl.uniform1f(U.uBias, LOD_BIAS);
   gl.uniform1f(U.uDebug, debug);
   gl.uniform1f(U.uClouds, loaded.clouds ? cloudFade : 0);
-  gl.uniform1f(U.uCloudTurn, 2.2 + cloudClock * 0.0009);         // the cloud layer drifts round very slowly
+  /* weather: the tropics drift west, the middle latitudes east (the southern ones a little quicker) */
+  const TAU = 2 * Math.PI;
+  gl.uniform3f(U.uWind, (2.2 + cloudClock * 0.0030) % TAU, (2.2 - cloudClock * 0.0061) % TAU, (2.2 - cloudClock * 0.0070) % TAU);
+  gl.uniform1f(U.uWave, (cloudClock * 0.075) % (TAU * 20));
   gl.uniform1f(U.uHasWisp, loaded.wisp ? 1 : 0);
   gl.uniform4f(U.uPtr, ptr.p[0], ptr.p[1], ptr.p[2], ptr.amt);
   gl.uniform1f(U.uPtrR, clamp(0.55 * view.dist * Math.min(tanH, tanV), 0.012, 0.30));
@@ -794,7 +835,11 @@ function frame(now) {
 
   const resting = ambient && !moving && now - lastInput > 1200;
   sway += ((resting ? 1 : 0) - sway) * Math.min(1, dt * (resting ? 0.7 : 7));
-  if (ambient) { swayClock += dt; cloudClock += dt; }
+  if (ambient) {
+    swayClock += dt;
+    /* the weather keeps the same calm pace on screen: close in, where a degree is many pixels, it moves fewer degrees a second */
+    cloudClock += dt * clamp(0.35 + 0.65 * Math.log(view.dist / 0.3) / Math.log(maxDist / 0.3), 0.35, 1);
+  }
 
   /* full sharpness whenever the picture is still; ease off only while it is moving and only if the device needs it */
   if (!lockQuality) {
@@ -916,6 +961,7 @@ if (gl) {
                     levels: [...where.keys()].reduce((a, k) => { const z = k.split('/')[1]; a[z] = (a[z] || 0) + 1; return a; }, {}) }),
     set(lat, lon, dist) { fly = null; vel.lat = vel.lon = 0; lastInput = performance.now(); spin = 0; view.lat = lat; view.lon = lon; view.dist = clamp(dist, minDist, maxDist); render(); },
     debug(v) { debug = v; render(); },
+    weather(sec) { if (sec !== undefined) { cloudClock = sec; render(); } return cloudClock; },
     still(time) { frozenTime = time; lockQuality = time !== null; if (lockQuality) { setQuality(1); sway = 0; } render(); } };
 }
 })();

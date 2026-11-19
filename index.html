@@ -1101,72 +1101,243 @@ class Component extends DCLogic {
   attachEarth(cv) {
     if (!cv || cv === this._earthEl) return;
     this._earthEl = cv;
-    // The planet under the page: the real Earth at night, seen from orbit looking north. Scrolling crosses the Atlantic and arrives over Britain.
-    // Night-lights map: NASA Earth at Night imagery, as shipped with three-globe (MIT, (c) 2019 Vasco Asturiano).
+    // The planet under the page, seen from orbit looking north. Scrolling crosses the Atlantic and arrives over Britain.
+    // It is drawn from the Ravenmoor globe artwork (the picture behind /globe/) with weather drifting over it; the cloud
+    // map is NASA Blue Marble cloud imagery (public domain). If that artwork cannot be fetched or drawn, the earlier
+    // picture is used instead: NASA Earth at Night imagery, as shipped with three-globe (MIT, (c) 2019 Vasco Asturiano).
     let gl = null;
     try { gl = cv.getContext('webgl', { alpha: true, premultipliedAlpha: true, antialias: false, powerPreference: 'low-power' }); } catch (e) {}
     if (!gl) return;
+    const reduce = !!this._reduce;
+    const fine = !!(window.matchMedia && window.matchMedia('(hover:hover) and (pointer:fine)').matches);
     const sh = (type, src) => { const s = gl.createShader(type); gl.shaderSource(s, src); gl.compileShader(s); return gl.getShaderParameter(s, gl.COMPILE_STATUS) ? s : null; };
     const vs = sh(gl.VERTEX_SHADER, 'attribute vec2 p;void main(){gl_Position=vec4(p,0.,1.);}');
-    const fs = sh(gl.FRAGMENT_SHADER, [
-      '#ifdef GL_FRAGMENT_PRECISION_HIGH', 'precision highp float;', '#else', 'precision mediump float;', '#endif',
-      'uniform vec2 uC;uniform float uR,uLon,uTilt,uA;uniform sampler2D uT;',
-      'void main(){',
-      'vec2 q=(gl_FragCoord.xy-uC)/uR;float d=length(q),px=1.5/uR;',
-      'float inside=smoothstep(1.+px,1.-px,d);vec3 col=vec3(0.);',
-      'if(d<1.+px){float z=sqrt(max(0.,1.-d*d));float ct=cos(uTilt),st=sin(uTilt);',
-      'vec3 m=vec3(q.x,q.y*ct-z*st,q.y*st+z*ct);',
-      'float lat=degrees(asin(clamp(m.y,-1.,1.))),lon=degrees(atan(m.x,m.z))+uLon;',
-      'vec2 uv=clamp(vec2((lon+140.)/198.,(80.-lat)/60.),0.,1.);vec3 t=texture2D(uT,uv).rgb;',
-      'vec2 o=vec2(1.6/2252.,1.6/683.);',
-      'vec3 b=(texture2D(uT,uv+vec2(o.x,0.)).rgb+texture2D(uT,uv-vec2(o.x,0.)).rgb+texture2D(uT,uv+vec2(0.,o.y)).rgb+texture2D(uT,uv-vec2(0.,o.y)).rgb)*.25;',
-      'float lm=smoothstep(.04,.42,t.r-t.b*.8),lg=smoothstep(.02,.4,b.r-b.b*.8);',
-      'col=t*vec3(.42,.6,.95)*.5+vec3(1.,.76,.38)*(lm*1.7+lg*.9);',
-      'col*=mix(.62,1.,smoothstep(.0,.55,1.-z));',
-      'col+=vec3(.1,.34,1.)*pow(1.-z,7.)*.95;}',
-      'float line=exp(-abs(d-1.)*uR/2.2),halo=exp(-max(d-1.,0.)*uR/28.);',
-      'vec3 air=vec3(.5,.78,1.)*line*.9+vec3(.1,.36,1.)*halo*.55*(1.-inside);',
-      'float a=max(inside,min(1.,line*.9+halo*.5*(1.-inside)));',
-      'gl_FragColor=vec4((col*inside+air)*uA,a*uA);}'
-    ].join('\n'));
-    if (!vs || !fs) return;
-    const pr = gl.createProgram(); gl.attachShader(pr, vs); gl.attachShader(pr, fs); gl.linkProgram(pr);
-    if (!gl.getProgramParameter(pr, gl.LINK_STATUS)) return;
-    gl.useProgram(pr);
+    const build = (src, names) => {
+      const fs = sh(gl.FRAGMENT_SHADER, src); if (!vs || !fs) return null;
+      const pr = gl.createProgram(); gl.attachShader(pr, vs); gl.attachShader(pr, fs); gl.bindAttribLocation(pr, 0, 'p'); gl.linkProgram(pr);
+      if (!gl.getProgramParameter(pr, gl.LINK_STATUS)) return null;
+      const U = {}; names.forEach((n) => { U[n] = gl.getUniformLocation(pr, n); });
+      return { pr: pr, U: U };
+    };
+    const PREC = ['#ifdef GL_FRAGMENT_PRECISION_HIGH', 'precision highp float;', '#else', 'precision mediump float;', '#endif'];
     const buf = gl.createBuffer(); gl.bindBuffer(gl.ARRAY_BUFFER, buf);
     gl.bufferData(gl.ARRAY_BUFFER, new Float32Array([-1, -1, 1, -1, -1, 1, -1, 1, 1, -1, 1, 1]), gl.STATIC_DRAW);
-    const loc = gl.getAttribLocation(pr, 'p'); gl.enableVertexAttribArray(loc); gl.vertexAttribPointer(loc, 2, gl.FLOAT, false, 0, 0);
-    const U = {}; ['uC', 'uR', 'uLon', 'uTilt', 'uA', 'uT'].forEach((n) => { U[n] = gl.getUniformLocation(pr, n); });
-    let W = 0, H = 0, dpr = 1, raf = 0, ready = false, mx = 0;
-    const fine = !!(window.matchMedia && window.matchMedia('(hover:hover) and (pointer:fine)').matches);
+    gl.enableVertexAttribArray(0); gl.vertexAttribPointer(0, 2, gl.FLOAT, false, 0, 0);
+
+    let W = 0, H = 0, dpr = 1, raf = 0, mx = 0, look = null, dirty = true, lastDraw = 0, lastT = 0;
     const size = () => {
       const r = cv.getBoundingClientRect(); if (!r.width || !r.height) return;
       W = r.width; H = r.height; dpr = Math.min(1.5, window.devicePixelRatio || 1);
       cv.width = Math.round(W * dpr); cv.height = Math.round(H * dpr);
     };
-    const draw = () => {
-      raf = 0; if (!ready) return;
+    const frame = (now) => {
+      raf = 0; if (!look) return;
+      if (!dirty && now - lastDraw < 31) { raf = requestAnimationFrame(frame); return; }   // the weather alone needs only 30 pictures a second
+      dirty = false; lastDraw = now;
       if (!W) size(); if (!W) return;
       const sy = window.scrollY || window.pageYOffset || 0, vh = window.innerHeight || H;
       const max = Math.max(1, document.documentElement.scrollHeight - vh), prog = Math.min(1, Math.max(0, sy / max));
       gl.viewport(0, 0, cv.width, cv.height); gl.clearColor(0, 0, 0, 0); gl.clear(gl.COLOR_BUFFER_BIT);
       const A = Math.min(1, Math.max(0, (sy - vh * .15) / (vh * .5)));
-      if (A <= 0 || document.hidden) return;
+      if (A <= 0 || document.hidden) { lastT = 0; return; }
+      const dt = lastT ? Math.min(.1, (now - lastT) / 1000) : 0; lastT = now;
       const e = prog * prog * (3 - 2 * prog), R = Math.max(W, vh) * 1.05, rise = vh * (.07 + .35 * e);
-      gl.uniform2f(U.uC, (W / 2 + mx * 16) * dpr, (rise - R) * dpr);
-      gl.uniform1f(U.uR, R * dpr); gl.uniform1f(U.uLon, -82 + 80 * e + mx * 2.5); gl.uniform1f(U.uTilt, 12 * Math.PI / 180); gl.uniform1f(U.uA, A);
-      gl.drawArrays(gl.TRIANGLES, 0, 6);
+      if (look(dt, A, (W / 2 + mx * 16) * dpr, (rise - R) * dpr, R * dpr, -82 + 80 * e + mx * 2.5, vh)) raf = requestAnimationFrame(frame); else lastT = 0;
     };
-    const req = () => { if (!raf) raf = requestAnimationFrame(draw); };
-    const img = new Image();
-    img.onload = () => {
-      const tx = gl.createTexture(); gl.bindTexture(gl.TEXTURE_2D, tx);
-      gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_WRAP_S, gl.CLAMP_TO_EDGE); gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_WRAP_T, gl.CLAMP_TO_EDGE);
+    const req = () => { dirty = true; if (!raf) raf = requestAnimationFrame(frame); };
+
+    /* ---- the earlier picture: used only if the artwork below cannot be shown ---- */
+    const oldLook = () => {
+      const P = build(PREC.concat([
+        'uniform vec2 uC;uniform float uR,uLon,uTilt,uA;uniform sampler2D uT;',
+        'void main(){',
+        'vec2 q=(gl_FragCoord.xy-uC)/uR;float d=length(q),px=1.5/uR;',
+        'float inside=smoothstep(1.+px,1.-px,d);vec3 col=vec3(0.);',
+        'if(d<1.+px){float z=sqrt(max(0.,1.-d*d));float ct=cos(uTilt),st=sin(uTilt);',
+        'vec3 m=vec3(q.x,q.y*ct-z*st,q.y*st+z*ct);',
+        'float lat=degrees(asin(clamp(m.y,-1.,1.))),lon=degrees(atan(m.x,m.z))+uLon;',
+        'vec2 uv=clamp(vec2((lon+140.)/198.,(80.-lat)/60.),0.,1.);vec3 t=texture2D(uT,uv).rgb;',
+        'vec2 o=vec2(1.6/2252.,1.6/683.);',
+        'vec3 b=(texture2D(uT,uv+vec2(o.x,0.)).rgb+texture2D(uT,uv-vec2(o.x,0.)).rgb+texture2D(uT,uv+vec2(0.,o.y)).rgb+texture2D(uT,uv-vec2(0.,o.y)).rgb)*.25;',
+        'float lm=smoothstep(.04,.42,t.r-t.b*.8),lg=smoothstep(.02,.4,b.r-b.b*.8);',
+        'col=t*vec3(.42,.6,.95)*.5+vec3(1.,.76,.38)*(lm*1.7+lg*.9);',
+        'col*=mix(.62,1.,smoothstep(.0,.55,1.-z));',
+        'col+=vec3(.1,.34,1.)*pow(1.-z,7.)*.95;}',
+        'float line=exp(-abs(d-1.)*uR/2.2),halo=exp(-max(d-1.,0.)*uR/28.);',
+        'vec3 air=vec3(.5,.78,1.)*line*.9+vec3(.1,.36,1.)*halo*.55*(1.-inside);',
+        'float a=max(inside,min(1.,line*.9+halo*.5*(1.-inside)));',
+        'gl_FragColor=vec4((col*inside+air)*uA,a*uA);}'
+      ]).join('\n'), ['uC', 'uR', 'uLon', 'uTilt', 'uA', 'uT']);
+      if (!P) return;
+      const img = new Image();
+      img.onload = () => {
+        const tx = gl.createTexture(); gl.activeTexture(gl.TEXTURE0); gl.bindTexture(gl.TEXTURE_2D, tx);
+        gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_WRAP_S, gl.CLAMP_TO_EDGE); gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_WRAP_T, gl.CLAMP_TO_EDGE);
+        gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_MIN_FILTER, gl.LINEAR); gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_MAG_FILTER, gl.LINEAR);
+        try { gl.texImage2D(gl.TEXTURE_2D, 0, gl.RGB, gl.RGB, gl.UNSIGNED_BYTE, img); } catch (e) { return; }
+        look = (dt, A, cx, cy, Rp, lon) => {
+          const U = P.U; gl.useProgram(P.pr); gl.activeTexture(gl.TEXTURE0); gl.bindTexture(gl.TEXTURE_2D, tx); gl.uniform1i(U.uT, 0);
+          gl.uniform2f(U.uC, cx, cy); gl.uniform1f(U.uR, Rp); gl.uniform1f(U.uLon, lon); gl.uniform1f(U.uTilt, 12 * Math.PI / 180); gl.uniform1f(U.uA, A);
+          gl.drawArrays(gl.TRIANGLES, 0, 6); return false;
+        };
+        this._earthOK = true; cv.__earth = { look: 'earlier' }; req();
+      };
+      img.src = 'a/3269279759af.jpg';
+    };
+
+    /* ---- the globe artwork ---- */
+    const newLook = () => {
+      const P = build(PREC.concat([
+        'uniform vec2 uC;uniform float uR,uLon,uTilt,uA,uTime,uLife,uFp;',
+        'uniform sampler2D uT,uCl,uWi,uNo;',
+        'uniform vec4 uMap;',                // the artwork map: west edge (degrees), 1/width, top edge (degrees), 1/height
+        'uniform vec4 uWx;',                 // weather: how far it has turned (radians), its wave, how much cloud, whether the wisps are in
+        'uniform vec4 uPtr;',                // pointer: x, y (pixels), 1/reach, strength
+        'const float PI=3.14159265;',
+        'const vec3 SUN=vec3(-.99027,-.13917,0.);',   // the sun stands over 0N 172W, as painted into the artwork
+        'vec4 noiseAt(vec2 x){vec2 i=floor(x),f=fract(x);f=f*f*(3.-2.*f);return texture2D(uNo,(i+f+.5)/64.);}',
+        'float wisp(vec3 q,vec3 w,float sc){return texture2D(uWi,q.yz*sc).r*w.x+texture2D(uWi,q.zx*sc+.37).r*w.y+texture2D(uWi,q.xy*sc+.71).r*w.z;}',
+        // The weather of the northern middle latitudes, the same as on the globe page: it drifts east as a whole, a slow
+        // wave carries it north and south in small loops, and it thickens and thins as it goes. South of about 30 degrees it clears.
+        'float cloud(float lon,float s,float detail){',
+        'float c2=max(1.-s*s,1e-4),lat=asin(s);',
+        'float edge=abs(s)+.07*sin(2.*lon+.6+uWx.y*.25)+.035*sin(5.*lon-uWx.y*.5)+.11*(noiseAt(vec2(lon*10.18592,s*14.)+7.).r-.5);',
+        'float k=smoothstep(.30,.58,edge);',
+        'float grow=.045*sin(3.*lon+5.*s+uWx.y*.6)+.5*(1.-k);',
+        'float amp=(.016+.176*s*s)*c2,th=4.*lon+2.5*s+1.3-uWx.y;',
+        'float lo=lon+uWx.x+amp*.8*cos(th),la=lat+amp*sin(th);',
+        'float base=smoothstep(.11+grow,.64+grow,texture2D(uCl,vec2(lo/(2.*PI)+.5,(1.50098-la)/1.25664)).r)*smoothstep(0.,.35,k)*(1.-.6*smoothstep(.87,.985,abs(s)));',
+        'float cl=cos(la);vec3 q=vec3(cl*cos(lo),cl*sin(lo),sin(la));',
+        'vec3 w=abs(q);w=w*w*w;w/=(w.x+w.y+w.z);',
+        'float big=wisp(q.zxy,w.zxy,1.7),fin=wisp(q,w,5.3);',
+        'float dd=big*.72+fin*.28+big*fin*.6;',
+        'float full=mix(base*.5,clamp(base*smoothstep(.04,.52,dd)*1.15,0.,1.),uWx.w);',
+        'return mix(base,full,detail);}',
+        'void main(){',
+        'vec2 q=(gl_FragCoord.xy-uC)/uR;float d=length(q),px=1.5/uR;',
+        'float inside=smoothstep(1.+px,1.-px,d);',
+        'vec2 qn=q/max(d,1.);float z=sqrt(max(0.,1.-dot(qn,qn)));float ct=cos(uTilt),st=sin(uTilt);',
+        'vec3 m=vec3(qn.x,qn.y*ct-z*st,qn.y*st+z*ct);',
+        'float s=clamp(m.y,-1.,1.),lat=degrees(asin(s)),lon=degrees(atan(m.x,m.z))+uLon,lonr=radians(lon),cl=sqrt(max(1.-s*s,0.));',
+        'vec3 p=vec3(cl*cos(lonr),cl*sin(lonr),s);',
+        'float mu=dot(p,SUN),day=smoothstep(-.10,.15,mu);',
+        'vec3 col=texture2D(uT,clamp(vec2((lon-uMap.x)*uMap.y,(uMap.z-lat)*uMap.w),0.,1.)).rgb;',
+        // city lights: a touch dimmer at rest, brighter and livelier near the pointer
+        'float peak=max(col.r,max(col.g,col.b));',
+        'float warm=smoothstep(.02,.16,col.r-col.b)*(1.-day);',
+        'float lit=smoothstep(.22,.62,peak)*warm;',
+        'vec2 pd=(gl_FragCoord.xy-uPtr.xy)*uPtr.z;float nearP=uPtr.w*exp(-dot(pd,pd));',
+        'float glowing=lit*(1.-.8*smoothstep(.82,1.,peak));',
+        'vec4 nf=noiseAt(vec2(lon,lat)*22.7),nc=noiseAt(vec2(lon,lat)*2.93+13.);',
+        'float shim=(.6*sin(1.7*uTime+25.*nf.r)+.4*sin(3.1*uTime+31.*nf.b)+1.6*pow(max(sin(.55*uTime+44.*nf.g),0.),26.))*.19*(1.-smoothstep(2.,7.,uFp))+sin(.9*uTime+19.*nc.g)*.09;',
+        'float gain=1.-.14*lit+uLife*glowing*shim*(.75+1.6*nearP)+nearP*warm*smoothstep(.05,.30,peak)*.55;',
+        'col*=min(gain,max(1.,1.06/max(peak,.001)));',
+        'col+=vec3(1.,.74,.36)*lit*nearP*.05;',
+        // clouds: grey-blue under the moon, white in daylight, a warm edge along the line between them
+        'float c=cloud(lonr,s,1.)*uWx.z;',
+        'vec3 p2=normalize(p+normalize(SUN-p*mu)*.006);',
+        'float shade=cloud(atan(p2.y,p2.x),p2.z,0.)*.8*uWx.z;',
+        'float sunlit=.30+.70*smoothstep(-.05,.50,mu);',
+        'col*=1.-.30*shade*day;',
+        'vec3 cc=mix(vec3(.105,.140,.200),vec3(.93,.95,.98)*sunlit,day)+vec3(.15,.065,.015)*day*(1.-smoothstep(.10,.40,mu));',
+        'float cov=c*mix(.64,.92,day);',
+        'col=col*(1.-cov*mix(.55,1.,day))+cc*cov;',
+        // haze toward the horizon, then the thin bright line of air and its glow above it
+        'float lightSide=smoothstep(-.25,.35,mu);',
+        'col+=vec3(.15,.36,.95)*pow(1.-z,4.6)*mix(.40,.95,lightSide);',
+        'float line=exp(-abs(d-1.)*uR/2.2),halo=exp(-max(d-1.,0.)*uR/28.);',
+        'vec3 air=(vec3(.5,.78,1.)*line*.9+vec3(.1,.36,1.)*halo*.55*(1.-inside))*mix(.8,1.25,lightSide);',
+        'float a=max(inside,min(1.,line*.9+halo*.5*(1.-inside)));',
+        'gl_FragColor=vec4((col*inside+air)*uA,a*uA);}'
+      ]).join('\n'), ['uC', 'uR', 'uLon', 'uTilt', 'uA', 'uTime', 'uLife', 'uFp', 'uT', 'uCl', 'uWi', 'uNo', 'uMap', 'uWx', 'uPtr']);
+      if (!P) return false;
+      const maxT = gl.getParameter(gl.MAX_TEXTURE_SIZE) || 0;
+      if (maxT < 4096) return false;
+      const an = gl.getExtension('EXT_texture_filter_anisotropic') || gl.getExtension('WEBKIT_EXT_texture_filter_anisotropic');
+      const tex = (unit, src, fmt, repeatS, repeatT) => {
+        const tx = gl.createTexture(); gl.activeTexture(gl.TEXTURE0 + unit); gl.bindTexture(gl.TEXTURE_2D, tx);
+        gl.texImage2D(gl.TEXTURE_2D, 0, fmt, fmt, gl.UNSIGNED_BYTE, src); gl.generateMipmap(gl.TEXTURE_2D);
+        gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_WRAP_S, repeatS ? gl.REPEAT : gl.CLAMP_TO_EDGE); gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_WRAP_T, repeatT ? gl.REPEAT : gl.CLAMP_TO_EDGE);
+        gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_MIN_FILTER, gl.LINEAR_MIPMAP_LINEAR); gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_MAG_FILTER, gl.LINEAR);
+        if (an) gl.texParameterf(gl.TEXTURE_2D, an.TEXTURE_MAX_ANISOTROPY_EXT, Math.min(8, gl.getParameter(an.MAX_TEXTURE_MAX_ANISOTROPY_EXT) || 1));
+        if (gl.getError() !== gl.NO_ERROR) throw new Error('texture');
+        return tx;
+      };
+      const picture = (url) => (window.fetch && window.createImageBitmap
+        ? fetch(url).then((r) => { if (!r.ok) throw new Error(url + ' ' + r.status); return r.blob(); }).then((b) => createImageBitmap(b))
+        : new Promise((ok, bad) => { const i = new Image(); i.onload = () => ok(i); i.onerror = () => bad(new Error(url)); i.src = url; }));
+      /* the same shimmer pattern every visit: 64 x 64 cells of fixed noise */
+      const noise = new Uint8Array(64 * 64 * 4); let sd = 0x2F6E2B1;
+      for (let i = 0; i < noise.length; i++) { sd = (Math.imul(sd, 1664525) + 1013904223) >>> 0; noise[i] = sd >>> 24; }
+      const T = { art: null, cloud: null, wisp: null, noise: null }; let kind = '', map = null, wanted = '';
+      gl.activeTexture(gl.TEXTURE3); T.noise = gl.createTexture(); gl.bindTexture(gl.TEXTURE_2D, T.noise);
+      gl.texImage2D(gl.TEXTURE_2D, 0, gl.RGBA, 64, 64, 0, gl.RGBA, gl.UNSIGNED_BYTE, noise);
       gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_MIN_FILTER, gl.LINEAR); gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_MAG_FILTER, gl.LINEAR);
-      try { gl.texImage2D(gl.TEXTURE_2D, 0, gl.RGB, gl.RGB, gl.UNSIGNED_BYTE, img); } catch (e) { return; }
-      gl.uniform1i(U.uT, 0); ready = true; this._earthOK = true; req();
+      /* which copy of the artwork fits this screen: upright phones see a narrower stretch of the planet, so theirs is cut closer and stays sharp */
+      const ART = {
+        tall: { url: 'globe/t/s_0.webp?v=1', map: [-140, 1 / 196, 80, 1 / 60], cloud: 'a/19ab3fb20bab.jpg' },
+        wide: { url: 'globe/t/s_1.webp?v=1', map: [-160, 1 / 235, 80, 1 / 60], cloud: 'a/fcc8c0c7979f.jpg' },
+        wideSmall: { url: 'globe/t/s_2.webp?v=1', map: [-160, 1 / 235, 80, 1 / 60], cloud: 'a/19ab3fb20bab.jpg' }
+      };
+      const pick = () => {
+        const vw = window.innerWidth || 1, vh = window.innerHeight || 1;
+        if (vw / vh <= .66) return 'tall';
+        const smallScreen = Math.min(window.screen ? window.screen.width : vw, window.screen ? window.screen.height : vh) < 600;
+        return maxT >= 8192 && !smallScreen && !(navigator.deviceMemory && navigator.deviceMemory < 4) ? 'wide' : 'wideSmall';
+      };
+      let clock = 0, fade = 0, cloudAmt = 0, px = -1, py = -1, ptrAmt = 0, failed = false, cloudFor = '', wispAsked = false;
+      const fail = () => { if (failed) return; failed = true; if (!T.art) { look = null; oldLook(); } };
+      const load = () => {
+        const k = pick(); if (k === wanted) return; wanted = k; const A = ART[k];
+        picture(A.url).then((b) => {
+          if (wanted !== k) return;
+          const old = T.art; T.art = tex(0, b, gl.RGB, false, false); if (old) gl.deleteTexture(old);
+          if (b.close) b.close();
+          kind = k; map = A.map;
+          if (!look) { look = drawNew; this._earthOK = true; }
+          req();
+        }).catch(fail);
+        if (cloudFor !== A.cloud) {
+          cloudFor = A.cloud;
+          picture(A.cloud).then((b) => { const old = T.cloud; T.cloud = tex(1, b, gl.LUMINANCE, true, false); if (old) gl.deleteTexture(old); if (b.close) b.close(); req(); }).catch(() => {});
+        }
+        if (!T.wisp && !wispAsked) { wispAsked = true; picture('globe/t/s_3.jpg?v=1').then((b) => { T.wisp = tex(2, b, gl.LUMINANCE, true, true); if (b.close) b.close(); req(); }).catch(() => {}); }
+      };
+      const drawNew = (dt, A, cx, cy, Rp, lon, vh) => {
+        const U = P.U; gl.useProgram(P.pr);
+        if (!reduce) clock += dt;
+        fade = reduce ? 1 : Math.min(1, fade + dt / .7);
+        const cloudsIn = T.cloud ? 1 : 0; cloudAmt = reduce ? cloudsIn : cloudAmt + (cloudsIn - cloudAmt) * Math.min(1, dt * 2.5);
+        const over = px >= 0 && py > vh - H - 120;
+        ptrAmt = reduce ? (over ? 1 : 0) : ptrAmt + ((over ? 1 : 0) - ptrAmt) * Math.min(1, dt * 5); if (ptrAmt < .004 && !over) ptrAmt = 0;
+        gl.activeTexture(gl.TEXTURE0); gl.bindTexture(gl.TEXTURE_2D, T.art); gl.uniform1i(U.uT, 0);
+        gl.activeTexture(gl.TEXTURE1); gl.bindTexture(gl.TEXTURE_2D, T.cloud || T.noise); gl.uniform1i(U.uCl, 1);
+        gl.activeTexture(gl.TEXTURE2); gl.bindTexture(gl.TEXTURE_2D, T.wisp || T.noise); gl.uniform1i(U.uWi, 2);
+        gl.activeTexture(gl.TEXTURE3); gl.bindTexture(gl.TEXTURE_2D, T.noise); gl.uniform1i(U.uNo, 3);
+        gl.uniform2f(U.uC, cx, cy); gl.uniform1f(U.uR, Rp); gl.uniform1f(U.uLon, lon); gl.uniform1f(U.uTilt, 12 * Math.PI / 180); gl.uniform1f(U.uA, A * fade);
+        gl.uniform1f(U.uTime, clock % 3600); gl.uniform1f(U.uLife, reduce ? 0 : 1);
+        gl.uniform1f(U.uFp, 205 / (Rp * Math.PI / 180));        // how many pixels of the full-size artwork one screen pixel covers
+        gl.uniform4f(U.uMap, map[0], map[1], map[2], map[3]);
+        /* the weather drifts east a third of a degree a second and its wave passes about once in eighty seconds, as on the globe page */
+        gl.uniform4f(U.uWx, (2.2 - clock * .0061) % (2 * Math.PI), (clock * .075) % (40 * Math.PI), cloudAmt, T.wisp ? 1 : 0);
+        gl.uniform4f(U.uPtr, px * dpr, (vh - py) * dpr, 1 / (170 * dpr), ptrAmt);
+        gl.drawArrays(gl.TRIANGLES, 0, 6);
+        return !reduce || fade < 1 || Math.abs(cloudAmt - cloudsIn) > .01;
+      };
+      window.addEventListener('resize', () => { try { load(); } catch (e) {} });
+      if (fine) {
+        window.addEventListener('pointermove', (ev) => { if (ev.pointerType && ev.pointerType !== 'mouse') return; px = ev.clientX; py = ev.clientY; }, { passive: true });
+        document.addEventListener('pointerleave', () => { px = -1; py = -1; req(); });
+      }
+      cv.__earth = { look: 'artwork', weather: (sec) => { if (sec !== undefined) { clock = sec; req(); } return clock; }, state: () => ({ kind: kind, art: !!T.art, cloud: !!T.cloud, wisp: !!T.wisp, fade: fade, failed: failed }) };
+      try { load(); } catch (e) { return false; }
+      return true;
     };
-    img.src = 'a/3269279759af.jpg';
+
+    /* the artwork is fetched once the page itself has loaded (or after five seconds), so it does not compete with the film */
+    const start = () => { let ok = false; try { ok = newLook(); } catch (e) {} if (!ok) oldLook(); };
+    let started = false; const go = () => { if (!started) { started = true; start(); } };
+    if (document.readyState === 'complete') go(); else { window.addEventListener('load', () => setTimeout(go, 200), { once: true }); setTimeout(go, 5000); }
     window.addEventListener('scroll', req, { passive: true });
     window.addEventListener('resize', () => { W = 0; req(); });
     document.addEventListener('visibilitychange', req);
