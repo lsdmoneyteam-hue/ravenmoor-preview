@@ -1,0 +1,906 @@
+<!DOCTYPE html>
+<html lang="en-GB">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<meta name="robots" content="noindex, nofollow">
+<title>Ravenmoor globe</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Cormorant+Garamond:wght@500;600&family=Schibsted+Grotesk:wght@400;500;600&display=swap" rel="stylesheet">
+<style>
+:root{
+  --space:#05070B; --ink:#0E0F11; --bone:#EDE8DF; --amber:#C8913A;
+  --panel:rgba(14,15,17,.80); --rule:rgba(237,232,223,.16);
+  --sans:'Schibsted Grotesk',system-ui,-apple-system,'Segoe UI',sans-serif;
+  --serif:'Cormorant Garamond',Georgia,serif;
+}
+*{box-sizing:border-box}
+[hidden]{display:none !important}
+html,body{height:100%;margin:0}
+body{background:var(--space);color:var(--bone);font-family:var(--sans);overflow:hidden;overscroll-behavior:none;-webkit-font-smoothing:antialiased}
+button{font:inherit;color:inherit;-webkit-tap-highlight-color:transparent}
+
+#gl{position:fixed;inset:0;width:100%;height:100%;display:block;touch-action:none;cursor:grab;outline:none}
+#gl.dragging{cursor:grabbing}
+#gl:focus-visible{outline:2px solid var(--amber);outline-offset:-2px}
+
+.top{position:fixed;inset:0 0 auto 0;padding:16px 18px 36px;pointer-events:none;
+  background:linear-gradient(rgba(5,7,11,.82),rgba(5,7,11,0))}
+.top h1{margin:0 0 6px;font:600 27px/1.08 var(--serif);letter-spacing:.005em}
+.top p{margin:0;max-width:35ch;font-size:13.5px;line-height:1.45;color:rgba(237,232,223,.80)}
+
+.dock{position:fixed;left:12px;right:12px;bottom:12px;display:flex;flex-direction:column;align-items:center;gap:8px;pointer-events:none}
+.note{margin:0;padding:8px 14px;border-radius:999px;background:var(--panel);border:1px solid var(--rule);
+  font-size:13.5px;line-height:1.3;text-align:center}
+.note.err{border-color:#D9825F;color:#F6C9B6;border-radius:14px}
+
+.panel{pointer-events:auto;width:100%;max-width:580px;padding:8px;border-radius:16px;background:var(--panel);
+  border:1px solid var(--rule);-webkit-backdrop-filter:blur(14px);backdrop-filter:blur(14px)}
+.places{display:flex;flex-wrap:wrap;gap:5px}
+.places button{flex:1 1 auto;min-height:44px;padding:0 9px;border-radius:10px;border:1px solid var(--rule);
+  background:rgba(237,232,223,.05);font-size:14.5px;font-weight:500;cursor:pointer;white-space:nowrap}
+.places button:hover{background:rgba(237,232,223,.11)}
+.places button:active{background:rgba(200,145,58,.28)}
+.places button[aria-current="true"]{border-color:var(--amber);color:#F4DDB0;background:rgba(200,145,58,.14)}
+.tools{display:flex;align-items:center;justify-content:space-between;gap:6px;margin-top:8px}
+.switches{display:flex;gap:2px;min-width:0}
+.switch{display:flex;align-items:center;gap:8px;min-height:44px;padding:0 8px 0 4px;border:0;background:none;
+  border-radius:10px;font-size:14.5px;font-weight:500;cursor:pointer;white-space:nowrap}
+.track{width:40px;height:24px;border-radius:999px;background:rgba(237,232,223,.20);position:relative;flex:none;transition:background .2s}
+.track::after{content:"";position:absolute;top:3px;left:3px;width:18px;height:18px;border-radius:50%;background:var(--bone);transition:transform .2s}
+.switch[aria-checked="true"] .track{background:var(--amber)}
+.switch[aria-checked="true"] .track::after{transform:translateX(16px)}
+.zoom{display:flex;gap:6px;flex:none}
+.zoom button{width:44px;height:44px;border-radius:10px;border:1px solid var(--rule);background:rgba(237,232,223,.05);
+  font-size:22px;line-height:1;cursor:pointer}
+.zoom button:hover{background:rgba(237,232,223,.11)}
+.zoom button:active{background:rgba(200,145,58,.28)}
+button:focus-visible{outline:2px solid var(--amber);outline-offset:2px}
+
+.flat{position:fixed;inset:0;overflow:auto;padding:20px 18px 40px;background:var(--space)}
+.flat h1{margin:0 0 8px;font:600 27px/1.08 var(--serif)}
+.flat p{margin:0 0 16px;max-width:46ch;font-size:15px;line-height:1.5;color:rgba(237,232,223,.85)}
+
+@media (min-width:760px){
+  .top{padding:24px 28px 44px}
+  .top h1{font-size:34px}
+  .top p{font-size:14.5px;max-width:44ch}
+  .dock{bottom:20px}
+  .places{gap:6px}
+  .places button{flex:1 1 0;font-size:15px;padding:0 14px}
+  .switch{font-size:15px;gap:10px;padding:0 12px 0 6px}
+}
+@media (max-width:380px){
+  .dock{left:8px;right:8px}
+  .panel{padding:6px}
+  .places{gap:4px}
+  .places button{padding:0 8px;font-size:14px}
+  .switch{font-size:14px;gap:6px;padding:0 6px 0 2px}
+  .zoom{gap:4px}
+}
+@media (max-width:340px){
+  .places button{padding:0 5px;font-size:13.5px}
+  .switch{font-size:13px;gap:5px;padding:0 4px 0 0}
+  .track{width:36px} .switch[aria-checked="true"] .track::after{transform:translateX(12px)}
+}
+@media (max-height:520px){ .top p{display:none} .top h1{font-size:22px} }
+@media (prefers-reduced-motion:reduce){ .track,.track::after{transition:none} }
+</style>
+</head>
+<body>
+<canvas id="gl" tabindex="0" role="img"
+  aria-label="A 3D globe you can move. Use the arrow keys to move and the plus and minus keys to zoom."></canvas>
+
+<header class="top">
+  <h1>Ravenmoor globe</h1>
+  <p>The whole planet in the new artwork. Night over Europe, daylight on the far side.</p>
+</header>
+
+<div class="dock">
+  <p class="note" id="note" role="status">Loading the map</p>
+  <div class="panel">
+    <div class="places" id="places">
+      <button type="button" data-place="uk">UK</button>
+      <button type="button" data-place="europe">Europe</button>
+      <button type="button" data-place="newyork">New York</button>
+      <button type="button" data-place="japan">Japan</button>
+      <button type="button" data-place="globe">Globe</button>
+    </div>
+    <div class="tools">
+      <div class="switches">
+        <button type="button" class="switch" id="clouds" role="switch" aria-checked="true"><span class="track"></span>Clouds</button>
+        <button type="button" class="switch" id="motion" role="switch" aria-checked="true"><span class="track"></span>Motion</button>
+      </div>
+      <div class="zoom">
+        <button type="button" id="zout" aria-label="Zoom out">&minus;</button>
+        <button type="button" id="zin" aria-label="Zoom in">+</button>
+      </div>
+    </div>
+  </div>
+</div>
+
+<div class="flat" id="flat" hidden>
+  <h1>Ravenmoor globe</h1>
+  <p>This device can't draw the 3D globe. Open this page on a newer phone or computer to see it.</p>
+</div>
+
+<script>
+(() => {
+'use strict';
+const $ = s => document.querySelector(s);
+const canvas = $('#gl'), note = $('#note');
+const DEG = Math.PI / 180;
+const reduceMotion = matchMedia('(prefers-reduced-motion: reduce)').matches;
+const coarse = matchMedia('(pointer: coarse)').matches;
+const params = new URLSearchParams(location.search);
+
+/* ---------- geometry shared with the artwork pipeline ---------- */
+const dir = (lat, lon) => { const a = lat * DEG, o = lon * DEG; return [Math.cos(a) * Math.cos(o), Math.cos(a) * Math.sin(o), Math.sin(a)]; };
+const basis = (lat, lon) => { const a = lat * DEG, o = lon * DEG; return {
+  c: dir(lat, lon),
+  e: [-Math.sin(o), Math.cos(o), 0],
+  n: [-Math.sin(a) * Math.cos(o), -Math.sin(a) * Math.sin(o), Math.cos(a)] }; };
+const dot = (a, b) => a[0] * b[0] + a[1] * b[1] + a[2] * b[2];
+const EU = basis(35, 8);          // centre of face 0; the other five faces are this one turned by quarter turns
+const SUN = dir(0, -172);         // midnight over Europe, daylight over the Pacific
+const TILE = 576;                 // tile size in pixels; a face is 2^z tiles across at level z
+const TOP = 5;                    // sharpest level: 32 tiles (18,432 pixels) across a face
+const TEXELS_PER_UNIT = TILE * (1 << TOP) / 2;
+const LOD_BIAS = 0.35;            // lean towards the sharper level
+const TILE_ROOT = params.get('tiles') || 't/';
+
+/* a face seen from the cube's own axes (x = c0, y = e0, z = n0): centre, right, up */
+const FACE = [
+  [[1, 0, 0], [0, 1, 0], [0, 0, 1]], [[0, 1, 0], [-1, 0, 0], [0, 0, 1]], [[0, 0, 1], [0, 1, 0], [-1, 0, 0]],
+  [[0, -1, 0], [1, 0, 0], [0, 0, 1]], [[0, 0, -1], [0, 1, 0], [1, 0, 0]], [[-1, 0, 0], [0, -1, 0], [0, 0, 1]]];
+/* where a direction (in the cube's axes) lands: face, and position 0..1 across and down that face */
+function locate(q) {
+  const ax = Math.abs(q[0]), ay = Math.abs(q[1]), az = Math.abs(q[2]);
+  let f, u, v;
+  if (ax >= ay && ax >= az) { if (q[0] > 0) { f = 0; u = q[1] / q[0]; v = q[2] / q[0]; } else { f = 5; u = q[1] / q[0]; v = -q[2] / q[0]; } }
+  else if (ay >= az) { if (q[1] > 0) { f = 1; u = -q[0] / q[1]; v = q[2] / q[1]; } else { f = 3; u = -q[0] / q[1]; v = -q[2] / q[1]; } }
+  else { if (q[2] > 0) { f = 2; u = q[1] / q[2]; v = -q[0] / q[2]; } else { f = 4; u = -q[1] / q[2]; v = -q[0] / q[2]; } }
+  return { f, u, v, gx: Math.min(0.999999, Math.max(0, u * 0.5 + 0.5)), gy: Math.min(0.999999, Math.max(0, 0.5 - v * 0.5)) };
+}
+
+const PLACES = {
+  uk:      { lat: 53.9, lon: -2.4, dist: 0.27 },
+  europe:  { lat: 47.5, lon: 9.5, dist: 0.85 },
+  newyork: { lat: 40.4, lon: -75.2, dist: 0.30 },
+  japan:   { lat: 36.8, lon: 137.8, dist: 0.42 },
+  globe:   { lat: 30, lon: 8, dist: Infinity }
+};
+
+/* ---------- view state ---------- */
+const view = { lat: 30, lon: 8, dist: 3 };
+let W = 1, H = 1, cssW = 1, cssH = 1, tanH = 1, tanV = 1, maxDist = 3, minDist = 0.13, tiltMax = 60 * DEG, shift = 0;
+let life = !reduceMotion, showClouds = true, debug = +(params.get('debug') || 0);
+let quality = 1, moveQuality = 1, lockQuality = false, frozenTime = null;
+const clamp = (x, a, b) => Math.min(b, Math.max(a, x));
+const wrap = x => ((x + 180) % 360 + 360) % 360 - 180;
+const fullDpr = () => Math.min(window.devicePixelRatio || 1, 3);
+
+function tiltFor(d) {
+  const x = clamp((Math.log(d) - Math.log(0.3)) / (Math.log(1.3) - Math.log(0.3)), 0, 1);
+  return tiltMax * (1 - x * x * (3 - 2 * x));
+}
+function setLens() {
+  const a = W / H;
+  tanV = Math.max(Math.tan(26 * DEG), Math.tan(18 * DEG) / a);
+  tanH = tanV * a;
+  maxDist = 1 / Math.sin(Math.atan(Math.min(tanV, tanH)) * 0.76) - 1;
+  tiltMax = (a < 1 ? 58 : 66) * DEG;
+  /* closest zoom: stop before the artwork has to be stretched by more than a quarter */
+  minDist = clamp(0.8 * cssH * fullDpr() / (2 * tanV * TEXELS_PER_UNIT), 0.12, 0.22);
+  view.dist = clamp(view.dist, minDist, maxDist);
+}
+
+/* ---------- WebGL ---------- */
+const VERT = `#version 300 es
+void main(){ vec2 p = vec2(float((gl_VertexID << 1) & 2), float(gl_VertexID & 2)); gl_Position = vec4(p * 2.0 - 1.0, 0.0, 1.0); }`;
+
+const FRAG = `#version 300 es
+precision highp float;
+precision highp int;
+precision highp sampler2DArray;
+uniform vec2 uRes;
+uniform vec3 uCam, uRight, uUp, uFwd;
+uniform vec2 uTan;
+uniform float uShift;
+uniform samplerCube uCube;        // the whole planet at a modest size: first picture, and the fallback everywhere
+uniform sampler2DArray uTiles;    // sharp tiles, loaded as the view needs them
+uniform sampler2D uInd;           // which layer of uTiles holds the tile for each spot, for levels 2,3,4,5 (255 = not loaded)
+uniform sampler2D uNoise, uCloud, uWisp;
+uniform vec3 uC0, uE0, uN0, uSun;
+uniform float uLife, uTime, uMeteorP, uBias, uDebug;
+uniform float uClouds, uCloudTurn, uHasWisp;
+uniform vec4 uMeteor;
+uniform vec4 uPtr;                // xyz: the spot on the globe under the pointer; w: strength
+uniform float uPtrR;
+out vec4 outColor;
+const float PI = 3.14159265359;
+const float TILE = ${TILE}.0;
+
+float hash(vec3 p){ p = fract(p * 0.3183099 + 0.1); p *= 17.0; return fract(p.x * p.y * p.z * (p.x + p.y + p.z)); }
+
+/* smooth repeating noise, 64 cells before it repeats */
+vec4 noiseAt(vec2 x){
+  vec2 i = floor(x), f = fract(x);
+  f = f * f * (3.0 - 2.0 * f);
+  return textureLod(uNoise, (i + f + 0.5) / 64.0, 0.0);
+}
+
+/* gentle shimmer for city lights; texel = position measured in artwork pixels, fp = artwork pixels per screen pixel */
+float shimmer(vec2 texel, float fp, float t){
+  vec4 nf = noiseAt(texel / 9.0), nc = noiseAt(texel / 70.0 + 13.0);
+  float fine = 0.6 * sin(1.7 * t + 25.0 * nf.r) + 0.4 * sin(3.1 * t + 31.0 * nf.b)
+             + 1.6 * pow(max(sin(0.55 * t + 44.0 * nf.g), 0.0), 26.0);
+  float slow = sin(0.9 * t + 19.0 * nc.g);
+  return fine * 0.19 * (1.0 - smoothstep(2.0, 7.0, fp)) + slow * 0.09 * (1.0 - smoothstep(15.0, 50.0, fp));
+}
+
+/* the sharpest loaded tile at level z or below; the cube picture if none is in yet */
+vec3 tileAt(int z, vec2 g, ivec4 L, vec3 q){
+  for (int zz = z; zz >= 2; zz--) {
+    int layer = L[zz - 2];
+    if (layer < 255) {
+      vec2 t = clamp(fract(g * exp2(float(zz))), vec2(0.5 / TILE), vec2(1.0 - 0.5 / TILE));
+      return textureLod(uTiles, vec3(t, float(layer)), 0.0).rgb;
+    }
+  }
+  return textureLod(uCube, q, 0.0).rgb;
+}
+
+/* how much cloud there is over a spot: the real cloud map for the big shapes, a fine layer to break up the edges */
+float cloudAt(vec3 p, float rho){
+  float lon = atan(p.y, p.x) + uCloudTurn;
+  vec2 uv = vec2(lon / (2.0 * PI) + 0.5, 0.5 - asin(clamp(p.z, -1.0, 1.0)) / PI);
+  float lod = max(log2(max(rho, 1e-7) * 652.0), 0.0);
+  float c = textureLod(uCloud, uv, lod).r;
+  /* fine detail, laid on from three sides so it has no pole and no edge */
+  vec3 w = abs(p); w = w * w; w /= (w.x + w.y + w.z);
+  float turn = uCloudTurn * 0.6;
+  mat2 r = mat2(cos(turn), -sin(turn), sin(turn), cos(turn));
+  vec3 pr = vec3(r * p.xy, p.z);
+  float sc = 7.0;
+  float dl = max(log2(max(rho, 1e-7) * sc * 163.0), 0.0);
+  float d;
+  if (uHasWisp > 0.5) d = textureLod(uWisp, pr.yz * sc, dl).r * w.x + textureLod(uWisp, pr.zx * sc + 0.37, dl).r * w.y + textureLod(uWisp, pr.xy * sc + 0.71, dl).r * w.z;
+  else {
+    float k = 1.0 - smoothstep(0.0, 4.0, dl);
+    d = 0.5 + k * ((noiseAt(pr.yz * 90.0).r - 0.5) * w.x + (noiseAt(pr.zx * 90.0).g - 0.5) * w.y + (noiseAt(pr.xy * 90.0).b - 0.5) * w.z) * 0.9
+            + k * ((noiseAt(pr.yz * 330.0).g - 0.5) * w.x + (noiseAt(pr.zx * 330.0).b - 0.5) * w.y + (noiseAt(pr.xy * 330.0).r - 0.5) * w.z) * 0.5;
+  }
+  return smoothstep(0.34, 0.80, c + (d - 0.5) * 0.42 * smoothstep(0.10, 0.45, c));
+}
+
+void main(){
+  vec2 scr = gl_FragCoord.xy / uRes * 2.0 - 1.0;
+  vec2 ndc = vec2(scr.x, scr.y - uShift);
+  vec3 rd = normalize(uFwd + ndc.x * uTan.x * uRight + ndc.y * uTan.y * uUp);
+  float b = dot(uCam, rd);
+  float cc = dot(uCam, uCam);
+  float d2 = b < 0.0 ? max(cc - b * b, 0.0) : cc;      // squared closest approach to the centre
+  float dmin = sqrt(d2);
+  float t = uTime;
+
+  /* sky: stars, the glow of the air, now and then a shooting star */
+  vec3 sky = vec3(0.012, 0.017, 0.030);
+  vec3 sg = rd * 190.0; vec3 cell = floor(sg);
+  float r = hash(cell);
+  float glint = uLife > 0.5 ? 0.70 + 0.30 * sin(t * (1.1 + 3.2 * hash(cell + 3.0)) + 40.0 * r) : 1.0;
+  sky += vec3(0.80, 0.86, 1.0) * step(0.9915, r) * smoothstep(0.30, 0.0, length(fract(sg) - 0.5)) * (0.35 + 0.65 * hash(cell + 7.0)) * glint;
+  vec3 pc = normalize(uCam - min(b, 0.0) * rd);
+  float skyDay = smoothstep(-0.25, 0.35, dot(pc, uSun));
+  float hgt = max(dmin - 1.0, 0.0);
+  sky += vec3(0.20, 0.46, 1.0) * (exp(-hgt / 0.020) * 0.85 + exp(-hgt / 0.085) * 0.16) * mix(0.34, 1.0, skyDay);
+  if (uMeteorP >= 0.0) {
+    vec2 mq = vec2(scr.x * uRes.x / uRes.y, scr.y);
+    vec2 along = normalize(uMeteor.zw - uMeteor.xy);
+    vec2 rel = mq - mix(uMeteor.xy, uMeteor.zw, uMeteorP);
+    float back = -dot(rel, along);
+    float side = abs(rel.x * along.y - rel.y * along.x);
+    float glow = sin(PI * uMeteorP);
+    float wide = 2.8 / uRes.y;
+    sky += vec3(0.86, 0.92, 1.0) * exp(-side * side / (wide * wide)) * step(0.0, back) * (1.0 - smoothstep(0.0, 0.05 + 0.20 * glow, back)) * glow * 0.9;
+  }
+
+  /* the ground */
+  float tt = -b - sqrt(max(1.0 - d2, 0.0));
+  vec3 p = normalize(uCam + tt * rd);
+  float mu = dot(p, uSun);
+  float day = smoothstep(-0.10, 0.15, mu);             // the same edge of night that is painted into the artwork
+
+  /* which face of the cube, and where on it */
+  vec3 q = vec3(dot(p, uC0), dot(p, uE0), dot(p, uN0));
+  vec3 aq = abs(q);
+  int f; vec2 uv;
+  if (aq.x >= aq.y && aq.x >= aq.z) { if (q.x > 0.0) { f = 0; uv = vec2(q.y, q.z) / q.x; } else { f = 5; uv = vec2(q.y, -q.z) / q.x; } }
+  else if (aq.y >= aq.z) { if (q.y > 0.0) { f = 1; uv = vec2(-q.x, q.z) / q.y; } else { f = 3; uv = vec2(-q.x, -q.z) / q.y; } }
+  else { if (q.z > 0.0) { f = 2; uv = vec2(q.y, -q.x) / q.z; } else { f = 4; uv = vec2(-q.y, -q.x) / q.z; } }
+  vec2 g = clamp(vec2(uv.x, -uv.y) * 0.5 + 0.5, 0.0, 0.999999);
+
+  /* how much ground one screen pixel covers, and so which level of sharpness fits */
+  float lx = length(dFdx(p)), ly = length(dFdy(p));
+  float rho = max(max(lx, ly) / 2.5, min(lx, ly));
+  float zf = -log2(max(rho, 1e-9) * 288.0 * pow(1.0 + dot(uv, uv), 0.75)) + uBias;
+
+  ivec4 L = ivec4(texelFetch(uInd, ivec2(f * 32 + int(g.x * 32.0), int(g.y * 32.0)), 0) * 255.0 + 0.5);
+  vec3 col;
+  if (zf <= 1.0) col = textureLod(uCube, q, 1.0 - zf).rgb;
+  else {
+    float zc = min(zf, ${TOP}.0); int zl = int(floor(zc)); float k = zc - float(zl);
+    vec3 lo = zl < 2 ? textureLod(uCube, q, 0.0).rgb : tileAt(zl, g, L, q);
+    vec3 hi = (zl >= ${TOP} || k < 0.02) ? lo : tileAt(zl + 1, g, L, q);
+    col = mix(lo, hi, k);
+  }
+
+  /* city lights: a touch dimmer at rest, brighter and livelier near the pointer */
+  float peak = max(col.r, max(col.g, col.b));
+  float warm = smoothstep(0.02, 0.16, col.r - col.b) * (1.0 - day);
+  float lit = smoothstep(0.22, 0.62, peak) * warm;
+  float nearPtr = 0.0;
+  if (uPtr.w > 0.0) { float a = acos(clamp(dot(p, uPtr.xyz), -1.0, 1.0)) / uPtrR; nearPtr = uPtr.w * exp(-a * a); }
+  float fp = exp2(${TOP}.0 - zf);
+  float glowing = lit * (1.0 - 0.8 * smoothstep(0.82, 1.0, peak));
+  float gain = 1.0 - 0.14 * lit;
+  if (uLife > 0.5 && glowing > 0.0) gain += glowing * shimmer(g * ${TILE * (1 << TOP)}.0 + float(f) * 977.0, fp, t) * (0.75 + 1.6 * nearPtr);
+  gain += nearPtr * warm * smoothstep(0.05, 0.30, peak) * 0.55;
+  col *= min(gain, max(1.0, 1.06 / max(peak, 0.001)));     // never far past full brightness, so the gold never bleaches to white
+  col += vec3(1.0, 0.74, 0.36) * lit * nearPtr * 0.05;
+
+  /* clouds: grey-blue under the moon, white in daylight, a warm edge along the line between them */
+  if (uClouds > 0.0) {
+    float c = cloudAt(p, rho) * uClouds;
+    vec3 toSun = normalize(uSun - p * mu);
+    float shadow = cloudAt(normalize(p + toSun * 0.006), rho) * uClouds;
+    float sunlit = 0.30 + 0.70 * smoothstep(-0.05, 0.50, mu);
+    col *= 1.0 - 0.30 * shadow * day;
+    vec3 cloudCol = mix(vec3(0.060, 0.082, 0.125), vec3(0.93, 0.95, 0.98) * sunlit, day);
+    cloudCol += vec3(0.30, 0.13, 0.03) * day * (1.0 - smoothstep(0.10, 0.40, mu));
+    float cover = c * mix(0.50, 0.90, day);
+    col = col * (1.0 - cover * mix(0.55, 1.0, day)) + cloudCol * cover;
+  }
+
+  if (uDebug > 0.5 && uDebug < 1.5) col = mix(col, 0.5 + 0.5 * cos(6.2832 * (clamp(zf, 0.0, 5.0) / 6.0 + vec3(0.0, 0.33, 0.67))), 0.35);
+  if (uDebug > 1.5) col = abs(textureLod(uCube, q, 0.0).rgb - tileAt(${TOP}, g, L, q)) * 6.0;
+
+  /* haze toward the horizon */
+  float nv = clamp(dot(p, -rd), 0.0, 1.0);
+  col += vec3(0.15, 0.36, 0.95) * pow(1.0 - nv, 3.2) * mix(0.42, 1.0, smoothstep(-0.25, 0.35, mu));
+
+  float cover = clamp(0.5 - (dmin - 1.0) / max(fwidth(dmin), 1e-6), 0.0, 1.0) * step(b, 0.0);
+  outColor = vec4(mix(sky, col, cover), 1.0);
+}`;
+
+let gl = null, prog = null, U = {}, tex = {}, epoch = 0;
+const loaded = { manifest: false, base: 0, baseDone: false, clouds: false, wisp: false, tiles: 0, failed: 0 };
+const LAYERS = coarse ? 72 : 140;                        // sharp tiles kept on the GPU at once
+
+function compile(type, src) {
+  const s = gl.createShader(type); gl.shaderSource(s, src); gl.compileShader(s);
+  if (!gl.getShaderParameter(s, gl.COMPILE_STATUS)) throw new Error(gl.getShaderInfoLog(s) || 'shader');
+  return s;
+}
+function noiseTexture(unit) {
+  let s = 0x2F6E2B1;                                   // fixed seed: the same sky and shimmer every visit
+  const rnd = () => { s |= 0; s = s + 0x6D2B79F5 | 0; let t = Math.imul(s ^ s >>> 15, 1 | s); t = t + Math.imul(t ^ t >>> 7, 61 | t) ^ t; return ((t ^ t >>> 14) >>> 0) / 4294967296; };
+  const data = new Uint8Array(64 * 64 * 4);
+  for (let i = 0; i < data.length; i++) data[i] = rnd() * 256;
+  const t = gl.createTexture();
+  gl.activeTexture(gl.TEXTURE0 + unit); gl.bindTexture(gl.TEXTURE_2D, t);
+  gl.texImage2D(gl.TEXTURE_2D, 0, gl.RGBA, 64, 64, 0, gl.RGBA, gl.UNSIGNED_BYTE, data);
+  gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_MIN_FILTER, gl.LINEAR);
+  gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_MAG_FILTER, gl.LINEAR);
+  gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_WRAP_S, gl.REPEAT);
+  gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_WRAP_T, gl.REPEAT);
+  return t;
+}
+function greyTexture(unit, value) {
+  const t = gl.createTexture();
+  gl.activeTexture(gl.TEXTURE0 + unit); gl.bindTexture(gl.TEXTURE_2D, t);
+  gl.texImage2D(gl.TEXTURE_2D, 0, gl.R8, 1, 1, 0, gl.RED, gl.UNSIGNED_BYTE, new Uint8Array([value]));
+  gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_MIN_FILTER, gl.LINEAR);
+  gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_MAG_FILTER, gl.LINEAR);
+  return t;
+}
+
+/* ---------- sharp tiles: a fixed stack of GPU layers, filled and reused as the view moves ---------- */
+const ind = new Uint8Array(192 * 32 * 4);               // for each of 32 x 32 spots on each face: the layer for levels 2..5
+let indDirty = true, manifest = null;
+const slotKey = new Array(LAYERS).fill(null), slotSeen = new Float64Array(LAYERS);
+const where = new Map();                                // tile key -> layer
+const loading = new Map();                              // tile key -> true while it is on its way
+const missing = new Set();                              // tiles that failed to load: do not keep asking
+let wanted = new Map(), pass = 0, lastNeedKey = '';
+const tkey = (f, z, x, y) => f + '/' + z + '/' + x + '_' + y;
+const tileUrl = key => TILE_ROOT + key + '.jpg' + (manifest && manifest.v ? '?v=' + manifest.v : '');
+function hasTile(f, z, x, y) {
+  if (!manifest) return false;
+  const rows = manifest.levels[z]; if (!rows) return false;
+  const i = y * (1 << z) + x;
+  return (rows[f][i >> 3] >> (7 - (i & 7))) & 1;
+}
+function mark(f, z, x, y, layer) {
+  const c = 32 >> z;
+  for (let cy = y * c; cy < (y + 1) * c; cy++) for (let cx = x * c; cx < (x + 1) * c; cx++) ind[(cy * 192 + f * 32 + cx) * 4 + (z - 2)] = layer;
+  indDirty = true;
+}
+function place(key, f, z, x, y, img) {
+  let slot = -1, oldest = Infinity;
+  for (let i = 0; i < LAYERS; i++) {
+    if (slotKey[i] === null) { slot = i; break; }
+    if (!wanted.has(slotKey[i]) && slotSeen[i] < oldest) { oldest = slotSeen[i]; slot = i; }
+  }
+  if (slot < 0) return false;                            // every layer is in use by the current view
+  if (slotKey[slot] !== null) {
+    const o = slotKey[slot].split(/[\/_]/).map(Number);
+    mark(o[0], o[1], o[2], o[3], 255); where.delete(slotKey[slot]);
+  }
+  gl.activeTexture(gl.TEXTURE1); gl.bindTexture(gl.TEXTURE_2D_ARRAY, tex.tiles);
+  gl.texSubImage3D(gl.TEXTURE_2D_ARRAY, 0, 0, 0, slot, TILE, TILE, 1, gl.RGBA, gl.UNSIGNED_BYTE, img);
+  slotKey[slot] = key; slotSeen[slot] = pass; where.set(key, slot); mark(f, z, x, y, slot);
+  return true;
+}
+async function bitmap(url) {
+  const res = await fetch(url);
+  if (!res.ok) throw new Error(url + ' ' + res.status);
+  const blob = await res.blob();
+  try { return await createImageBitmap(blob, { colorSpaceConversion: 'none', premultiplyAlpha: 'none' }); }
+  catch (err) { return createImageBitmap(blob); }
+}
+function fetchTile(key, f, z, x, y) {
+  const mine = epoch;
+  loading.set(key, true);
+  bitmap(tileUrl(key)).then(img => {
+    loading.delete(key);
+    if (mine !== epoch || gl.isContextLost()) { img.close(); return; }
+    if (place(key, f, z, x, y, img)) loaded.tiles++;
+    img.close(); setNote(); render(); pump();
+  }).catch(err => { loading.delete(key); missing.add(key); loaded.failed++; console.warn(err); setNote(); pump(); });
+}
+let queue = [];
+function pump() {
+  while (loading.size < 6 && queue.length) {
+    const q = queue.shift();
+    if (where.has(q.key) || loading.has(q.key) || missing.has(q.key) || !wanted.has(q.key)) continue;
+    fetchTile(q.key, q.f, q.z, q.x, q.y);
+  }
+}
+
+/* the camera, as last drawn (also used to find what is under the pointer) */
+const camNow = { cam: [0, 0, 3], right: [1, 0, 0], up: [0, 1, 0], fwd: [0, 0, -1] };
+function rayAt(nx, ny) {                                // nx, ny: -1..1 across and up the canvas
+  const y = ny - shift, c = camNow;
+  const d = [0, 1, 2].map(i => c.fwd[i] + nx * tanH * c.right[i] + y * tanV * c.up[i]);
+  const l = Math.hypot(d[0], d[1], d[2]); d[0] /= l; d[1] /= l; d[2] /= l;
+  const b = dot(c.cam, d), cc = dot(c.cam, c.cam), disc = b * b - cc + 1;
+  if (b >= 0 || disc <= 0) return null;
+  const t = -b - Math.sqrt(disc);
+  const p = [0, 1, 2].map(i => c.cam[i] + t * d[i]);
+  return { p, t, cos: -dot(p, d) };
+}
+/* work out which sharp tiles the current view needs, and ask for the ones not here yet */
+function needTiles() {
+  if (!manifest || !loaded.baseDone) return;
+  const k = camNow.cam.map(v => v.toFixed(5)).join() + '|' + W + 'x' + H + '|' + camNow.fwd.map(v => v.toFixed(4)).join();
+  if (k === lastNeedKey && !queue.length) return;
+  lastNeedKey = k; pass++;
+  const pix = 2 * tanV / (cssH * fullDpr());            // the angle one screen pixel covers, at full sharpness
+  const next = new Map(), list = [];
+  const NX = 13, NY = 21;
+  for (let iy = 0; iy <= NY; iy++) for (let ix = 0; ix <= NX; ix++) {
+    const nx = ix / NX * 2 - 1, ny = iy / NY * 2 - 1;
+    const h = rayAt(nx, ny); if (!h) continue;
+    const q = [dot(h.p, EU.c), dot(h.p, EU.e), dot(h.p, EU.n)], w = locate(q);
+    const small = h.t * pix, rho = Math.max(small / Math.max(h.cos, 0.06) / 2.5, small);
+    const zf = -Math.log2(rho * 288 * Math.pow(1 + w.u * w.u + w.v * w.v, 0.75)) + LOD_BIAS;
+    if (zf + 0.3 <= 1) continue;
+    const z0 = clamp(Math.floor(zf - 0.3), 2, TOP), z1 = clamp(Math.ceil(zf + 0.3), 2, TOP);
+    for (let z = z0; z <= z1; z++) {
+      const n = 1 << z, x = Math.floor(w.gx * n), y = Math.floor(w.gy * n);
+      if (!hasTile(w.f, z, x, y)) continue;
+      const key = tkey(w.f, z, x, y);
+      if (!next.has(key)) { const o = { key, f: w.f, z, x, y, d: nx * nx + ny * ny }; next.set(key, o); list.push(o); }
+      else { const o = next.get(key); o.d = Math.min(o.d, nx * nx + ny * ny); }
+    }
+  }
+  wanted = next;
+  for (const o of list) { const s = where.get(o.key); if (s !== undefined) slotSeen[s] = pass; }
+  queue = list.filter(o => !where.has(o.key) && !loading.has(o.key) && !missing.has(o.key)).sort((a, b) => a.z - b.z || a.d - b.d);
+  pump();
+}
+
+/* ---------- the whole-planet picture: 24 small tiles drawn onto the six sides of a cube ---------- */
+const CUBE = [  // WebGL's own cube sides: which way each points, and how it lays out its picture
+  { ours: 0, st: r => [-r[2] / r[0], -r[1] / r[0]] }, { ours: 5, st: r => [-r[2] / r[0], r[1] / r[0]] },
+  { ours: 1, st: r => [r[0] / r[1], r[2] / r[1]] },   { ours: 3, st: r => [-r[0] / r[1], r[2] / r[1]] },
+  { ours: 2, st: r => [r[0] / r[2], -r[1] / r[2]] },  { ours: 4, st: r => [r[0] / r[2], r[1] / r[2]] }];
+async function loadBase() {
+  const mine = epoch, N = TILE * 2;
+  const live = () => mine === epoch && !gl.isContextLost();
+  for (let side = 0; side < 6; side++) {
+    const C = CUBE[side], F = FACE[C.ours];
+    const tiles = await Promise.all([[0, 0], [1, 0], [0, 1], [1, 1]].map(([x, y]) => bitmap(tileUrl(tkey(C.ours, 1, x, y))).catch(err => { console.warn(err); return null; })));
+    if (!live()) return;
+    if (tiles.every(t => !t)) throw new Error('no base pictures for face ' + C.ours);
+    /* our picture runs right with u and down with -v; find where three of its corners land on WebGL's side */
+    const at = (X, Y) => {
+      const u = 2 * X / N - 1, v = 1 - 2 * Y / N, r = [0, 1, 2].map(i => F[0][i] + u * F[1][i] + v * F[2][i]), st = C.st(r);
+      return [(st[0] + 1) / 2 * N, (st[1] + 1) / 2 * N];
+    };
+    const o = at(0, 0), a = at(N, 0), b = at(0, N);
+    const cv = document.createElement('canvas'); cv.width = cv.height = N;
+    const cx = cv.getContext('2d'); cx.imageSmoothingEnabled = false;
+    cx.setTransform((a[0] - o[0]) / N, (a[1] - o[1]) / N, (b[0] - o[0]) / N, (b[1] - o[1]) / N, o[0], o[1]);
+    tiles.forEach((img, i) => { if (img) { cx.drawImage(img, (i & 1) * TILE, (i >> 1) * TILE); img.close(); } });
+    gl.activeTexture(gl.TEXTURE0); gl.bindTexture(gl.TEXTURE_CUBE_MAP, tex.cube);
+    gl.texSubImage2D(gl.TEXTURE_CUBE_MAP_POSITIVE_X + side, 0, 0, 0, gl.RGBA, gl.UNSIGNED_BYTE, cv);
+    loaded.base++;
+  }
+  gl.activeTexture(gl.TEXTURE0); gl.bindTexture(gl.TEXTURE_CUBE_MAP, tex.cube);
+  gl.generateMipmap(gl.TEXTURE_CUBE_MAP);
+  loaded.baseDone = true;
+}
+async function loadGrey(url, unit, key, repeatY) {
+  const mine = epoch, img = await bitmap(url);
+  if (mine !== epoch || gl.isContextLost()) { img.close(); return; }
+  const t = gl.createTexture();
+  gl.activeTexture(gl.TEXTURE0 + unit); gl.bindTexture(gl.TEXTURE_2D, t);
+  gl.pixelStorei(gl.UNPACK_ALIGNMENT, 1);
+  gl.texImage2D(gl.TEXTURE_2D, 0, gl.R8, gl.RED, gl.UNSIGNED_BYTE, img); img.close();
+  gl.generateMipmap(gl.TEXTURE_2D);
+  gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_MIN_FILTER, gl.LINEAR_MIPMAP_LINEAR);
+  gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_MAG_FILTER, gl.LINEAR);
+  gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_WRAP_S, gl.REPEAT);
+  gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_WRAP_T, repeatY ? gl.REPEAT : gl.CLAMP_TO_EDGE);
+  gl.deleteTexture(tex[key]); tex[key] = t; loaded[key] = true;
+}
+
+function initGL() {
+  epoch++;
+  prog = gl.createProgram();
+  gl.attachShader(prog, compile(gl.VERTEX_SHADER, VERT));
+  gl.attachShader(prog, compile(gl.FRAGMENT_SHADER, FRAG));
+  gl.linkProgram(prog);
+  if (!gl.getProgramParameter(prog, gl.LINK_STATUS)) throw new Error(gl.getProgramInfoLog(prog) || 'link');
+  gl.useProgram(prog);
+  gl.bindVertexArray(gl.createVertexArray());
+  for (const n of ['uRes', 'uCam', 'uRight', 'uUp', 'uFwd', 'uTan', 'uShift', 'uCube', 'uTiles', 'uInd', 'uNoise', 'uCloud', 'uWisp',
+                   'uC0', 'uE0', 'uN0', 'uSun', 'uLife', 'uTime', 'uMeteor', 'uMeteorP', 'uBias', 'uDebug',
+                   'uClouds', 'uCloudTurn', 'uHasWisp', 'uPtr', 'uPtrR']) U[n] = gl.getUniformLocation(prog, n);
+  gl.pixelStorei(gl.UNPACK_FLIP_Y_WEBGL, false);
+  gl.pixelStorei(gl.UNPACK_PREMULTIPLY_ALPHA_WEBGL, false);
+  gl.pixelStorei(gl.UNPACK_COLORSPACE_CONVERSION_WEBGL, gl.NONE);
+
+  tex.cube = gl.createTexture();
+  gl.activeTexture(gl.TEXTURE0); gl.bindTexture(gl.TEXTURE_CUBE_MAP, tex.cube);
+  const N = TILE * 2;
+  gl.texStorage2D(gl.TEXTURE_CUBE_MAP, Math.floor(Math.log2(N)) + 1, gl.RGBA8, N, N);
+  gl.texParameteri(gl.TEXTURE_CUBE_MAP, gl.TEXTURE_MIN_FILTER, gl.LINEAR_MIPMAP_LINEAR);
+  gl.texParameteri(gl.TEXTURE_CUBE_MAP, gl.TEXTURE_MAG_FILTER, gl.LINEAR);
+
+  tex.tiles = gl.createTexture();
+  gl.activeTexture(gl.TEXTURE1); gl.bindTexture(gl.TEXTURE_2D_ARRAY, tex.tiles);
+  gl.texStorage3D(gl.TEXTURE_2D_ARRAY, 1, gl.RGBA8, TILE, TILE, LAYERS);
+  gl.texParameteri(gl.TEXTURE_2D_ARRAY, gl.TEXTURE_MIN_FILTER, gl.LINEAR);
+  gl.texParameteri(gl.TEXTURE_2D_ARRAY, gl.TEXTURE_MAG_FILTER, gl.LINEAR);
+  gl.texParameteri(gl.TEXTURE_2D_ARRAY, gl.TEXTURE_WRAP_S, gl.CLAMP_TO_EDGE);
+  gl.texParameteri(gl.TEXTURE_2D_ARRAY, gl.TEXTURE_WRAP_T, gl.CLAMP_TO_EDGE);
+
+  tex.ind = gl.createTexture();
+  gl.activeTexture(gl.TEXTURE2); gl.bindTexture(gl.TEXTURE_2D, tex.ind);
+  gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_MIN_FILTER, gl.NEAREST);
+  gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_MAG_FILTER, gl.NEAREST);
+  gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_WRAP_S, gl.CLAMP_TO_EDGE);
+  gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_WRAP_T, gl.CLAMP_TO_EDGE);
+  ind.fill(255); indDirty = true;
+  slotKey.fill(null); where.clear(); loading.clear(); missing.clear(); wanted = new Map(); queue = []; lastNeedKey = '';
+
+  tex.noise = noiseTexture(3);
+  tex.clouds = greyTexture(4, 0);
+  tex.wisp = greyTexture(5, 128);
+  gl.uniform1i(U.uCube, 0); gl.uniform1i(U.uTiles, 1); gl.uniform1i(U.uInd, 2); gl.uniform1i(U.uNoise, 3); gl.uniform1i(U.uCloud, 4); gl.uniform1i(U.uWisp, 5);
+  gl.uniform3fv(U.uC0, EU.c); gl.uniform3fv(U.uE0, EU.e); gl.uniform3fv(U.uN0, EU.n);
+  gl.uniform3fv(U.uSun, SUN);
+  loaded.manifest = false; loaded.base = 0; loaded.baseDone = false; loaded.clouds = false; loaded.wisp = false; loaded.tiles = 0; loaded.failed = 0;
+}
+
+let failed = false, started = false, touched = false;
+function setNote() {
+  note.classList.toggle('err', failed);
+  if (failed) { note.hidden = false; note.textContent = "The pictures didn't load. Reload the page to try again."; return; }
+  if (!loaded.baseDone) { note.hidden = false; note.textContent = 'Loading the map'; return; }
+  if (!touched) { note.hidden = false; note.textContent = coarse ? 'Drag to move, pinch to zoom' : 'Drag to move, scroll to zoom'; return; }
+  if (queue.length + loading.size > 3) { note.hidden = false; note.textContent = 'Sharpening'; return; }
+  note.hidden = true;
+}
+async function loadAll() {
+  const mine = epoch, live = () => mine === epoch && !gl.isContextLost();
+  try {
+    const res = await fetch(TILE_ROOT + 'tiles.json'); if (!res.ok) throw new Error('tiles.json ' + res.status);
+    const m = await res.json();
+    for (const z of Object.keys(m.levels)) m.levels[z] = m.levels[z].map(hex => Uint8Array.from(hex.match(/../g) || [], h => parseInt(h, 16)));
+    if (!live()) return;
+    manifest = m; loaded.manifest = true;
+    await loadBase();
+    if (!live()) return;
+    setNote(); render();
+    if (!started) { started = true; if (!touched && !params.has('stay')) flyTo('uk', 2600); }
+  } catch (err) {
+    if (!live()) return;
+    failed = true; setNote(); console.error(err); return;
+  }
+  loadGrey(m_url('clouds'), 4, 'clouds', false).then(render).catch(err => console.warn(err));
+  if (manifest.wisp) loadGrey(m_url('wisp'), 5, 'wisp', true).then(render).catch(err => console.warn(err));
+}
+const m_url = k => TILE_ROOT + ((manifest && manifest[k]) || k + '.jpg');
+
+/* ---------- drawing ---------- */
+let queued = false;
+function render() { if (!queued) { queued = true; requestAnimationFrame(frame); } }
+function resize() {
+  const r = canvas.getBoundingClientRect();
+  cssW = Math.max(1, r.width); cssH = Math.max(1, r.height);
+  const k = fullDpr() * quality;
+  const w = Math.max(1, Math.round(r.width * k)), h = Math.max(1, Math.round(r.height * k));
+  if (w !== canvas.width || h !== canvas.height) { canvas.width = w; canvas.height = h; }
+  W = w; H = h; setLens();
+  /* keep the point you are looking at in the middle of the clear space between the heading and the controls */
+  const lead = document.querySelector('.top p').getBoundingClientRect().bottom || document.querySelector('.top h1').getBoundingClientRect().bottom;
+  const panelTop = document.querySelector('.panel').getBoundingClientRect().top;
+  shift = clamp((cssH / 2 - (lead * 0.6 + panelTop) / 2) / (cssH / 2), 0, 0.25);
+}
+function setQuality(q) { if (q !== quality) { quality = q; resize(); } }
+
+const clock0 = performance.now();
+let meteor = null, nextMeteor = 7, cloudFade = 1;
+const ptr = { on: false, x: 0, y: 0, amt: 0, p: [0, 0, 1], lastSeen: -1e9 };
+function draw(time, dt) {
+  /* left alone, the camera floats a little, as if in orbit; it settles the moment you touch the globe */
+  const k = sway * clamp(view.dist / 0.27, 0.5, 2);
+  const lat = clamp(view.lat + 0.16 * k * Math.sin(swayClock * 0.41 + 1.0), -85, 85);
+  const lon = view.lon + 0.30 * k * Math.sin(swayClock * 0.29) / Math.max(Math.cos(view.lat * DEG), 0.3);
+  const T = dir(lat, lon), B = basis(lat, lon), N = B.n, E = B.e;
+  const d = view.dist * (1 + 0.012 * sway * Math.sin(swayClock * 0.23 + 2.0));
+  const t = tiltFor(view.dist), ct = Math.cos(t), st = Math.sin(t);
+  const cam = [0, 1, 2].map(i => T[i] * (1 + d * ct) - N[i] * d * st);
+  const fwd = [0, 1, 2].map(i => -ct * T[i] + st * N[i]);
+  const up = [0, 1, 2].map(i => ct * N[i] + st * T[i]);
+  camNow.cam = cam; camNow.right = E; camNow.up = up; camNow.fwd = fwd;
+
+  /* the glow that follows the pointer */
+  const want = ptr.on || performance.now() - ptr.lastSeen < 900 ? 1 : 0;
+  if (ptr.on || want) { const h = rayAt(ptr.x / cssW * 2 - 1, 1 - ptr.y / cssH * 2); if (h) ptr.p = h.p; else if (!ptr.on) ptr.lastSeen = -1e9; }
+  ptr.amt += (want - ptr.amt) * Math.min(1, dt * (want ? 6 : 2.2));
+  if (ptr.amt < 0.004 && !want) ptr.amt = 0;
+
+  needTiles();
+  if (indDirty) {
+    gl.activeTexture(gl.TEXTURE2); gl.bindTexture(gl.TEXTURE_2D, tex.ind);
+    gl.texImage2D(gl.TEXTURE_2D, 0, gl.RGBA8, 192, 32, 0, gl.RGBA, gl.UNSIGNED_BYTE, ind); indDirty = false;
+  }
+  cloudFade += ((showClouds && loaded.clouds ? 1 : 0) - cloudFade) * Math.min(1, dt * 3);
+  gl.viewport(0, 0, W, H);
+  gl.uniform2f(U.uRes, W, H);
+  gl.uniform3fv(U.uCam, cam); gl.uniform3fv(U.uRight, E); gl.uniform3fv(U.uUp, up); gl.uniform3fv(U.uFwd, fwd);
+  gl.uniform2f(U.uTan, tanH, tanV); gl.uniform1f(U.uShift, shift);
+  gl.uniform1f(U.uLife, life ? 1 : 0);
+  gl.uniform1f(U.uTime, time);
+  gl.uniform1f(U.uBias, LOD_BIAS);
+  gl.uniform1f(U.uDebug, debug);
+  gl.uniform1f(U.uClouds, loaded.clouds ? cloudFade : 0);
+  gl.uniform1f(U.uCloudTurn, 2.2 + cloudClock * 0.0009);         // the cloud layer drifts round very slowly
+  gl.uniform1f(U.uHasWisp, loaded.wisp ? 1 : 0);
+  gl.uniform4f(U.uPtr, ptr.p[0], ptr.p[1], ptr.p[2], ptr.amt);
+  gl.uniform1f(U.uPtrR, clamp(0.55 * view.dist * Math.min(tanH, tanV), 0.012, 0.30));
+  let mp = -1;
+  if (life && frozenTime === null) {
+    if (!meteor && time > nextMeteor) {
+      const a = W / H, side = Math.random() < 0.5 ? -1 : 1, ang = 0.22 + 0.30 * Math.random();
+      const x0 = (-0.75 + 1.5 * Math.random()) * a, y0 = 0.45 + 0.45 * Math.random(), len = 0.45 + 0.25 * Math.random();
+      meteor = { t0: time, dur: 0.8 + 0.5 * Math.random(), line: [x0, y0, x0 + side * len * Math.cos(ang), y0 - len * Math.sin(ang)] };
+    }
+    if (meteor) {
+      mp = (time - meteor.t0) / meteor.dur;
+      if (mp >= 1) { meteor = null; mp = -1; nextMeteor = time + 9 + 13 * Math.random(); }
+      else gl.uniform4fv(U.uMeteor, meteor.line);
+    }
+  }
+  gl.uniform1f(U.uMeteorP, mp);
+  gl.drawArrays(gl.TRIANGLES, 0, 3);
+}
+
+/* ---------- movement ---------- */
+let fly = null, vel = { lat: 0, lon: 0 }, lastT = 0, lastDraw = 0, lastInput = -1e9, current = null, pace = 16, spin = 0, sway = 0, swayClock = 0, cloudClock = 0;
+const samples = [];
+function setCurrent(name) {
+  current = name;
+  document.querySelectorAll('#places button').forEach(b => b.setAttribute('aria-current', b.dataset.place === name ? 'true' : 'false'));
+}
+function pan(dx, dy) {
+  const k = view.dist * 2 * tanV / cssH / DEG;
+  const dLat = dy * k / Math.max(Math.cos(tiltFor(view.dist)), 0.4);
+  const dLon = -dx * k / Math.max(Math.cos(view.lat * DEG), 0.15);
+  view.lat = clamp(view.lat + dLat, -84, 84);
+  view.lon = wrap(view.lon + dLon);
+  return [dLat, dLon];
+}
+function zoomBy(f) { view.dist = clamp(view.dist * f, minDist, maxDist); }
+function userMoved() {
+  fly = null; lastInput = performance.now(); spin = 0;
+  if (current) setCurrent(null);
+  if (!touched) { touched = true; setNote(); }
+}
+function flyTo(name, ms) {
+  const p = PLACES[name]; if (!p) return;
+  const dist = clamp(p.dist, minDist, maxDist);
+  vel.lat = vel.lon = 0; setCurrent(name); lastInput = performance.now(); spin = 0;
+  if (reduceMotion) { view.lat = p.lat; view.lon = p.lon; view.dist = dist; fly = null; render(); return; }
+  const a = dir(view.lat, view.lon), b = dir(p.lat, p.lon);
+  const ang = Math.acos(clamp(dot(a, b), -1, 1)) / DEG;
+  fly = { t0: performance.now(), dur: ms || 900 + 1000 * Math.min(1, ang / 90),
+          lat0: view.lat, lon0: view.lon, ld0: Math.log(view.dist),
+          dLat: p.lat - view.lat, dLon: wrap(p.lon - view.lon), ld1: Math.log(dist),
+          bump: Math.log(1 + ang / 35) * 0.9 };
+  render();
+}
+function frame(now) {
+  queued = false;
+  if (!gl || gl.isContextLost()) return;
+  const gliding = pointers.size === 0 && (Math.abs(vel.lat) > 0.02 || Math.abs(vel.lon) > 0.02);
+  const moving = !!fly || gliding || pointers.size > 0;
+  const ambient = life && frozenTime === null;
+  const settling = ptr.amt > 0 || ptr.on || Math.abs(cloudFade - (showClouds && loaded.clouds ? 1 : 0)) > 0.01;
+  /* when only the gentle background motion is running, 30 pictures a second is plenty */
+  if (!moving && ambient && !ptr.on && now - lastDraw < 30) { render(); return; }
+  const dt = Math.min(0.05, lastT ? (now - lastT) / 1000 : 0.016);
+  if (moving && lastT) pace += ((now - lastT) - pace) * 0.15;
+  lastT = now; lastDraw = now;
+
+  if (fly) {
+    const x = clamp((now - fly.t0) / fly.dur, 0, 1), e = x < 0.5 ? 4 * x * x * x : 1 - Math.pow(-2 * x + 2, 3) / 2;
+    view.lat = fly.lat0 + fly.dLat * e;
+    view.lon = wrap(fly.lon0 + fly.dLon * e);
+    view.dist = clamp(Math.exp(fly.ld0 + (fly.ld1 - fly.ld0) * e + fly.bump * Math.sin(Math.PI * e)), minDist, maxDist);
+    if (x >= 1) { fly = null; lastInput = now; }
+  } else if (gliding) {
+    view.lat = clamp(view.lat + vel.lat * dt, -84, 84);
+    view.lon = wrap(view.lon + vel.lon * dt);
+    const decay = Math.exp(-dt / 0.32); vel.lat *= decay; vel.lon *= decay;
+  } else if (ambient && pointers.size === 0 && view.dist > maxDist * 0.8 && now - lastInput > 3500) {
+    spin = Math.min(1, spin + dt / 2.5);                // seen from far away and left alone, the Earth turns slowly
+    view.lon = wrap(view.lon + 1.6 * spin * spin * dt);
+  }
+
+  const resting = ambient && !moving && now - lastInput > 1200;
+  sway += ((resting ? 1 : 0) - sway) * Math.min(1, dt * (resting ? 0.7 : 7));
+  if (ambient) { swayClock += dt; cloudClock += dt; }
+
+  /* full sharpness whenever the picture is still; ease off only while it is moving and only if the device needs it */
+  if (!lockQuality) {
+    if (moving) {
+      if (pace > 24 && moveQuality > 0.55) { moveQuality = Math.max(0.55, moveQuality - 0.12); pace = 17; }
+      else if (pace < 12.5 && moveQuality < 1) { moveQuality = Math.min(1, moveQuality + 0.06); pace = 16; }
+      setQuality(moveQuality);
+    } else setQuality(1);
+  }
+
+  draw(frozenTime !== null ? frozenTime : (now - clock0) / 1000, dt);
+  if (moving || ambient || settling || queue.length || loading.size) render(); else lastT = 0;
+}
+
+/* ---------- input ---------- */
+const pointers = new Map();
+let pinch = 0;
+const span = () => { const [a, b] = [...pointers.values()]; return Math.hypot(a.x - b.x, a.y - b.y); };
+const seen = e => { const r = canvas.getBoundingClientRect(); ptr.x = e.clientX - r.left; ptr.y = e.clientY - r.top; ptr.lastSeen = performance.now(); };
+canvas.addEventListener('pointerdown', e => {
+  try { canvas.setPointerCapture(e.pointerId); } catch (err) { /* capture is a nicety, not a need */ }
+  if (pointers.size === 0 && moveQuality < 1) moveQuality = Math.min(1, moveQuality + 0.06);
+  pointers.set(e.pointerId, { x: e.clientX, y: e.clientY });
+  vel.lat = vel.lon = 0; samples.length = 0;
+  if (pointers.size === 2) pinch = span();
+  canvas.classList.add('dragging');
+  seen(e); ptr.on = pointers.size === 1;
+  userMoved(); render();
+});
+canvas.addEventListener('pointermove', e => {
+  const p = pointers.get(e.pointerId);
+  if (!p) { if (e.pointerType === 'mouse') { seen(e); ptr.on = true; render(); } return; }
+  const dx = e.clientX - p.x, dy = e.clientY - p.y;
+  p.x = e.clientX; p.y = e.clientY; lastInput = performance.now();
+  if (pointers.size === 1) {
+    seen(e);
+    const [dLat, dLon] = pan(dx, dy);
+    samples.push({ t: e.timeStamp, dLat, dLon });
+    while (samples.length && e.timeStamp - samples[0].t > 90) samples.shift();
+  } else if (pointers.size === 2) {
+    pan(dx / 2, dy / 2);
+    const s = span();
+    if (pinch > 0 && s > 0) zoomBy(pinch / s);
+    pinch = s;
+  }
+  render();
+});
+function release(e) {
+  if (!pointers.delete(e.pointerId)) return;
+  lastInput = performance.now();
+  if (e.pointerType !== 'mouse') ptr.on = false;
+  if (pointers.size === 0) {
+    canvas.classList.remove('dragging');
+    if (!reduceMotion && samples.length > 1 && e.timeStamp - samples[samples.length - 1].t < 60) {
+      const secs = Math.max(16, samples[samples.length - 1].t - samples[0].t) / 1000;
+      vel.lat = samples.reduce((s, q) => s + q.dLat, 0) / secs;
+      vel.lon = samples.reduce((s, q) => s + q.dLon, 0) / secs;
+    }
+    samples.length = 0; render();
+  } else { pinch = 0; samples.length = 0; ptr.on = false; }
+}
+canvas.addEventListener('pointerup', release);
+canvas.addEventListener('pointercancel', release);
+canvas.addEventListener('pointerleave', e => { if (e.pointerType === 'mouse' && !pointers.size) { ptr.on = false; render(); } });
+canvas.addEventListener('wheel', e => {
+  e.preventDefault();
+  userMoved(); vel.lat = vel.lon = 0;
+  const unit = e.deltaMode === 1 ? 16 : e.deltaMode === 2 ? 400 : 1;
+  zoomBy(Math.exp(clamp(e.deltaY * unit, -400, 400) * (e.ctrlKey ? 0.010 : 0.0016)));
+  render();
+}, { passive: false });
+canvas.addEventListener('keydown', e => {
+  const step = 60;
+  const moves = { ArrowLeft: [step, 0], ArrowRight: [-step, 0], ArrowUp: [0, step], ArrowDown: [0, -step] };
+  if (moves[e.key]) { userMoved(); pan(moves[e.key][0], moves[e.key][1]); }
+  else if (e.key === '+' || e.key === '=') { userMoved(); zoomBy(0.8); }
+  else if (e.key === '-' || e.key === '_') { userMoved(); zoomBy(1.25); }
+  else return;
+  e.preventDefault(); render();
+});
+$('#places').addEventListener('click', e => {
+  const b = e.target.closest('button[data-place]'); if (!b) return;
+  if (!touched) { touched = true; setNote(); }
+  flyTo(b.dataset.place);
+});
+$('#clouds').addEventListener('click', e => {
+  showClouds = !showClouds;
+  e.currentTarget.setAttribute('aria-checked', showClouds ? 'true' : 'false');
+  render();
+});
+$('#motion').addEventListener('click', e => {
+  life = !life; meteor = null; spin = 0; if (!life) sway = 0;
+  e.currentTarget.setAttribute('aria-checked', life ? 'true' : 'false');
+  render();
+});
+$('#motion').setAttribute('aria-checked', life ? 'true' : 'false');
+$('#zin').addEventListener('click', () => { userMoved(); zoomBy(0.7); render(); });
+$('#zout').addEventListener('click', () => { userMoved(); zoomBy(1 / 0.7); render(); });
+
+/* ---------- start ---------- */
+function showFlat() { $('#flat').hidden = false; canvas.hidden = true; document.querySelector('.top').hidden = true; document.querySelector('.dock').hidden = true; }
+try {
+  gl = canvas.getContext('webgl2', { antialias: false, alpha: false, powerPreference: 'high-performance' });
+  if (!gl) throw new Error('no webgl2');
+  initGL();
+} catch (err) { console.error(err); gl = null; showFlat(); }
+
+if (gl) {
+  canvas.addEventListener('webglcontextlost', e => { e.preventDefault(); epoch++; });
+  canvas.addEventListener('webglcontextrestored', () => { try { initGL(); resize(); setNote(); render(); loadAll(); } catch (err) { showFlat(); } });
+  new ResizeObserver(() => { resize(); render(); }).observe(canvas);
+  resize();
+  view.dist = maxDist;
+  setNote(); render(); loadAll();
+  /* handles for checking the page by script */
+  window.__globe = { view, places: PLACES, flyTo, render, loaded, ptr, locate,
+    state: () => ({ minDist, maxDist, quality, life, canvas: [canvas.width, canvas.height], layers: LAYERS,
+                    held: where.size, wanted: wanted.size, waiting: queue.length, loading: loading.size, missing: missing.size,
+                    levels: [...where.keys()].reduce((a, k) => { const z = k.split('/')[1]; a[z] = (a[z] || 0) + 1; return a; }, {}) }),
+    set(lat, lon, dist) { fly = null; vel.lat = vel.lon = 0; lastInput = performance.now(); spin = 0; view.lat = lat; view.lon = lon; view.dist = clamp(dist, minDist, maxDist); render(); },
+    debug(v) { debug = v; render(); },
+    still(time) { frozenTime = time; lockQuality = time !== null; if (lockQuality) { setQuality(1); sway = 0; } render(); } };
+}
+})();
+</script>
+</body>
+</html>
