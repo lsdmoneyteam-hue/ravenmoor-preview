@@ -377,7 +377,7 @@ void main(){
 
 let gl = null, prog = null, U = {}, tex = {}, epoch = 0;
 const loaded = { manifest: false, base: 0, baseDone: false, clouds: false, wisp: false, tiles: 0, failed: 0 };
-const LAYERS = coarse ? 72 : 140;                        // sharp tiles kept on the GPU at once
+const LAYERS = coarse ? 64 : 140;                        // sharp tiles kept on the GPU at once
 
 function compile(type, src) {
   const s = gl.createShader(type); gl.shaderSource(s, src); gl.compileShader(s);
@@ -414,6 +414,7 @@ const slotKey = new Array(LAYERS).fill(null), slotSeen = new Float64Array(LAYERS
 const where = new Map();                                // tile key -> layer
 const loading = new Map();                              // tile key -> true while it is on its way
 const missing = new Set();                              // tiles that failed to load: do not keep asking
+const nofit = new Set();                                // tiles there was no room for in this view: ask again when the view changes
 let wanted = new Map(), pass = 0, lastNeedKey = '';
 const tkey = (f, z, x, y) => f + '/' + z + '/' + x + '_' + y;
 const tileUrl = key => TILE_ROOT + key + '.jpg' + (manifest && manifest.v ? '?v=' + manifest.v : '');
@@ -457,7 +458,7 @@ function fetchTile(key, f, z, x, y) {
   bitmap(tileUrl(key)).then(img => {
     loading.delete(key);
     if (mine !== epoch || gl.isContextLost()) { img.close(); return; }
-    if (place(key, f, z, x, y, img)) loaded.tiles++;
+    if (place(key, f, z, x, y, img)) loaded.tiles++; else nofit.add(key);
     img.close(); setNote(); render(); pump();
   }).catch(err => { loading.delete(key); missing.add(key); loaded.failed++; console.warn(err); setNote(); pump(); });
 }
@@ -465,7 +466,7 @@ let queue = [];
 function pump() {
   while (loading.size < 6 && queue.length) {
     const q = queue.shift();
-    if (where.has(q.key) || loading.has(q.key) || missing.has(q.key) || !wanted.has(q.key)) continue;
+    if (where.has(q.key) || loading.has(q.key) || missing.has(q.key) || nofit.has(q.key) || !wanted.has(q.key)) continue;
     fetchTile(q.key, q.f, q.z, q.x, q.y);
   }
 }
@@ -487,6 +488,7 @@ function needTiles() {
   if (!manifest || !loaded.baseDone) return;
   const k = camNow.cam.map(v => v.toFixed(5)).join() + '|' + W + 'x' + H + '|' + camNow.fwd.map(v => v.toFixed(4)).join();
   if (k === lastNeedKey && !queue.length) return;
+  if (k !== lastNeedKey) nofit.clear();
   lastNeedKey = k; pass++;
   const pix = 2 * tanV / (cssH * fullDpr());            // the angle one screen pixel covers, at full sharpness
   const next = new Map(), list = [];
@@ -509,7 +511,7 @@ function needTiles() {
   }
   wanted = next;
   for (const o of list) { const s = where.get(o.key); if (s !== undefined) slotSeen[s] = pass; }
-  queue = list.filter(o => !where.has(o.key) && !loading.has(o.key) && !missing.has(o.key)).sort((a, b) => a.z - b.z || a.d - b.d);
+  queue = list.filter(o => !where.has(o.key) && !loading.has(o.key) && !missing.has(o.key) && !nofit.has(o.key)).sort((a, b) => a.z - b.z || a.d - b.d);
   pump();
 }
 
@@ -599,7 +601,7 @@ function initGL() {
   gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_WRAP_S, gl.CLAMP_TO_EDGE);
   gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_WRAP_T, gl.CLAMP_TO_EDGE);
   ind.fill(255); indDirty = true;
-  slotKey.fill(null); where.clear(); loading.clear(); missing.clear(); wanted = new Map(); queue = []; lastNeedKey = '';
+  slotKey.fill(null); where.clear(); loading.clear(); missing.clear(); nofit.clear(); wanted = new Map(); queue = []; lastNeedKey = '';
 
   tex.noise = noiseTexture(3);
   tex.clouds = greyTexture(4, 0);
@@ -897,7 +899,7 @@ if (gl) {
   /* handles for checking the page by script */
   window.__globe = { view, places: PLACES, flyTo, render, loaded, ptr, locate,
     state: () => ({ minDist, maxDist, quality, life, canvas: [canvas.width, canvas.height], layers: LAYERS,
-                    held: where.size, wanted: wanted.size, waiting: queue.length, loading: loading.size, missing: missing.size,
+                    held: where.size, wanted: wanted.size, waiting: queue.length, loading: loading.size, missing: missing.size, nofit: nofit.size,
                     levels: [...where.keys()].reduce((a, k) => { const z = k.split('/')[1]; a[z] = (a[z] || 0) + 1; return a; }, {}) }),
     set(lat, lon, dist) { fly = null; vel.lat = vel.lon = 0; lastInput = performance.now(); spin = 0; view.lat = lat; view.lon = lon; view.dist = clamp(dist, minDist, maxDist); render(); },
     debug(v) { debug = v; render(); },
