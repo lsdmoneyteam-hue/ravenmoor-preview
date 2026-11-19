@@ -420,10 +420,10 @@ void main(){
   float glowing = lit * (1.0 - 0.8 * smoothstep(0.82, 1.0, peak));
   /* roads and the faint glow between towns are held back hardest (to about 25%), bright city centres least (about 60%) */
   float hold = mix(0.75, 0.40, smoothstep(0.45, 0.85, peak));
-  float gain = 1.0 - hold * glow * (1.0 - nearPtr) + nearPtr * glow * 0.75;
+  float gain = 1.0 - hold * glow * (1.0 - nearPtr) + nearPtr * glow * 0.80;
   if (uLife > 0.5 && glowing > 0.0) gain += glowing * shimmer(g * ${TILE * (1 << TOP)}.0 + float(f) * 977.0, fp, t) * (0.75 + 1.6 * nearPtr);
   gain += nearPtr * warm * smoothstep(0.05, 0.30, peak) * 0.55;
-  col *= min(gain, max(1.0, mix(1.06, 1.45, nearPtr) / max(peak, 0.001)));     // only under the pointer may it go past full brightness
+  col *= min(gain, max(1.0, mix(1.06, 1.52, nearPtr) / max(peak, 0.001)));     // only under the pointer may it go past full brightness
   col += vec3(1.0, 0.74, 0.36) * (glow * nearPtr * 0.10 + warm * nearPtr * nearPtr * 0.03);
 
   /* clouds: grey-blue under the moon, white in daylight, a warm edge along the line between them */
