@@ -7,6 +7,7 @@
 //   POST /api/tg/hook      Telegram webhook: bot commands and buttons              (telegram.js)
 //   GET  /admin            private dashboard, signed in through the bot            (admin.js)
 //   GET  /a/*.mp4          video with byte ranges                                  (media.js)
+//   PUT  /api/drop/*.jpg   TEMPORARY: guide images for the globe artwork run       (drop.js)
 //   cron 08:00 UTC         yesterday's digest to Telegram, old data removed        (telegram.js)
 //   cron hourly            reminder for an enquiry left on "new" for two hours      (telegram.js)
 //
@@ -22,6 +23,7 @@ import { collect } from './track.js';
 import { tgRegister, tgHook, daily, hourly } from './telegram.js';
 import { admin } from './admin.js';
 import { media } from './media.js';
+import { drop } from './drop.js';
 import { json, log, errText } from './util.js';
 
 export default {
@@ -33,6 +35,7 @@ export default {
       if (path === '/api/e') return await collect(request, env, ctx, url);
       if (path === '/api/tg/register') return await tgRegister(request, env, url);
       if (path === '/api/tg/hook') return await tgHook(request, env, url);
+      if (path.startsWith('/api/drop/')) return await drop(request, env, url);
       if (path.startsWith('/api/')) return json({ ok: false, error: 'not_found' }, 404);
       if (path === '/admin' || path.startsWith('/admin/')) return await admin(request, env, ctx, url);
       if (path.startsWith('/a/') && path.endsWith('.mp4')) return await media(request, env, ctx, url);
