@@ -270,6 +270,9 @@ body{margin:0}
 .cover.over{pointer-events:none}
 .fb{position:absolute;inset:0;width:100%;height:100%;display:block;pointer-events:none;-webkit-user-drag:none}
 .gl{position:absolute;inset:0;width:100%;height:100%;display:block;opacity:0;transition:opacity .5s ease-out;pointer-events:none}
+.gl-live{position:absolute;inset:0;width:100%;height:100%;border:0;display:block;pointer-events:none;visibility:hidden;background:#02040a}
+.gl-live.on{visibility:visible}
+.is-playing .gl-live,.is-ended .gl-live{visibility:hidden}
 .gl.on{opacity:1}
 .is-playing .gl,.is-ended .gl{visibility:hidden;transition:visibility 0s .25s}
 .hero2.is-grab{cursor:grabbing}
@@ -431,6 +434,7 @@ window.__ldReady=Promise.race([getHi(),new Promise(function(r){setTimeout(r,1200
 <img class="fb" src="a/00019961d9e6.webp" alt="" decoding="async" draggable="false">
 <img class="fb" src="a/1e8333f83131.webp" alt="" decoding="async" draggable="false">
 </div>
+<iframe class="gl-live" aria-hidden="true" tabIndex="-1" title="Ravenmoor globe" data-src="globe/?hero=1"></iframe>
 <canvas class="gl" aria-hidden="true" data-bg-lo="a/00019961d9e6.webp" data-bg-hi="a/619c5766f375.webp" data-stars-lo="a/6273683c7e67.webp" data-stars-hi="a/5f47adc6fb23.webp" data-lights-lo="a/8e338d0da2a7.webp" data-lights-hi="a/09cca8360b74.webp" data-mask="a/3f8b317684ef.png" data-frame="a/ac4e9236091f.webp" data-screen="a/d717c8ff9d8c.webp" data-halo="a/7f030243b6b6.webp"></canvas>
 <div class="cover over">
 <button type="button" class="phone-btn" aria-label="Play the Ravenmoor film" onClick="{{playFilm}}" onPointerEnter="{{preloadFilm}}" onFocus="{{preloadFilm}}" data-track="hero-play-film"><span class="tap"></span></button>
@@ -1057,11 +1061,14 @@ class Component extends DCLogic {
         if (m < 1.6) { ctx.globalAlpha = a * .16; ctx.beginPath(); ctx.arc(x, y, r * 3.2, 0, 6.2832); ctx.fill(); }
         ctx.globalAlpha = a; ctx.beginPath(); ctx.arc(x, y, r, 0, 6.2832); ctx.fill();
       }
-      // constellation lines grow out of their stars and join as the pointer nears them, the way the stars brighten;
-      // on a phone, with no pointer, they do it as they cross the middle of the screen
-      const qx = fine ? px : W / 2, qy = fine ? py : H * .42, rad = fine ? 210 : Math.min(W, H) * .42, la = fine ? .62 : .36;
-      if (qx >= 0) {
-        ctx.lineWidth = .9; ctx.lineCap = 'round'; ctx.strokeStyle = '#EDE8DF';
+      // constellation lines (computers only): they show only round the pointer, brightest right under it, holding
+      // their strength a little way out and then falling away quickly, the way the city lights do on the Earth below
+      if (fine && px >= 0) {
+        const rad = 90, g = ctx.createRadialGradient(px, py, 0, px, py, rad);
+        g.addColorStop(0, 'rgba(237,232,223,0.62)'); g.addColorStop(0.5, 'rgba(237,232,223,0.50)');
+        g.addColorStop(0.8, 'rgba(237,232,223,0.14)'); g.addColorStop(1, 'rgba(237,232,223,0)');
+        ctx.lineWidth = .9; ctx.lineCap = 'round'; ctx.strokeStyle = g; ctx.globalAlpha = 1;
+        ctx.beginPath();
         for (let ci = 0; ci < CN.length; ci++) {
           const segs = CN[ci].segs;
           for (let si = 0; si < segs.length; si++) {
@@ -1069,21 +1076,14 @@ class Component extends DCLogic {
             for (let i = 1; i < sg.length; i++) {
               const ok1 = proj(sg[i]), x1 = X, y1 = Y;
               if (ok0 && ok1) {
-                const dx = x1 - x0, dy = y1 - y0, l2 = dx * dx + dy * dy || 1, u = Math.max(0, Math.min(1, ((qx - x0) * dx + (qy - y0) * dy) / l2));
-                const d = Math.hypot(x0 + dx * u - qx, y0 + dy * u - qy);
-                if (d < rad) {
-                  const k = 1 - d / rad, f = Math.min(1, k * 2.4) / 2;
-                  ctx.globalAlpha = k * k * (3 - 2 * k) * la;
-                  ctx.beginPath();
-                  if (f >= .5) { ctx.moveTo(x0, y0); ctx.lineTo(x1, y1); }
-                  else { ctx.moveTo(x0, y0); ctx.lineTo(x0 + dx * f, y0 + dy * f); ctx.moveTo(x1, y1); ctx.lineTo(x1 - dx * f, y1 - dy * f); }
-                  ctx.stroke();
-                }
+                const dx = x1 - x0, dy = y1 - y0, l2 = dx * dx + dy * dy || 1, u = Math.max(0, Math.min(1, ((px - x0) * dx + (py - y0) * dy) / l2));
+                if (Math.hypot(x0 + dx * u - px, y0 + dy * u - py) < rad) { ctx.moveTo(x0, y0); ctx.lineTo(x1, y1); }
               }
               ok0 = ok1; x0 = x1; y0 = y1;
             }
           }
         }
+        ctx.stroke();
       }
       ctx.globalAlpha = 1;
       if (tw) req();
@@ -1541,7 +1541,8 @@ class Component extends DCLogic {
     this._noGL = true;
     if (this._reduce || !T || !H.cv) return;
     let R;
-    try { R = new T.WebGLRenderer({ canvas: H.cv, antialias: true, alpha: false, powerPreference: 'high-performance' }); } catch (e) { return; }
+    try { R = new T.WebGLRenderer({ canvas: H.cv, antialias: true, alpha: true, powerPreference: 'high-performance' }); } catch (e) { return; }
+    R.setClearColor(0x000000, 0);
     this._noGL = false;
     H.R = R;
     let coarse = false;
@@ -1594,8 +1595,8 @@ class Component extends DCLogic {
       uCover: { value: new T.Vector4(1, 1, 0, 0) }, uPar: { value: new T.Vector2() }, uNudge: { value: new T.Vector3() }, uWave: { value: new T.Vector3(0.5, 0.7, 0) }, uCur: { value: new T.Vector2(0.5, 0.7) },
       uPose: { value: 0 }, uK: { value: 0 }, uTime: { value: 0 }, uWaveA: { value: 0 }, uGlow: { value: 0 },
       uC: { value: [new T.Vector4(), new T.Vector4(), new T.Vector4()] }, uCI: { value: [0, 0, 0] },
-      uPl: { value: Array.from({ length: 12 }, () => new T.Vector4()) }, uPd: { value: Array.from({ length: 12 }, () => new T.Vector4()) }, uPx: { value: 0.001 } };
-    const bgScene = new T.Scene(); bgScene.add(new T.Mesh(quad, new T.ShaderMaterial({ uniforms: U, vertexShader: VS, fragmentShader: "precision highp float;\nvarying vec2 vUv;\nuniform sampler2D tBg; uniform sampler2D tStars; uniform sampler2D tLights; uniform sampler2D tMask; uniform sampler2D tHeat;\nuniform vec4 uCover; uniform vec2 uPar; uniform vec3 uNudge; uniform vec3 uWave; uniform vec2 uCur;\nuniform float uPose; uniform float uK; uniform float uTime; uniform float uWaveA; uniform float uGlow;\nuniform vec4 uC[3]; uniform float uCI[3];\nuniform vec4 uPl[12]; uniform vec4 uPd[12]; uniform float uPx;\nconst float A = 1.7777778;\nfloat hash(vec2 p){ p = fract(p * vec2(123.34, 456.21)); p += dot(p, p + 45.32); return fract(p.x * p.y); }\nfloat noise(vec2 p){ vec2 i = floor(p), f = fract(p); f = f * f * (3.0 - 2.0 * f); return mix(mix(hash(i), hash(i + vec2(1.0, 0.0)), f.x), mix(hash(i + vec2(0.0, 1.0)), hash(i + vec2(1.0, 1.0)), f.x), f.y); }\nfloat fbm(vec2 p){ float a = 0.5, s = 0.0; for (int i = 0; i < 3; i++) { s += a * noise(p); p *= 2.03; a *= 0.5; } return s; }\nfloat limb(float x){ return 0.49568653 * x * x - 0.49439854 * x + 0.53793609; }\nvec4 tx(sampler2D t, vec2 u){ return texture2D(t, vec2(u.x, 1.0 - u.y)); }\nvec4 txb(sampler2D t, vec2 u, float b){ return texture2D(t, vec2(u.x, 1.0 - u.y), b); }\nvoid main(){\n  vec2 img = vec2(vUv.x, 1.0 - vUv.y) * uCover.xy + uCover.zw;\n  float edge = smoothstep(0.0, 0.09, img.x) * smoothstep(0.0, 0.09, 1.0 - img.x) * smoothstep(0.0, 0.09, 1.0 - img.y);\n  vec2 sUv = img + uPar * 0.004 * uK * edge * smoothstep(0.0, 0.09, img.y);\n  sUv = mix(sUv, 0.5 + (sUv - 0.5 + vec2(0.00833, 0.01852)) / 0.98, uPose);\n  vec3 st = tx(tStars, sUv).rgb;\n  float l = dot(st, vec3(0.3333));\n  float lb = dot(txb(tStars, sUv, 3.0).rgb, vec3(0.3333));\n  vec2 cell = floor(sUv * vec2(480.0, 270.0));\n  float h1 = hash(cell), h2 = hash(cell + 19.7);\n  float small = smoothstep(0.10, 0.30, l) * (1.0 - smoothstep(0.08, 0.20, lb)) * step(0.5, h2);\n  st *= 1.0 + 0.5 * sin(uTime * (1.2 + 3.5 * h1) + 6.2832 * h2) * small * uK;\n  float l0 = limb(img.x);\n  float hgt = clamp((img.y - l0) / (1.0 - l0), 0.0, 1.0);\n  vec2 q = img + uPar * 0.011 * mix(0.35, 1.0, sqrt(hgt)) * uK;\n  vec2 pa = vec2(q.x * A, q.y) - vec2(0.5 * A, 2.4);\n  float cs = cos(uNudge.z), sn = sin(uNudge.z);\n  pa = vec2(cs * pa.x - sn * pa.y, sn * pa.x + cs * pa.y);\n  q = (pa + vec2(0.5 * A, 2.4)) / vec2(A, 1.0) - uNudge.xy;\n  q = img + (q - img) * edge;\n  q = mix(q, 0.5 + (q - 0.5 + vec2(0.00833, 0.01852)) / 0.98, uPose);\n  float lq = limb(q.x);\n  float mE = smoothstep(lq - 0.045, lq, q.y);\n  vec3 sky = st;\n  vec3 e = tx(tBg, q).rgb;\n  vec4 Lt = tx(tLights, q);\n  float heat = tx(tHeat, q).r;\n  float wd = distance(vec2(q.x * A, q.y), vec2(uWave.x * A, uWave.y));\n  float ring = exp(-pow((wd - uWave.z) / 0.05, 2.0)) * uWaveA;\n  float exc = clamp(heat + ring, 0.0, 1.6);\n  vec2 c2 = floor(q * vec2(96.0, 54.0));\n  float fl = 1.0 + (0.11 * sin(uTime * (1.1 + 2.6 * hash(c2)) + 6.2832 * hash(c2 + 3.1)) + 0.05 * (noise(q * 260.0 + uTime * 0.7) - 0.5)) * (1.0 - smoothstep(0.7, 1.0, max(e.r, max(e.g, e.b))));\n  float pk = max(e.r, max(e.g, e.b));\n  float F = mix(1.0, (mix(0.25, 0.60, smoothstep(0.45, 0.85, pk)) + 1.16 * exc) * fl, uK);\n  e = mix(e, e * F, Lt.a);\n  vec4 Lb = txb(tLights, q, 4.0);\n  e += Lb.rgb * Lb.a * exc * 1.37 * uK * vec3(1.0, 0.82, 0.55);\n  float n = fbm(q * vec2(5.0, 9.0) + vec2(uTime / 60.0, uTime / 140.0));\n  e += vec3(0.75, 0.82, 1.0) * 0.10 * smoothstep(0.42, 0.78, n) * uK * (1.0 - Lt.a);\n  float band = exp(-pow((q.y - lq) / 0.02, 2.0));\n  e *= 1.0 + 0.10 * sin(uTime * 1.0472) * band * uK;\n  float cd = distance(vec2(q.x * A, q.y), vec2(uCur.x * A, uCur.y));\n  e += vec3(0.78, 0.57, 0.23) * 0.07 * exp(-cd * cd / 0.02) * uGlow * uK;\n  vec3 air = vec3(0.0);\n  for (int i = 0; i < 12; i++) {\n    vec4 a = uPl[i]; if (a.z <= 0.0) continue;\n    vec2 r = (q - a.xy) * vec2(A, 1.0) / uPx; vec2 dv = uPd[i].xy;\n    float al = dot(r, dv) / a.w, x = dot(r, vec2(-dv.y, dv.x));\n    float core = exp(-(x * x + al * al) / 1.6);\n    float trace = step(al, -0.8) * exp(-x * x / 0.5) * exp(max(min(al, 0.0), -60.0) / 16.0) * 0.22;\n    float strobe = pow(max(sin(uTime * 4.3 + uPd[i].z), 0.0), 40.0);\n    air += (vec3(1.0, 0.93, 0.80) * core * (0.5 + 1.6 * strobe) + vec3(0.85, 0.80, 0.75) * trace) * a.z;\n  }\n  e += air * uK;\n  gl_FragColor = vec4(mix(sky, e, mE), 1.0);\n}", depthTest: false, depthWrite: false })));
+      uPl: { value: Array.from({ length: 12 }, () => new T.Vector4()) }, uPd: { value: Array.from({ length: 12 }, () => new T.Vector4()) }, uPx: { value: 0.001 }, uLive: { value: 0 } };
+    const bgScene = new T.Scene(); bgScene.add(new T.Mesh(quad, new T.ShaderMaterial({ uniforms: U, vertexShader: VS, fragmentShader: "precision highp float;\nvarying vec2 vUv;\nuniform sampler2D tBg; uniform sampler2D tStars; uniform sampler2D tLights; uniform sampler2D tMask; uniform sampler2D tHeat;\nuniform vec4 uCover; uniform vec2 uPar; uniform vec3 uNudge; uniform vec3 uWave; uniform vec2 uCur;\nuniform float uPose; uniform float uK; uniform float uTime; uniform float uWaveA; uniform float uGlow;\nuniform vec4 uC[3]; uniform float uCI[3];\nuniform vec4 uPl[12]; uniform vec4 uPd[12]; uniform float uPx; uniform float uLive;\nconst float A = 1.7777778;\nfloat hash(vec2 p){ p = fract(p * vec2(123.34, 456.21)); p += dot(p, p + 45.32); return fract(p.x * p.y); }\nfloat noise(vec2 p){ vec2 i = floor(p), f = fract(p); f = f * f * (3.0 - 2.0 * f); return mix(mix(hash(i), hash(i + vec2(1.0, 0.0)), f.x), mix(hash(i + vec2(0.0, 1.0)), hash(i + vec2(1.0, 1.0)), f.x), f.y); }\nfloat fbm(vec2 p){ float a = 0.5, s = 0.0; for (int i = 0; i < 3; i++) { s += a * noise(p); p *= 2.03; a *= 0.5; } return s; }\nfloat limb(float x){ return 0.49568653 * x * x - 0.49439854 * x + 0.53793609; }\nvec4 tx(sampler2D t, vec2 u){ return texture2D(t, vec2(u.x, 1.0 - u.y)); }\nvec4 txb(sampler2D t, vec2 u, float b){ return texture2D(t, vec2(u.x, 1.0 - u.y), b); }\nvoid main(){\n  vec2 img = vec2(vUv.x, 1.0 - vUv.y) * uCover.xy + uCover.zw;\n  float edge = smoothstep(0.0, 0.09, img.x) * smoothstep(0.0, 0.09, 1.0 - img.x) * smoothstep(0.0, 0.09, 1.0 - img.y);\n  vec2 sUv = img + uPar * 0.004 * uK * edge * smoothstep(0.0, 0.09, img.y);\n  sUv = mix(sUv, 0.5 + (sUv - 0.5 + vec2(0.00833, 0.01852)) / 0.98, uPose);\n  vec3 st = tx(tStars, sUv).rgb;\n  float l = dot(st, vec3(0.3333));\n  float lb = dot(txb(tStars, sUv, 3.0).rgb, vec3(0.3333));\n  vec2 cell = floor(sUv * vec2(480.0, 270.0));\n  float h1 = hash(cell), h2 = hash(cell + 19.7);\n  float small = smoothstep(0.10, 0.30, l) * (1.0 - smoothstep(0.08, 0.20, lb)) * step(0.5, h2);\n  st *= 1.0 + 0.5 * sin(uTime * (1.2 + 3.5 * h1) + 6.2832 * h2) * small * uK;\n  float l0 = limb(img.x);\n  float hgt = clamp((img.y - l0) / (1.0 - l0), 0.0, 1.0);\n  vec2 q = img + uPar * 0.011 * mix(0.35, 1.0, sqrt(hgt)) * uK;\n  vec2 pa = vec2(q.x * A, q.y) - vec2(0.5 * A, 2.4);\n  float cs = cos(uNudge.z), sn = sin(uNudge.z);\n  pa = vec2(cs * pa.x - sn * pa.y, sn * pa.x + cs * pa.y);\n  q = (pa + vec2(0.5 * A, 2.4)) / vec2(A, 1.0) - uNudge.xy;\n  q = img + (q - img) * edge;\n  q = mix(q, 0.5 + (q - 0.5 + vec2(0.00833, 0.01852)) / 0.98, uPose);\n  float lq = limb(q.x);\n  float mE = smoothstep(lq - 0.045, lq, q.y);\n  vec3 sky = st;\n  vec3 e = tx(tBg, q).rgb;\n  vec4 Lt = tx(tLights, q);\n  float heat = tx(tHeat, q).r;\n  float wd = distance(vec2(q.x * A, q.y), vec2(uWave.x * A, uWave.y));\n  float ring = exp(-pow((wd - uWave.z) / 0.05, 2.0)) * uWaveA;\n  float exc = clamp(heat + ring, 0.0, 1.6);\n  vec2 c2 = floor(q * vec2(96.0, 54.0));\n  float fl = 1.0 + (0.11 * sin(uTime * (1.1 + 2.6 * hash(c2)) + 6.2832 * hash(c2 + 3.1)) + 0.05 * (noise(q * 260.0 + uTime * 0.7) - 0.5)) * (1.0 - smoothstep(0.7, 1.0, max(e.r, max(e.g, e.b))));\n  float pk = max(e.r, max(e.g, e.b));\n  float F = mix(1.0, (mix(0.25, 0.60, smoothstep(0.45, 0.85, pk)) + 1.16 * exc) * fl, uK);\n  e = mix(e, e * F, Lt.a);\n  vec4 Lb = txb(tLights, q, 4.0);\n  e += Lb.rgb * Lb.a * exc * 1.37 * uK * vec3(1.0, 0.82, 0.55);\n  float n = fbm(q * vec2(5.0, 9.0) + vec2(uTime / 60.0, uTime / 140.0));\n  e += vec3(0.75, 0.82, 1.0) * 0.10 * smoothstep(0.42, 0.78, n) * uK * (1.0 - Lt.a);\n  float band = exp(-pow((q.y - lq) / 0.02, 2.0));\n  e *= 1.0 + 0.10 * sin(uTime * 1.0472) * band * uK;\n  float cd = distance(vec2(q.x * A, q.y), vec2(uCur.x * A, uCur.y));\n  e += vec3(0.78, 0.57, 0.23) * 0.07 * exp(-cd * cd / 0.02) * uGlow * uK;\n  vec3 air = vec3(0.0);\n  for (int i = 0; i < 12; i++) {\n    vec4 a = uPl[i]; if (a.z <= 0.0) continue;\n    vec2 r = (q - a.xy) * vec2(A, 1.0) / uPx; vec2 dv = uPd[i].xy;\n    float al = dot(r, dv) / a.w, x = dot(r, vec2(-dv.y, dv.x));\n    float core = exp(-(x * x + al * al) / 1.6);\n    float trace = step(al, -0.8) * exp(-x * x / 0.5) * exp(max(min(al, 0.0), -60.0) / 16.0) * 0.22;\n    float strobe = pow(max(sin(uTime * 4.3 + uPd[i].z), 0.0), 40.0);\n    air += (vec3(1.0, 0.93, 0.80) * core * (0.5 + 1.6 * strobe) + vec3(0.85, 0.80, 0.75) * trace) * a.z;\n  }\n  e += air * uK;\n  float see = mE * uLive;\n  gl_FragColor = vec4(sky * (1.0 - mE) + e * mE * (1.0 - uLive), 1.0 - see);\n}", depthTest: false, depthWrite: false })));
     const scene = new T.Scene(), cam = new T.PerspectiveCamera(20, 1, 200, 20000);
     cam.position.set(0, 0, D);
     try {
@@ -1610,6 +1611,7 @@ class Component extends DCLogic {
     } catch (e) {}
     const sun = new T.DirectionalLight(0xffc890, 1.6); sun.position.set(0.3, -0.2, 1); scene.add(sun);
     const grp = new T.Group(); scene.add(grp);
+    const lightOnly = (m) => { m.blending = T.CustomBlending; m.blendEquation = T.AddEquation; m.blendSrc = T.SrcAlphaFactor; m.blendDst = T.OneFactor; m.blendSrcAlpha = T.ZeroFactor; m.blendDstAlpha = T.OneFactor; return m; };
     const sh = new T.Shape(), w2 = PW / 2 - BV - 2, h2 = PH / 2 - BV - 2, rad = 119 - BV - 2;
     sh.moveTo(-w2 + rad, -h2); sh.lineTo(w2 - rad, -h2); sh.absarc(w2 - rad, -h2 + rad, rad, -Math.PI / 2, 0, false);
     sh.lineTo(w2, h2 - rad); sh.absarc(w2 - rad, h2 - rad, rad, 0, Math.PI / 2, false);
@@ -1618,7 +1620,7 @@ class Component extends DCLogic {
     const geo = new T.ExtrudeGeometry(sh, { depth: TK - 2 * BV, bevelEnabled: true, bevelSize: BV, bevelThickness: BV, bevelSegments: 5, curveSegments: 20 });
     geo.translate(0, 0, -(TK - BV) - 3);
     grp.add(new T.Mesh(geo, new T.MeshStandardMaterial({ color: 0x4a4038, metalness: 1, roughness: 0.3, envMapIntensity: 1.5 })));
-    const halo = new T.Mesh(new T.PlaneGeometry(862, 1500), new T.MeshBasicMaterial({ map: tHalo, blending: T.AdditiveBlending, transparent: true, depthWrite: false, toneMapped: false }));
+    const halo = new T.Mesh(new T.PlaneGeometry(862, 1500), lightOnly(new T.MeshBasicMaterial({ map: tHalo, blending: T.AdditiveBlending, transparent: true, depthWrite: false, toneMapped: false })));
     halo.position.z = -0.5; halo.renderOrder = 1; grp.add(halo);
     const scr = new T.Mesh(new T.PlaneGeometry(616, 1256), new T.MeshBasicMaterial({ map: tScreen, transparent: true, depthWrite: false, toneMapped: false }));
     scr.position.set(0, -1, -2); scr.renderOrder = 2; grp.add(scr);
@@ -1626,7 +1628,7 @@ class Component extends DCLogic {
     frame.renderOrder = 3; grp.add(frame);
     const GU = { uTilt: { value: new T.Vector2() }, uAmt: { value: 0 } };
     const glass = new T.Mesh(new T.PlaneGeometry(616, 1256), new T.ShaderMaterial({ uniforms: GU, vertexShader: 'varying vec2 vUv; void main(){ vUv = uv; gl_Position = projectionMatrix * modelViewMatrix * vec4(position, 1.0); }', fragmentShader: "precision highp float;\nvarying vec2 vUv; uniform vec2 uTilt; uniform float uAmt;\nfloat rr(vec2 p, vec2 b, float r){ vec2 d = abs(p) - b + r; return length(max(d, 0.0)) + min(max(d.x, d.y), 0.0) - r; }\nvoid main(){\n  vec2 p = (vUv - 0.5) * vec2(616.0, 1256.0);\n  float m = 1.0 - smoothstep(-1.5, 0.5, rr(p, vec2(308.0, 628.0), 96.0));\n  float s = dot(vUv - 0.5, vec2(0.80, 0.36)) - uTilt.x * 0.55 + uTilt.y * 0.25;\n  float sheen = exp(-s * s / 0.010) * 0.20 + exp(-s * s / 0.12) * 0.05;\n  vec3 c = vec3(1.0, 0.96, 0.9) * sheen + vec3(0.25, 0.45, 1.0) * 0.07 * smoothstep(0.35, 1.0, 1.0 - vUv.y) * length(uTilt);\n  gl_FragColor = vec4(c * m * uAmt, 1.0);\n}", blending: T.AdditiveBlending, transparent: true, depthWrite: false }));
-    glass.position.set(0, -1, 0.5); glass.renderOrder = 4; grp.add(glass);
+    lightOnly(glass.material); glass.position.set(0, -1, 0.5); glass.renderOrder = 4; grp.add(glass);
 
     const cScene = new T.Scene(), RN = 48;
     const RVS = 'attribute float aSide; attribute float aT; varying float vS; varying float vT; varying vec2 vW; void main(){ vS = aSide; vT = aT; vec4 w = modelMatrix * vec4(position, 1.0); vW = w.xy; gl_Position = projectionMatrix * viewMatrix * w; }';
@@ -1639,8 +1641,8 @@ class Component extends DCLogic {
       const pa = new T.BufferAttribute(pos, 3); pa.setUsage(T.DynamicDrawUsage);
       g.setAttribute('position', pa); g.setAttribute('aSide', new T.BufferAttribute(side, 1)); g.setAttribute('aT', new T.BufferAttribute(al, 1)); g.setIndex(idx);
       const opt = { blending: T.AdditiveBlending, transparent: true, depthTest: false, depthWrite: false, side: T.DoubleSide };
-      const mat = new T.ShaderMaterial(Object.assign({ uniforms: { tMask: { value: tMask }, uI: { value: 0 } }, vertexShader: RVS, fragmentShader: RFS }, opt));
-      const hmat = new T.ShaderMaterial(Object.assign({ uniforms: { tMask: { value: tMask }, uI: { value: 0 } }, vertexShader: HVS, fragmentShader: HFS }, opt));
+      const mat = lightOnly(new T.ShaderMaterial(Object.assign({ uniforms: { tMask: { value: tMask }, uI: { value: 0 } }, vertexShader: RVS, fragmentShader: RFS }, opt)));
+      const hmat = lightOnly(new T.ShaderMaterial(Object.assign({ uniforms: { tMask: { value: tMask }, uI: { value: 0 } }, vertexShader: HVS, fragmentShader: HFS }, opt)));
       const m = new T.Mesh(g, mat), hd = new T.Mesh(new T.PlaneGeometry(1, 1), hmat);
       m.frustumCulled = false; m.visible = false; hd.visible = false; cScene.add(m); cScene.add(hd);
       const tx = new Float32Array(RN), ty = new Float32Array(RN);
@@ -1697,12 +1699,26 @@ class Component extends DCLogic {
       pl.set(p0[0], p0[1], fade, 1); pd.set(dx, dy, Rr.st, 0);
     });
     let cov = { x: 1, y: 1, ox: 0, oy: 0 }, wpc = 1;
+    /* On a computer the Earth under the phone is the live globe (globe/?hero=1, the same engine as the globe page) seen
+       through the camera this picture was drawn with: it starts exactly where the picture is, then travels slowly east
+       round the world, and can be dragged. The picture stays underneath until the globe has everything it needs. */
+    H.fr = q('.gl-live'); H.G = null; H.live = 0; H.liveT = 0;
+    let fine = false; try { fine = window.matchMedia('(hover: hover) and (pointer: fine)').matches; } catch (e) {}
+    if (H.fr && fine && hi) {
+      const startLive = () => {
+        if (H.fr.src) return;
+        H.fr.addEventListener('load', () => { try { const G = H.fr.contentWindow.__globe; if (G && G.hero) { G.hero.hold(true); H.G = G.hero; H.liveT = performance.now(); if (H.measure) H.measure(); } } catch (e) {} });
+        H.fr.src = H.fr.dataset.src;
+      };
+      if (document.readyState === 'complete') setTimeout(startLive, 600); else window.addEventListener('load', () => setTimeout(startLive, 600), { once: true });
+    }
     H.measure = () => {
       const w = Math.max(1, el.clientWidth), h = Math.max(1, el.clientHeight), a = w / h;
       const visW = a > AS ? 3840 : 2160 * a, visH = a > AS ? 3840 / a : 2160;
       cov = { x: visW / 3840, y: visH / 2160, ox: (1 - visW / 3840) / 2, oy: (1 - visH / 2160) / 2 };
       U.uCover.value.set(cov.x, cov.y, cov.ox, cov.oy);
       wpc = visW / w;
+      if (H.G) H.G.cover(cov.x, cov.y);
       cam.aspect = a; cam.fov = 2 * Math.atan(visH / 2 / D) * 180 / Math.PI; cam.updateProjectionMatrix();
       H.basePR = Math.min(dpr, Math.sqrt(H.budget / (w * h)));
       R.setPixelRatio(Math.max(0.5, H.basePR * H.qs));
@@ -1720,11 +1736,15 @@ class Component extends DCLogic {
       if (e.pointerType !== 'mouse' || this.state.phase !== 'idle') return;
       const p = H.locate(e);
       H.mx = p.nx; H.my = p.ny; H.cu = p.u; H.cv2 = p.v; H.gt = 1;
+      if (H.G) { const r = el.getBoundingClientRect(); H.G.pointer(e.clientX - r.left, e.clientY - r.top, true); }
       const px = (p.u - 0.49948) / 0.0862, py = (p.v - 0.40972) / 0.3009;
       H.hov = Math.abs(px) <= 1 && Math.abs(py) <= 1 && !dn;
       H.px = Math.max(-1, Math.min(1, px)); H.py = Math.max(-1, Math.min(1, py));
       if (dn && dn.moved > 6) {
-        if (dn.zone === 'earth') { H.exT = Math.tanh((e.clientX - dn.x) / 380); H.eyT = Math.tanh((e.clientY - dn.y) / 380); }
+        if (dn.zone === 'earth') {
+          if (H.live > 0.5 && H.G) { H.G.drag(e.clientX - (dn.lx === undefined ? dn.x : dn.lx), e.clientY - (dn.ly === undefined ? dn.y : dn.ly)); dn.lx = e.clientX; dn.ly = e.clientY; H.G.hold(true); }
+          else { H.exT = Math.tanh((e.clientX - dn.x) / 380); H.eyT = Math.tanh((e.clientY - dn.y) / 380); }
+        }
         else if (!dn.comet) { dn.comet = addShot({ kind: 1, x: p.u * AS, y: p.v, vx: 0, vy: 0, I: 0, I0: 1, t: 0, path: [], pts: [], w: 26 }); }
         if (dn.comet) { dn.comet.cx = p.u * AS; dn.comet.cy = p.v; }
       }
@@ -1735,7 +1755,7 @@ class Component extends DCLogic {
       const sp = Math.hypot(vx, vy); if (sp > 3) { vx *= 3 / sp; vy *= 3 / sp; }
       c.kind = 2; c.t = 0; c.I0 = Math.max(0.4, c.I); c.vx = vx; c.vy = vy;
     };
-    H.leave = () => { H.mx = 0; H.my = 0; H.gt = 0; H.hov = false; };
+    H.leave = () => { H.mx = 0; H.my = 0; H.gt = 0; H.hov = false; if (H.G) H.G.pointer(0, 0, false); };
     H.pdown = (e) => {
       if (this.state.phase !== 'idle' || e.button) return;
       if (e.target && e.target.closest && e.target.closest('button, a')) return;
@@ -1748,6 +1768,7 @@ class Component extends DCLogic {
     H.pup = () => {
       const d = H.down;
       H.down = null; H.drag = false; H.exT = 0; H.eyT = 0; el.classList.remove('is-grab');
+      if (H.G && H.live > 0.5) H.G.hold(false);
       if (!d || this.state.phase !== 'idle') return;
       if (d.comet) { H.fling(d.comet); return; }
       if (d.moved > 6) return;
@@ -1800,6 +1821,15 @@ class Component extends DCLogic {
       U.uNudge.value.set(H.ex * 0.006 * k, H.ey * 0.006 * k, -H.ex * 0.0436 * k);
       U.uPose.value = pose; U.uK.value = k; U.uTime.value = tm; U.uGlow.value = H.g;
       flights(tm); U.uPx.value = cov.y / Math.max(1, el.clientHeight);
+      if (H.G) {
+        try {
+          H.G.frame(now);
+          if (H.live === 0 && H.G.ready()) { H.live = 0.001; H.fr.classList.add('on'); }
+          if (H.live === 0 && (H.G.failed() || now - H.liveT > 25000)) { H.G = null; }
+          if (H.live > 0 && H.live < 1) { H.live = Math.min(1, H.live + dt / 0.9); if (H.live >= 1) H.G.hold(false); }
+        } catch (err) { H.G = null; H.live = 0; }
+      }
+      U.uLive.value = H.G ? H.live * H.live * (3 - 2 * H.live) : 0;
       U.uCur.value.set(H.cu, H.cv2);
       if (H.wave) {
         H.wave.t += dt; const u = H.wave.t / 1.2;

@@ -57,6 +57,9 @@ button{font:inherit;color:inherit;-webkit-tap-highlight-color:transparent}
 .zoom button:hover{background:rgba(237,232,223,.11)}
 .zoom button:active{background:rgba(200,145,58,.28)}
 button:focus-visible{outline:2px solid var(--amber);outline-offset:2px}
+/* inside the home page hero: the picture only, driven by the page around it */
+body.hero .top,body.hero .dock{display:none !important}
+body.hero #gl{pointer-events:none;cursor:default}
 
 .flat{position:fixed;inset:0;overflow:auto;padding:20px 18px 40px;background:var(--space)}
 .flat h1{margin:0 0 8px;font:600 27px/1.08 var(--serif)}
@@ -134,6 +137,12 @@ const DEG = Math.PI / 180;
 const reduceMotion = matchMedia('(prefers-reduced-motion: reduce)').matches;
 const coarse = matchMedia('(pointer: coarse)').matches;
 const params = new URLSearchParams(location.search);
+/* ?hero=1: the Earth under the phone on the home page. The camera is the one the hero picture was drawn through
+   (over 45.9N 2.1W, 540 km up, looking north-north-west); it travels slowly east round the world, and the home page
+   draws each frame, passes the pointer and drags, and lays its own sky and phone over the top. */
+const HERO = params.has('hero');
+if (HERO) document.body.classList.add('hero');
+const heroCam = { lat: 45.9139, lon: -2.0547, h: 0.0843, yaw: -13.1523, pitch: 26.774, roll: 0.0411, fv: 44.3198, covx: 1, covy: 1, A: 16 / 9, run: true, pace: 0.6 };
 
 /* ---------- geometry shared with the artwork pipeline ---------- */
 const dir = (lat, lon) => { const a = lat * DEG, o = lon * DEG; return [Math.cos(a) * Math.cos(o), Math.cos(a) * Math.sin(o), Math.sin(a)]; };
@@ -216,6 +225,7 @@ function setLens() {
   /* closest zoom: stop before the artwork has to be stretched by more than a quarter */
   minDist = clamp(0.8 * cssH * fullDpr() / (2 * tanV * TEXELS_PER_UNIT), 0.12, 0.22);
   view.dist = clamp(view.dist, minDist, maxDist);
+  if (HERO) { const f = 0.5 / Math.tan(heroCam.fv * DEG / 2); tanH = heroCam.A * heroCam.covx / (2 * f); tanV = heroCam.covy / (2 * f); }
 }
 
 /* ---------- WebGL ---------- */
@@ -735,7 +745,7 @@ async function loadAll() {
     await loadBase();
     if (!live()) return;
     setNote(); render();
-    if (!started) { started = true; if (!touched && !params.has('stay')) flyTo('uk', 2600); }
+    if (!started) { started = true; if (!touched && !params.has('stay') && !HERO) flyTo('uk', 2600); }
   } catch (err) {
     if (!live()) return;
     failed = true; setNote(); console.error(err); return;
@@ -747,7 +757,7 @@ const m_url = k => TILE_ROOT + ((manifest && manifest[k]) || k + '.jpg');
 
 /* ---------- drawing ---------- */
 let queued = false;
-function render() { if (!queued) { queued = true; requestAnimationFrame(frame); } }
+function render() { if (!HERO && !queued) { queued = true; requestAnimationFrame(frame); } }
 function resize() {
   const r = canvas.getBoundingClientRect();
   cssW = Math.max(1, r.width); cssH = Math.max(1, r.height);
@@ -758,7 +768,7 @@ function resize() {
   /* keep the point you are looking at in the middle of the clear space between the heading and the controls */
   const lead = document.querySelector('.top p').getBoundingClientRect().bottom || document.querySelector('.top h1').getBoundingClientRect().bottom;
   const panelTop = document.querySelector('.panel').getBoundingClientRect().top;
-  shift = clamp((cssH / 2 - (lead * 0.6 + panelTop) / 2) / (cssH / 2), 0, 0.25);
+  shift = HERO ? 0 : clamp((cssH / 2 - (lead * 0.6 + panelTop) / 2) / (cssH / 2), 0, 0.25);
 }
 function setQuality(q) { if (q !== quality) { quality = q; resize(); } }
 
@@ -767,15 +777,30 @@ let meteor = null, nextMeteor = 7, cloudFade = 1;
 const ptr = { on: false, x: 0, y: 0, amt: 0, p: [0, 0, 1], lastSeen: -1e9 };
 function draw(time, dt) {
   /* left alone, the camera floats a little, as if in orbit; it settles the moment you touch the globe */
-  const k = sway * clamp(view.dist / 0.27, 0.5, 2);
-  const lat = clamp(view.lat + 0.16 * k * Math.sin(swayClock * 0.41 + 1.0), -85, 85);
-  const lon = view.lon + 0.30 * k * Math.sin(swayClock * 0.29) / Math.max(Math.cos(view.lat * DEG), 0.3);
-  const T = dir(lat, lon), B = basis(lat, lon), N = B.n, E = B.e;
-  const d = view.dist * (1 + 0.012 * sway * Math.sin(swayClock * 0.23 + 2.0));
-  const t = tiltFor(view.dist), ct = Math.cos(t), st = Math.sin(t);
-  const cam = [0, 1, 2].map(i => T[i] * (1 + d * ct) - N[i] * d * st);
-  const fwd = [0, 1, 2].map(i => -ct * T[i] + st * N[i]);
-  const up = [0, 1, 2].map(i => ct * N[i] + st * T[i]);
+  let cam, fwd, up, E;
+  if (HERO) {
+    if (heroCam.run && life) heroCam.lon = wrap(heroCam.lon + heroCam.pace * dt);
+    const hc = heroCam, B = basis(hc.lat, hc.lon), T = B.c, y = hc.yaw * DEG, pt = hc.pitch * DEG, r = hc.roll * DEG;
+    cam = T.map(v => v * (1 + hc.h));
+    const hd = [0, 1, 2].map(i => Math.cos(y) * B.n[i] + Math.sin(y) * B.e[i]);
+    fwd = [0, 1, 2].map(i => Math.cos(pt) * hd[i] - Math.sin(pt) * T[i]);
+    let rt = [fwd[1] * T[2] - fwd[2] * T[1], fwd[2] * T[0] - fwd[0] * T[2], fwd[0] * T[1] - fwd[1] * T[0]];
+    const rl = Math.hypot(rt[0], rt[1], rt[2]); rt = rt.map(v => v / rl);
+    const u0 = [rt[1] * fwd[2] - rt[2] * fwd[1], rt[2] * fwd[0] - rt[0] * fwd[2], rt[0] * fwd[1] - rt[1] * fwd[0]];
+    E = [0, 1, 2].map(i => Math.cos(r) * rt[i] + Math.sin(r) * u0[i]);
+    up = [0, 1, 2].map(i => -Math.sin(r) * rt[i] + Math.cos(r) * u0[i]);
+  } else {
+    const k = sway * clamp(view.dist / 0.27, 0.5, 2);
+    const lat = clamp(view.lat + 0.16 * k * Math.sin(swayClock * 0.41 + 1.0), -85, 85);
+    const lon = view.lon + 0.30 * k * Math.sin(swayClock * 0.29) / Math.max(Math.cos(view.lat * DEG), 0.3);
+    const T = dir(lat, lon), B = basis(lat, lon), N = B.n;
+    E = B.e;
+    const d = view.dist * (1 + 0.012 * sway * Math.sin(swayClock * 0.23 + 2.0));
+    const t = tiltFor(view.dist), ct = Math.cos(t), st = Math.sin(t);
+    cam = [0, 1, 2].map(i => T[i] * (1 + d * ct) - N[i] * d * st);
+    fwd = [0, 1, 2].map(i => -ct * T[i] + st * N[i]);
+    up = [0, 1, 2].map(i => ct * N[i] + st * T[i]);
+  }
   camNow.cam = cam; camNow.right = E; camNow.up = up; camNow.fwd = fwd;
 
   /* the glow that follows the pointer */
@@ -1020,7 +1045,21 @@ if (gl) {
     set(lat, lon, dist) { fly = null; vel.lat = vel.lon = 0; lastInput = performance.now(); spin = 0; view.lat = lat; view.lon = lon; view.dist = clamp(dist, minDist, maxDist); render(); },
     debug(v) { debug = v; render(); },
     weather(sec) { if (sec !== undefined) { cloudClock = sec; render(); } return cloudClock; },
-    still(time) { frozenTime = time; lockQuality = time !== null; if (lockQuality) { setQuality(1); sway = 0; } render(); } };
+    still(time) { frozenTime = time; lockQuality = time !== null; if (lockQuality) { setQuality(1); sway = 0; } render(); },
+    /* the home page hero drives this page when it is opened with ?hero=1 */
+    hero: {
+      frame(now) { queued = true; frame(now); },
+      ready: () => loaded.baseDone && loaded.clouds && queue.length === 0 && loading.size === 0,
+      failed: () => failed,
+      cover(cx, cy) { heroCam.covx = cx; heroCam.covy = cy; setLens(); },
+      drag(dx, dy) {                     // screen pixels: the ground follows the hand
+        const k = 0.025 * 900 / Math.max(300, cssH);
+        heroCam.lon = wrap(heroCam.lon - dx * k / Math.max(0.35, Math.cos(heroCam.lat * DEG)));
+        heroCam.lat = clamp(heroCam.lat + dy * k, 15, 62);
+      },
+      hold(on) { heroCam.run = !on; },
+      pointer(x, y, on) { ptr.on = on; if (on) { ptr.x = x; ptr.y = y; ptr.lastSeen = performance.now(); } },
+      cam: () => Object.assign({}, heroCam) } };
 }
 })();
 </script>
