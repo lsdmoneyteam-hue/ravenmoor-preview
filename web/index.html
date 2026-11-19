@@ -268,13 +268,12 @@ float cloudAt(vec3 p, float rho){
   vec3 w = abs(p); w = w * w * w; w /= (w.x + w.y + w.z);
   mat2 r = mat2(cos(uCloudTurn), sin(uCloudTurn), -sin(uCloudTurn), cos(uCloudTurn));   // the detail travels with the weather
   vec3 q = vec3(r * p.xy, p.z);
-  float d = 0.25;
-  if (uHasWisp > 0.5) d = mix(wispAt(q, w, 6.0, rho), wispAt(q.zxy, w.zxy, 1.9, rho), 0.35);
-  else {
-    float k = 1.0 - smoothstep(0.0, 4.0, max(log2(max(rho, 1e-7) * 14000.0), 0.0));
-    d += k * ((noiseAt(q.yz * 90.0).r - 0.5) * w.x + (noiseAt(q.zx * 90.0).g - 0.5) * w.y + (noiseAt(q.xy * 90.0).b - 0.5) * w.z) * 0.35;
-  }
-  return clamp(base * (0.30 + 2.2 * d), 0.0, 1.0);
+  if (uHasWisp < 0.5) return base * 0.5;
+  /* broad streaks and clusters first, finer wisps inside them; from far away only the weather map is left */
+  float big = wispAt(q.zxy, w.zxy, 1.7, rho), fine = wispAt(q, w, 5.3, rho);
+  float d = big * 0.72 + fine * 0.28 + big * fine * 0.6;
+  float far = smoothstep(2.5, 5.0, log2(max(rho, 1e-7) * 2611.0));
+  return clamp(base * mix(smoothstep(0.10, 0.62, d) * 1.15, 0.55, far), 0.0, 1.0);
 }
 
 void main(){
@@ -359,9 +358,9 @@ void main(){
     float shadow = smoothstep(0.22, 0.78, cloudMap(normalize(p + toSun * 0.006), rho)) * 0.8 * uClouds;
     float sunlit = 0.30 + 0.70 * smoothstep(-0.05, 0.50, mu);
     col *= 1.0 - 0.30 * shadow * day;
-    vec3 cloudCol = mix(vec3(0.060, 0.082, 0.125), vec3(0.93, 0.95, 0.98) * sunlit, day);
+    vec3 cloudCol = mix(vec3(0.085, 0.115, 0.170), vec3(0.93, 0.95, 0.98) * sunlit, day);
     cloudCol += vec3(0.30, 0.13, 0.03) * day * (1.0 - smoothstep(0.10, 0.40, mu));
-    float cover = c * mix(0.50, 0.90, day);
+    float cover = c * mix(0.58, 0.92, day);
     col = col * (1.0 - cover * mix(0.55, 1.0, day)) + cloudCol * cover;
   }
 
