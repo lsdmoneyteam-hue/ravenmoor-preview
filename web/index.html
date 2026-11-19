@@ -176,7 +176,7 @@ const PLACES = {
 const view = { lat: 30, lon: 8, dist: 3 };
 let W = 1, H = 1, cssW = 1, cssH = 1, tanH = 1, tanV = 1, maxDist = 3, minDist = 0.13, tiltMax = 60 * DEG, shift = 0;
 let life = !reduceMotion, showClouds = true, debug = +(params.get('debug') || 0);
-let quality = 1, moveQuality = 1, lockQuality = false, frozenTime = null;
+let quality = 1, moveQuality = 1, restQuality = 1, restPace = 33, lockQuality = false, frozenTime = null;
 const clamp = (x, a, b) => Math.min(b, Math.max(a, x));
 const wrap = x => ((x + 180) % 360 + 360) % 360 - 180;
 const fullDpr = () => Math.min(window.devicePixelRatio || 1, 3);
@@ -762,6 +762,11 @@ function frame(now) {
   if (!moving && ambient && !ptr.on && now - lastDraw < 30) { render(); return; }
   const dt = Math.min(0.05, lastT ? (now - lastT) / 1000 : 0.016);
   if (moving && lastT) pace += ((now - lastT) - pace) * 0.15;
+  else if (ambient && lastT && !queue.length && !loading.size) {
+    /* a device that cannot keep the gentle background motion going at full sharpness gives up a little sharpness, once */
+    restPace += ((now - lastT) - restPace) * 0.08;
+    if (restPace > 75 && restQuality > 0.7) { restQuality = Math.max(0.7, restQuality - 0.15); restPace = 40; }
+  }
   lastT = now; lastDraw = now;
 
   if (fly) {
@@ -789,7 +794,7 @@ function frame(now) {
       if (pace > 24 && moveQuality > 0.55) { moveQuality = Math.max(0.55, moveQuality - 0.12); pace = 17; }
       else if (pace < 12.5 && moveQuality < 1) { moveQuality = Math.min(1, moveQuality + 0.06); pace = 16; }
       setQuality(moveQuality);
-    } else setQuality(1);
+    } else setQuality(restQuality);
   }
 
   draw(frozenTime !== null ? frozenTime : (now - clock0) / 1000, dt);
@@ -898,7 +903,7 @@ if (gl) {
   setNote(); render(); loadAll();
   /* handles for checking the page by script */
   window.__globe = { view, places: PLACES, flyTo, render, loaded, ptr, locate,
-    state: () => ({ minDist, maxDist, quality, life, canvas: [canvas.width, canvas.height], layers: LAYERS,
+    state: () => ({ minDist, maxDist, quality, restQuality, life, canvas: [canvas.width, canvas.height], layers: LAYERS,
                     held: where.size, wanted: wanted.size, waiting: queue.length, loading: loading.size, missing: missing.size, nofit: nofit.size,
                     levels: [...where.keys()].reduce((a, k) => { const z = k.split('/')[1]; a[z] = (a[z] || 0) + 1; return a; }, {}) }),
     set(lat, lon, dist) { fly = null; vel.lat = vel.lon = 0; lastInput = performance.now(); spin = 0; view.lat = lat; view.lon = lon; view.dist = clamp(dist, minDist, maxDist); render(); },
