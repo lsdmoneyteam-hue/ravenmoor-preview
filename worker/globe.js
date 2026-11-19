@@ -43,7 +43,8 @@ export async function globeTile(request, env) {
     slot = z === 4 ? (y & 1) * 2 + (x & 1) : 4 + (y & 3) * 4 + (x & 3);
   }
 
-  const pack = await env.DROP.get(key, { type: 'arrayBuffer', cacheTtl: 3600 });
+  // A short cache time on purpose: a pack asked for before it was uploaded would otherwise stay "missing" for an hour.
+  const pack = await env.DROP.get(key, { type: 'arrayBuffer', cacheTtl: 300 });
   if (!pack || pack.byteLength < 8) return text('Not found', 404);
   const view = new DataView(pack);
   if (view.getUint32(0) !== MAGIC || slot >= view.getUint32(4, true)) return text('Not found', 404);
