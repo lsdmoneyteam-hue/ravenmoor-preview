@@ -252,6 +252,85 @@ vec3 tileAt(int z, vec2 g, ivec4 L, vec3 q){
   return textureLod(uCube, q, 0.0).rgb;
 }
 
+/* how much cloud there is over a spot: the real cloud map says where the weather is, a fine picture of wisps gives it texture */
+float cloudMap(vec3 p, float rho){
+  float lon = atan(p.y, p.x) + uCloudTurn;
+  vec2 uv = vec2(lon / (2.0 * PI) + 0.5, 0.5 - asin(clamp(p.z, -1.0, 1.0)) / PI);
+  return textureLod(uCloud, uv, max(log2(max(rho, 1e-7) * 652.0), 0.0)).r;
+}
+float wispAt(vec3 q, vec3 w, float sc, float rho){   // laid on from three sides, so it has no pole and no edge
+  float lod = max(log2(max(rho, 1e-7) * sc * 1536.0), 0.0);
+  return textureLod(uWisp, q.yz * sc, lod).r * w.x + textureLod(uWisp, q.zx * sc + 0.37, lod).r * w.y + textureLod(uWisp, q.xy * sc + 0.71, lod).r * w.z;
+}
+float cloudAt(vec3 p, float rho){
+  float base = smoothstep(0.22, 0.78, cloudMap(p, rho));
+  if (base <= 0.0) return 0.0;
+  vec3 w = abs(p); w = w * w * w; w /= (w.x + w.y + w.z);
+  mat2 r = mat2(cos(uCloudTurn), sin(uCloudTurn), -sin(uCloudTurn), cos(uCloudTurn));   // the detail travels with the weather
+  vec3 q = vec3(r * p.xy, p.z);
+  float d = 0.25;
+  if (uHasWisp > 0.5) d = mix(wispAt(q, w, 6.0, rho), wispAt(q.zxy, w.zxy, 1.9, rho), 0.35);
+  else {
+    float k = 1.0 - smoothstep(0.0, 4.0, max(log2(max(rho, 1e-7) * 14000.0), 0.0));
+    d += k * ((noiseAt(q.yz * 90.0).r - 0.5) * w.x + (noiseAt(q.zx * 90.0).g - 0.5) * w.y + (noiseAt(q.xy * 90.0).b - 0.5) * w.z) * 0.35;
+  }
+  return clamp(base * (0.30 + 2.2 * d), 0.0, 1.0);
+}
+
+void main(){ vec2 p = vec2(float((gl_VertexID << 1) & 2), float(gl_VertexID & 2)); gl_Position = vec4(p * 2.0 - 1.0, 0.0, 1.0); }`;
+
+const FRAG = `#version 300 es
+precision highp float;
+precision highp int;
+precision highp sampler2DArray;
+uniform vec2 uRes;
+uniform vec3 uCam, uRight, uUp, uFwd;
+uniform vec2 uTan;
+uniform float uShift;
+uniform samplerCube uCube;        // the whole planet at a modest size: first picture, and the fallback everywhere
+uniform sampler2DArray uTiles;    // sharp tiles, loaded as the view needs them
+uniform sampler2D uInd;           // which layer of uTiles holds the tile for each spot, for levels 2,3,4,5 (255 = not loaded)
+uniform sampler2D uNoise, uCloud, uWisp;
+uniform vec3 uC0, uE0, uN0, uSun;
+uniform float uLife, uTime, uMeteorP, uBias, uDebug;
+uniform float uClouds, uCloudTurn, uHasWisp;
+uniform vec4 uMeteor;
+uniform vec4 uPtr;                // xyz: the spot on the globe under the pointer; w: strength
+uniform float uPtrR;
+out vec4 outColor;
+const float PI = 3.14159265359;
+const float TILE = ${TILE}.0;
+
+float hash(vec3 p){ p = fract(p * 0.3183099 + 0.1); p *= 17.0; return fract(p.x * p.y * p.z * (p.x + p.y + p.z)); }
+
+/* smooth repeating noise, 64 cells before it repeats */
+vec4 noiseAt(vec2 x){
+  vec2 i = floor(x), f = fract(x);
+  f = f * f * (3.0 - 2.0 * f);
+  return textureLod(uNoise, (i + f + 0.5) / 64.0, 0.0);
+}
+
+/* gentle shimmer for city lights; texel = position measured in artwork pixels, fp = artwork pixels per screen pixel */
+float shimmer(vec2 texel, float fp, float t){
+  vec4 nf = noiseAt(texel / 9.0), nc = noiseAt(texel / 70.0 + 13.0);
+  float fine = 0.6 * sin(1.7 * t + 25.0 * nf.r) + 0.4 * sin(3.1 * t + 31.0 * nf.b)
+             + 1.6 * pow(max(sin(0.55 * t + 44.0 * nf.g), 0.0), 26.0);
+  float slow = sin(0.9 * t + 19.0 * nc.g);
+  return fine * 0.19 * (1.0 - smoothstep(2.0, 7.0, fp)) + slow * 0.09 * (1.0 - smoothstep(15.0, 50.0, fp));
+}
+
+/* the sharpest loaded tile at level z or below; the cube picture if none is in yet */
+vec3 tileAt(int z, vec2 g, ivec4 L, vec3 q){
+  for (int zz = z; zz >= 2; zz--) {
+    int layer = L[zz - 2];
+    if (layer < 255) {
+      vec2 t = clamp(fract(g * exp2(float(zz))), vec2(0.5 / TILE), vec2(1.0 - 0.5 / TILE));
+      return textureLod(uTiles, vec3(t, float(layer)), 0.0).rgb;
+    }
+  }
+  return textureLod(uCube, q, 0.0).rgb;
+}
+
 /* how much cloud there is over a spot: the real cloud map for the big shapes, a fine layer to break up the edges */
 float cloudAt(vec3 p, float rho){
   float lon = atan(p.y, p.x) + uCloudTurn;
@@ -354,7 +433,7 @@ void main(){
   if (uClouds > 0.0) {
     float c = cloudAt(p, rho) * uClouds;
     vec3 toSun = normalize(uSun - p * mu);
-    float shadow = cloudAt(normalize(p + toSun * 0.006), rho) * uClouds;
+    float shadow = smoothstep(0.22, 0.78, cloudMap(normalize(p + toSun * 0.006), rho)) * 0.8 * uClouds;
     float sunlit = 0.30 + 0.70 * smoothstep(-0.05, 0.50, mu);
     col *= 1.0 - 0.30 * shadow * day;
     vec3 cloudCol = mix(vec3(0.060, 0.082, 0.125), vec3(0.93, 0.95, 0.98) * sunlit, day);
@@ -520,11 +599,12 @@ const CUBE = [  // WebGL's own cube sides: which way each points, and how it lay
 async function loadBase() {
   const mine = epoch, N = TILE * 2;
   const live = () => mine === epoch && !gl.isContextLost();
+  let got = 0;
   for (let side = 0; side < 6; side++) {
     const C = CUBE[side], F = FACE[C.ours];
     const tiles = await Promise.all([[0, 0], [1, 0], [0, 1], [1, 1]].map(([x, y]) => bitmap(tileUrl(tkey(C.ours, 1, x, y))).catch(err => { console.warn(err); return null; })));
     if (!live()) return;
-    if (tiles.every(t => !t)) throw new Error('no base pictures for face ' + C.ours);
+    got += tiles.filter(Boolean).length;
     /* our picture runs right with u and down with -v; find where three of its corners land on WebGL's side */
     const at = (X, Y) => {
       const u = 2 * X / N - 1, v = 1 - 2 * Y / N, r = [0, 1, 2].map(i => F[0][i] + u * F[1][i] + v * F[2][i]), st = C.st(r);
@@ -541,6 +621,7 @@ async function loadBase() {
   }
   gl.activeTexture(gl.TEXTURE0); gl.bindTexture(gl.TEXTURE_CUBE_MAP, tex.cube);
   gl.generateMipmap(gl.TEXTURE_CUBE_MAP);
+  if (!got) throw new Error('no base pictures');
   loaded.baseDone = true;
 }
 async function loadGrey(url, unit, key, repeatY) {
@@ -633,7 +714,7 @@ async function loadAll() {
     failed = true; setNote(); console.error(err); return;
   }
   loadGrey(m_url('clouds'), 4, 'clouds', false).then(render).catch(err => console.warn(err));
-  if (manifest.wisp) loadGrey(m_url('wisp'), 5, 'wisp', true).then(render).catch(err => console.warn(err));
+  loadGrey(m_url('wisp'), 5, 'wisp', true).then(render).catch(err => console.warn(err));
 }
 const m_url = k => TILE_ROOT + ((manifest && manifest[k]) || k + '.jpg');
 
