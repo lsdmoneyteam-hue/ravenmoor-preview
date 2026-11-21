@@ -1098,7 +1098,8 @@ class Component extends DCLogic {
     if (!cv || cv === this._earthEl) return;
     this._earthEl = cv;
     // The planet under the page: the real Earth at night, seen from orbit looking north. Scrolling crosses the Atlantic and arrives over Britain.
-    // Night-lights map: NASA Earth at Night imagery, as shipped with three-globe (MIT, (c) 2019 Vasco Asturiano).
+    // Night-lights map: NASA Earth at Night imagery (as shipped with three-globe, MIT, (c) 2019 Vasco Asturiano), restyled to look like a satellite photo,
+    // with the detailed UK, France and Spain artwork from the globe test painted in.
     let gl = null;
     try { gl = cv.getContext('webgl', { alpha: true, premultipliedAlpha: true, antialias: false, powerPreference: 'low-power' }); } catch (e) {}
     if (!gl) return;
@@ -1114,10 +1115,7 @@ class Component extends DCLogic {
       'vec3 m=vec3(q.x,q.y*ct-z*st,q.y*st+z*ct);',
       'float lat=degrees(asin(clamp(m.y,-1.,1.))),lon=degrees(atan(m.x,m.z))+uLon;',
       'vec2 uv=clamp(vec2((lon+140.)/198.,(80.-lat)/60.),0.,1.);vec3 t=texture2D(uT,uv).rgb;',
-      'vec2 o=vec2(1.6/2252.,1.6/683.);',
-      'vec3 b=(texture2D(uT,uv+vec2(o.x,0.)).rgb+texture2D(uT,uv-vec2(o.x,0.)).rgb+texture2D(uT,uv+vec2(0.,o.y)).rgb+texture2D(uT,uv-vec2(0.,o.y)).rgb)*.25;',
-      'float lm=smoothstep(.04,.42,t.r-t.b*.8),lg=smoothstep(.02,.4,b.r-b.b*.8);',
-      'col=t*vec3(.42,.6,.95)*.5+vec3(1.,.76,.38)*(lm*1.7+lg*.9);',
+      'col=t*1.08;',
       'col*=mix(.62,1.,smoothstep(.0,.55,1.-z));',
       'col+=vec3(.1,.34,1.)*pow(1.-z,7.)*.95;}',
       'float line=exp(-abs(d-1.)*uR/2.2),halo=exp(-max(d-1.,0.)*uR/28.);',
@@ -1162,7 +1160,7 @@ class Component extends DCLogic {
       try { gl.texImage2D(gl.TEXTURE_2D, 0, gl.RGB, gl.RGB, gl.UNSIGNED_BYTE, img); } catch (e) { return; }
       gl.uniform1i(U.uT, 0); ready = true; this._earthOK = true; req();
     };
-    img.src = 'a/3269279759af.jpg';
+    img.src = 'a/earth_night_sat.jpg';
     window.addEventListener('scroll', req, { passive: true });
     window.addEventListener('resize', () => { W = 0; req(); });
     document.addEventListener('visibilitychange', req);
