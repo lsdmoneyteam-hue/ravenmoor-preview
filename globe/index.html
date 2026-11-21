@@ -1,0 +1,825 @@
+<!DOCTYPE html>
+<html lang="en-GB">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Ravenmoor globe test</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Cormorant+Garamond:wght@500;600&family=Schibsted+Grotesk:wght@400;500;600&display=swap" rel="stylesheet">
+<style>
+:root{
+  --space:#05070B; --ink:#0E0F11; --bone:#EDE8DF; --amber:#C8913A; --join:#7FB8FF;
+  --panel:rgba(14,15,17,.80); --rule:rgba(237,232,223,.16);
+  --sans:'Schibsted Grotesk',system-ui,-apple-system,'Segoe UI',sans-serif;
+  --serif:'Cormorant Garamond',Georgia,serif;
+}
+*{box-sizing:border-box}
+[hidden]{display:none !important}
+html,body{height:100%;margin:0}
+body{background:var(--space);color:var(--bone);font-family:var(--sans);overflow:hidden;overscroll-behavior:none;-webkit-font-smoothing:antialiased}
+button{font:inherit;color:inherit;-webkit-tap-highlight-color:transparent}
+
+#gl{position:fixed;inset:0;width:100%;height:100%;display:block;touch-action:none;cursor:grab;outline:none}
+#gl.dragging{cursor:grabbing}
+#gl:focus-visible{outline:2px solid var(--amber);outline-offset:-2px}
+
+.top{position:fixed;inset:0 0 auto 0;padding:16px 18px 36px;pointer-events:none;
+  background:linear-gradient(rgba(5,7,11,.82),rgba(5,7,11,0))}
+.top h1{margin:0 0 6px;font:600 27px/1.08 var(--serif);letter-spacing:.005em}
+.top p{margin:0;max-width:35ch;font-size:13.5px;line-height:1.45;color:rgba(237,232,223,.80)}
+
+.dock{position:fixed;left:12px;right:12px;bottom:12px;display:flex;flex-direction:column;align-items:center;gap:8px;pointer-events:none}
+.note{margin:0;padding:8px 14px;border-radius:999px;background:var(--panel);border:1px solid var(--rule);
+  font-size:13.5px;line-height:1.3;display:flex;align-items:center;gap:8px;flex-wrap:wrap;justify-content:center}
+.note.err{border-color:#D9825F;color:#F6C9B6;border-radius:14px;text-align:center}
+.sw{display:inline-block;width:18px;height:10px;border-radius:2px;flex:none}
+.sw.edge{height:0;border-top:2px solid var(--amber)}
+.sw.band{background:rgba(127,184,255,.38);border-top:2px solid var(--join);border-bottom:2px solid var(--join);height:12px}
+.gap{width:6px}
+
+.panel{pointer-events:auto;width:100%;max-width:580px;padding:8px;border-radius:16px;background:var(--panel);
+  border:1px solid var(--rule);-webkit-backdrop-filter:blur(14px);backdrop-filter:blur(14px)}
+.places{display:flex;flex-wrap:wrap;gap:5px}
+.places button{flex:1 1 auto;min-height:44px;padding:0 9px;border-radius:10px;border:1px solid var(--rule);
+  background:rgba(237,232,223,.05);font-size:14.5px;font-weight:500;cursor:pointer;white-space:nowrap}
+.places button:hover{background:rgba(237,232,223,.11)}
+.places button:active{background:rgba(200,145,58,.28)}
+.places button[aria-current="true"]{border-color:var(--amber);color:#F4DDB0;background:rgba(200,145,58,.14)}
+.tools{display:flex;align-items:center;justify-content:space-between;gap:6px;margin-top:8px}
+.switches{display:flex;gap:2px;min-width:0}
+.switch{display:flex;align-items:center;gap:8px;min-height:44px;padding:0 8px 0 4px;border:0;background:none;
+  border-radius:10px;font-size:14.5px;font-weight:500;cursor:pointer;white-space:nowrap}
+.track{width:40px;height:24px;border-radius:999px;background:rgba(237,232,223,.20);position:relative;flex:none;transition:background .2s}
+.track::after{content:"";position:absolute;top:3px;left:3px;width:18px;height:18px;border-radius:50%;background:var(--bone);transition:transform .2s}
+.switch[aria-checked="true"] .track{background:var(--amber)}
+.switch[aria-checked="true"] .track::after{transform:translateX(16px)}
+.zoom{display:flex;gap:6px;flex:none}
+.zoom button{width:44px;height:44px;border-radius:10px;border:1px solid var(--rule);background:rgba(237,232,223,.05);
+  font-size:22px;line-height:1;cursor:pointer}
+.zoom button:hover{background:rgba(237,232,223,.11)}
+.zoom button:active{background:rgba(200,145,58,.28)}
+button:focus-visible{outline:2px solid var(--amber);outline-offset:2px}
+
+.flat{position:fixed;inset:0;overflow:auto;padding:20px 18px 40px;background:var(--space)}
+.flat h1{margin:0 0 8px;font:600 27px/1.08 var(--serif)}
+.flat p{margin:0 0 16px;max-width:46ch;font-size:15px;line-height:1.5;color:rgba(237,232,223,.85)}
+.flat img{display:block;width:100%;max-width:560px;height:auto;border-radius:10px}
+
+@media (min-width:760px){
+  .top{padding:24px 28px 44px}
+  .top h1{font-size:34px}
+  .top p{font-size:14.5px;max-width:44ch}
+  .dock{bottom:20px}
+  .places{gap:6px}
+  .places button{flex:1 1 0;font-size:15px;padding:0 14px}
+  .switch{font-size:15px;gap:10px;padding:0 12px 0 6px}
+}
+@media (max-width:380px){
+  .dock{left:8px;right:8px}
+  .panel{padding:6px}
+  .places{gap:4px}
+  .places button{padding:0 8px;font-size:14px}
+  .switch{font-size:14px;gap:6px;padding:0 6px 0 2px}
+  .zoom{gap:4px}
+}
+@media (max-width:340px){
+  .places button{padding:0 5px;font-size:13.5px}
+  .switch{font-size:13px;gap:5px;padding:0 4px 0 0}
+  .track{width:36px} .switch[aria-checked="true"] .track::after{transform:translateX(12px)}
+}
+@media (max-height:520px){ .top p{display:none} .top h1{font-size:22px} }
+@media (prefers-reduced-motion:reduce){ .track,.track::after{transition:none} }
+</style>
+</head>
+<body>
+<canvas id="gl" tabindex="0" role="img"
+  aria-label="A 3D globe you can move. Use the arrow keys to move and the plus and minus keys to zoom."></canvas>
+
+<header class="top">
+  <h1>Ravenmoor globe test</h1>
+  <p>The whole Earth at night. The UK, France and Spain, and Japan are the detailed sections.</p>
+</header>
+
+<div class="dock">
+  <p class="note" id="note" role="status">Loading the map</p>
+  <div class="panel">
+    <div class="places" id="places">
+      <button type="button" data-place="uk">UK</button>
+      <button type="button" data-place="join">The join</button>
+      <button type="button" data-place="spain">Spain</button>
+      <button type="button" data-place="japan">Japan</button>
+      <button type="button" data-place="globe">Globe</button>
+    </div>
+    <div class="tools">
+      <div class="switches">
+        <button type="button" class="switch" id="joins" role="switch" aria-checked="false"><span class="track"></span>Joins</button>
+        <button type="button" class="switch" id="motion" role="switch" aria-checked="true"><span class="track"></span>Motion</button>
+      </div>
+      <div class="zoom">
+        <button type="button" id="zout" aria-label="Zoom out">&minus;</button>
+        <button type="button" id="zin" aria-label="Zoom in">+</button>
+      </div>
+    </div>
+  </div>
+</div>
+
+<div class="flat" id="flat" hidden>
+  <h1>Ravenmoor globe test</h1>
+  <p>This device can't draw the 3D globe, so here is the finished artwork laid flat: the UK at the top, France and Spain below.</p>
+  <img src="flat.jpg" alt="Night view of the UK, France and Spain with city lights in gold">
+</div>
+
+<script>
+(() => {
+'use strict';
+const $ = s => document.querySelector(s);
+const canvas = $('#gl'), note = $('#note');
+const DEG = Math.PI / 180;
+const reduceMotion = matchMedia('(prefers-reduced-motion: reduce)').matches;
+const coarse = matchMedia('(pointer: coarse)').matches;
+
+/* ---------- geometry shared with the artwork pipeline ---------- */
+const dir = (lat, lon) => { const a = lat * DEG, o = lon * DEG; return [Math.cos(a) * Math.cos(o), Math.cos(a) * Math.sin(o), Math.sin(a)]; };
+const basis = (lat, lon) => { const a = lat * DEG, o = lon * DEG; return {
+  c: dir(lat, lon),
+  e: [-Math.sin(o), Math.cos(o), 0],
+  n: [-Math.sin(a) * Math.cos(o), -Math.sin(a) * Math.sin(o), Math.cos(a)] }; };
+const EU = basis(35, 8);          // centre of the Europe face
+const JP = basis(36.5, 136);      // centre of the Japan test section
+const SUN = dir(0, -172);         // midnight over Europe, daylight over the Pacific
+const TEXELS_PER_UNIT = 2880 / 0.3125;   // how finely the artwork covers the ground
+const faceLatLon = (B, u, v) => {
+  const d = [0, 1, 2].map(i => B.c[i] + u * B.e[i] + v * B.n[i]);
+  const l = Math.hypot(d[0], d[1], d[2]);
+  return [Math.asin(d[2] / l) / DEG, Math.atan2(d[1], d[0]) / DEG];
+};
+const joinAt = faceLatLon(EU, -0.105, 0.25);   // middle of the blended band
+
+const PLACES = {
+  uk:    { lat: 53.9, lon: -2.4, dist: 0.27 },
+  join:  { lat: joinAt[0], lon: joinAt[1], dist: 0.20 },
+  spain: { lat: 40.2, lon: -3.6, dist: 0.30 },
+  japan: { lat: 36.8, lon: 137.8, dist: 0.34 },
+  globe: { lat: 30, lon: 70, dist: Infinity }
+};
+
+/* The full-sharpness artwork arrives as a grid of tiles, exactly as Higgsfield made it. */
+const SHARP = {
+  euTop: { unit: 1, w: 2880, h: 2608, name: 'top', tw: 720, th: 652 },
+  euBot: { unit: 2, w: 2880, h: 2608, name: 'bot', tw: 720, th: 652 },
+  jp:    { unit: 3, w: 2880, h: 2880, name: 'jp',  tw: 720, th: 720 }
+};
+const LIGHT = { euTop: 'europe_top.jpg', euBot: 'europe_bottom.jpg', jp: 'japan.jpg' };
+
+/* ---------- view state ---------- */
+const view = { lat: 30, lon: 70, dist: 3 };
+let W = 1, H = 1, cssH = 1, tanH = 1, tanV = 1, maxDist = 3, minDist = 0.13, tiltMax = 60 * DEG, shift = 0;
+let showJoins = false, life = !reduceMotion;
+let quality = 1, moveQuality = 1, lockQuality = false, frozenTime = null;
+const clamp = (x, a, b) => Math.min(b, Math.max(a, x));
+const wrap = x => ((x + 180) % 360 + 360) % 360 - 180;
+const fullDpr = () => Math.min(window.devicePixelRatio || 1, 3);
+
+function tiltFor(d) {
+  const x = clamp((Math.log(d) - Math.log(0.3)) / (Math.log(1.3) - Math.log(0.3)), 0, 1);
+  return tiltMax * (1 - x * x * (3 - 2 * x));
+}
+function setLens() {
+  const a = W / H;
+  tanV = Math.max(Math.tan(26 * DEG), Math.tan(18 * DEG) / a);
+  tanH = tanV * a;
+  maxDist = 1 / Math.sin(Math.atan(Math.min(tanV, tanH)) * 0.76) - 1;
+  tiltMax = (a < 1 ? 58 : 66) * DEG;
+  /* closest zoom: stop before the artwork has to be stretched by more than a quarter */
+  minDist = clamp(0.8 * cssH * fullDpr() / (2 * tanV * TEXELS_PER_UNIT), 0.12, 0.22);
+  view.dist = clamp(view.dist, minDist, maxDist);
+}
+
+/* ---------- WebGL ---------- */
+const VERT = `#version 300 es
+void main(){ vec2 p = vec2(float((gl_VertexID << 1) & 2), float(gl_VertexID & 2)); gl_Position = vec4(p * 2.0 - 1.0, 0.0, 1.0); }`;
+
+const FRAG = `#version 300 es
+precision highp float;
+uniform vec2 uRes;
+uniform vec3 uCam, uRight, uUp, uFwd;
+uniform vec2 uTan;
+uniform float uShift;
+uniform sampler2D uBase, uEuTop, uEuBot, uJp, uNoise;
+uniform vec2 uTopSize, uBotSize, uJpSize;
+uniform vec3 uHas;
+uniform float uJoins, uLife, uTime, uMeteorP;
+uniform vec4 uMeteor;
+uniform vec3 uEc, uEe, uEn, uJc, uJe, uJn, uSun;
+uniform vec3 uPtr;        // finger or mouse position in canvas pixels, and the radius of the glow around it
+uniform float uReveal;    // 0 = no finger on the map, 1 = finger down
+out vec4 outColor;
+const float PI = 3.14159265359;
+
+float hash(vec3 p){ p = fract(p * 0.3183099 + 0.1); p *= 17.0; return fract(p.x * p.y * p.z * (p.x + p.y + p.z)); }
+float stroke(float x, float x0, float w){ return 1.0 - smoothstep(w * 0.7, w * 1.7, abs(x - x0)); }
+float inside(float x, float a, float b, float f){ return smoothstep(a, a + f, x) * (1.0 - smoothstep(b - f, b, x)); }
+
+/* smooth repeating noise, 64 cells before it repeats */
+vec4 noiseAt(vec2 x){
+  vec2 i = floor(x), f = fract(x);
+  f = f * f * (3.0 - 2.0 * f);
+  return textureLod(uNoise, (i + f + 0.5) / 64.0, 0.0);
+}
+
+/* Sharp enlargement (Catmull-Rom): keeps fine lines crisp where a picture is drawn larger than it was made. */
+vec3 enlarge(sampler2D tex, vec2 px, vec2 size){
+  vec2 c = floor(px - 0.5) + 0.5, f = px - c;
+  vec2 w0 = f * (-0.5 + f * (1.0 - 0.5 * f));
+  vec2 w1 = 1.0 + f * f * (-2.5 + 1.5 * f);
+  vec2 w2 = f * (0.5 + f * (2.0 - 1.5 * f));
+  vec2 w3 = f * f * (-0.5 + 0.5 * f);
+  vec2 w12 = w1 + w2;
+  vec2 t0 = (c - 1.0) / size, t3 = (c + 2.0) / size, t12 = (c + w2 / w12) / size;
+  vec3 s = textureLod(tex, vec2(t0.x,  t0.y),  0.0).rgb * (w0.x  * w0.y)
+         + textureLod(tex, vec2(t12.x, t0.y),  0.0).rgb * (w12.x * w0.y)
+         + textureLod(tex, vec2(t3.x,  t0.y),  0.0).rgb * (w3.x  * w0.y)
+         + textureLod(tex, vec2(t0.x,  t12.y), 0.0).rgb * (w0.x  * w12.y)
+         + textureLod(tex, vec2(t12.x, t12.y), 0.0).rgb * (w12.x * w12.y)
+         + textureLod(tex, vec2(t3.x,  t12.y), 0.0).rgb * (w3.x  * w12.y)
+         + textureLod(tex, vec2(t0.x,  t3.y),  0.0).rgb * (w0.x  * w3.y)
+         + textureLod(tex, vec2(t12.x, t3.y),  0.0).rgb * (w12.x * w3.y)
+         + textureLod(tex, vec2(t3.x,  t3.y),  0.0).rgb * (w3.x  * w3.y);
+  return clamp(s, 0.0, 1.0);
+}
+float stretch(vec2 px){ return 1.0 - smoothstep(0.75, 1.15, max(length(dFdx(px)), length(dFdy(px)))); }
+
+/* gentle shimmer for city lights; texel = position measured in picture pixels */
+float shimmer(vec2 texel, float fp, float t){
+  vec4 nf = noiseAt(texel / 9.0), nc = noiseAt(texel / 70.0 + 13.0);
+  float fine = 0.6 * sin(1.7 * t + 25.0 * nf.r) + 0.4 * sin(3.1 * t + 31.0 * nf.b)
+             + 1.6 * pow(max(sin(0.55 * t + 44.0 * nf.g), 0.0), 26.0);
+  float slow = sin(0.9 * t + 19.0 * nc.g);
+  return fine * 0.19 * (1.0 - smoothstep(2.0, 7.0, fp)) + slow * 0.09 * (1.0 - smoothstep(15.0, 50.0, fp));
+}
+
+/* At rest the artwork already looks like a real night photo from orbit; under the finger the lights glow gold. */
+vec3 calmLights(vec3 c){
+  float d = length(gl_FragCoord.xy - uPtr.xy);
+  float near = uReveal * (1.0 - smoothstep(uPtr.z * 0.30, uPtr.z, d));
+  if (near <= 0.0) return c;
+  float light = max(c.r - 0.9 * c.b, 0.0) / 0.73;                  // how much street light is in this pixel
+  vec3 glowCol = vec3(1.0, 0.66, 0.24) * min(light * 1.7, 1.0);             // warm gold on top of it
+  vec3 lit = 1.0 - (1.0 - c) * (1.0 - glowCol);                     // screened on, so it never bleaches to white
+  return mix(c, lit, near);
+}
+
+void main(){
+  vec2 scr = gl_FragCoord.xy / uRes * 2.0 - 1.0;
+  vec2 ndc = vec2(scr.x, scr.y - uShift);
+  vec3 rd = normalize(uFwd + ndc.x * uTan.x * uRight + ndc.y * uTan.y * uUp);
+  float b = dot(uCam, rd);
+  float cc = dot(uCam, uCam);
+  float d2 = b < 0.0 ? max(cc - b * b, 0.0) : cc;      // squared closest approach to the centre
+  float dmin = sqrt(d2);
+  float t = uTime;
+
+  /* sky: stars, the glow of the air, now and then a shooting star */
+  vec3 sky = vec3(0.012, 0.017, 0.030);
+  vec3 g = rd * 190.0; vec3 cell = floor(g);
+  float r = hash(cell);
+  float glint = uLife > 0.5 ? 0.70 + 0.30 * sin(t * (1.1 + 3.2 * hash(cell + 3.0)) + 40.0 * r) : 1.0;
+  sky += vec3(0.80, 0.86, 1.0) * step(0.9915, r) * smoothstep(0.30, 0.0, length(fract(g) - 0.5)) * (0.35 + 0.65 * hash(cell + 7.0)) * glint;
+  vec3 pc = normalize(uCam - min(b, 0.0) * rd);
+  float skyDay = 0.2;                                  // the whole Earth is shown at night
+  float hgt = max(dmin - 1.0, 0.0);
+  sky += vec3(0.20, 0.46, 1.0) * (exp(-hgt / 0.020) * 0.85 + exp(-hgt / 0.085) * 0.16) * mix(0.34, 1.0, skyDay);
+  if (uMeteorP >= 0.0) {
+    vec2 q = vec2(scr.x * uRes.x / uRes.y, scr.y);
+    vec2 along = normalize(uMeteor.zw - uMeteor.xy);
+    vec2 rel = q - mix(uMeteor.xy, uMeteor.zw, uMeteorP);
+    float back = -dot(rel, along);
+    float side = abs(rel.x * along.y - rel.y * along.x);
+    float glow = sin(PI * uMeteorP);
+    float wide = 2.8 / uRes.y;
+    sky += vec3(0.86, 0.92, 1.0) * exp(-side * side / (wide * wide)) * step(0.0, back) * (1.0 - smoothstep(0.0, 0.05 + 0.20 * glow, back)) * glow * 0.9;
+  }
+
+  /* the ground */
+  float tt = -b - sqrt(max(1.0 - d2, 0.0));
+  vec3 p = normalize(uCam + tt * rd);
+  float day = 0.0;
+
+  float u1 = atan(p.y, p.x) / (2.0 * PI) + 0.5;
+  float u2 = fract(u1 + 0.5) - 0.5;
+  float vv = 0.5 - asin(clamp(p.z, -1.0, 1.0)) / PI;
+  vec2 gx = vec2(abs(dFdx(u1)) < abs(dFdx(u2)) ? dFdx(u1) : dFdx(u2), dFdx(vv));
+  vec2 gy = vec2(abs(dFdy(u1)) < abs(dFdy(u2)) ? dFdy(u1) : dFdy(u2), dFdy(vv));
+  vec3 col = textureGrad(uBase, vec2(u1, vv), gx, gy).rgb * 0.88;
+  float fpB = max(length(vec2(gx.x, gy.x)) * 4096.0, length(vec2(gx.y, gy.y)) * 2048.0);
+  if (uLife > 0.5) {
+    float peakB = max(col.r, max(col.g, col.b));
+    float litB = smoothstep(0.20, 0.62, peakB) * (1.0 - day);
+    if (litB > 0.0) col *= min(1.0 + litB * shimmer(vec2(u1 * 4096.0, vv * 2048.0) * 3.0, fpB * 3.0, t), 1.0 / max(peakB, 0.001));
+  }
+  col = calmLights(col);
+
+  /* Europe artwork: two sections, already blended into one tall picture */
+  float qe = dot(p, uEc); float qes = max(qe, 0.2);
+  float eu = dot(p, uEe) / qes, ev = dot(p, uEn) / qes;
+  float es = (eu + 0.28125) / 0.3125;
+  float row = (0.53125 - ev) / 0.5625 * 5184.0;
+  vec2 uvT = vec2(es, row / 2608.0), uvB = vec2(es, (row - 2576.0) / 2608.0);
+  vec3 aTop = texture(uEuTop, uvT, -0.35).rgb;
+  vec3 aBot = texture(uEuBot, uvB, -0.35).rgb;
+  float kT = stretch(uvT * uTopSize), kB = stretch(uvB * uBotSize);
+  float fpE = max(fwidth(es) * 2880.0, fwidth(row));
+  float me = inside(eu, -0.28125, 0.03125, 0.012) * inside(ev, -0.03125, 0.53125, 0.012) * step(0.2, qe) * uHas.x;
+  if (me > 0.0) {
+    vec3 art;
+    if (row < 2592.0) { art = aTop; if (kT > 0.0) art = mix(art, enlarge(uEuTop, uvT * uTopSize, uTopSize), kT); }
+    else              { art = aBot; if (kB > 0.0) art = mix(art, enlarge(uEuBot, uvB * uBotSize, uBotSize), kB); }
+    if (uLife > 0.5) {
+      float peak = max(art.r, max(art.g, art.b));
+      float lit = smoothstep(0.28, 0.70, peak) * (1.0 - 0.8 * smoothstep(0.82, 1.0, peak));
+      /* never push a light past full brightness, so its gold never bleaches to white */
+      if (lit > 0.0) art *= min(1.0 + lit * shimmer(vec2(es * 2880.0, row), fpE, t), 1.0 / max(peak, 0.001));
+    }
+    art = calmLights(art);
+    col = mix(col, art, me);
+  }
+
+  /* Japan artwork */
+  float qj = dot(p, uJc); float qjs = max(qj, 0.2);
+  float ju = dot(p, uJe) / qjs, jv = dot(p, uJn) / qjs;
+  vec2 uvJ = vec2((ju + 0.15625) / 0.3125, (0.15625 - jv) / 0.3125);
+  vec3 aJ = texture(uJp, uvJ, -0.35).rgb;
+  float kJ = stretch(uvJ * uJpSize);
+  float mj = inside(ju, -0.15625, 0.15625, 0.012) * inside(jv, -0.15625, 0.15625, 0.012) * step(0.2, qj) * uHas.y;
+  if (mj > 0.0) {
+    if (kJ > 0.0) aJ = mix(aJ, enlarge(uJp, uvJ * uJpSize, uJpSize), kJ);
+    aJ = calmLights(aJ);
+    col = mix(col, aJ, mj);
+  }
+
+  /* optional guide lines: section edges and the blended band */
+  if (uJoins > 0.5) {
+    vec3 amber = vec3(0.86, 0.62, 0.25), blue = vec3(0.50, 0.72, 1.0);
+    float wu = fwidth(eu), wv = fwidth(ev);
+    float inU = step(-0.28125 - wu, eu) * step(eu, 0.03125 + wu);
+    float inV = step(-0.03125 - wv, ev) * step(ev, 0.53125 + wv);
+    float ok = step(0.2, qe) * uHas.x;
+    float band = inU * step(0.21875, ev) * step(ev, 0.28125) * ok;
+    float bandEdge = max(stroke(ev, 0.21875, wv), stroke(ev, 0.28125, wv)) * inU * ok;
+    float edge = max(max(stroke(eu, -0.28125, wu), stroke(eu, 0.03125, wu)) * inV,
+                     max(stroke(ev, -0.03125, wv), stroke(ev, 0.53125, wv)) * inU) * ok;
+    float ju2 = fwidth(ju), jv2 = fwidth(jv);
+    float jin = step(-0.15625 - ju2, ju) * step(ju, 0.15625 + ju2) * step(-0.15625 - jv2, jv) * step(jv, 0.15625 + jv2);
+    float jedge = max(max(stroke(ju, -0.15625, ju2), stroke(ju, 0.15625, ju2)),
+                      max(stroke(jv, -0.15625, jv2), stroke(jv, 0.15625, jv2))) * jin * step(0.2, qj) * uHas.y;
+    col = mix(col, blue, band * 0.20);
+    col = mix(col, blue, bandEdge * 0.95);
+    col = mix(col, amber, max(edge, jedge) * 0.95);
+  }
+
+  /* haze toward the horizon */
+  float nv = clamp(dot(p, -rd), 0.0, 1.0);
+  col += vec3(0.15, 0.36, 0.95) * pow(1.0 - nv, 3.2) * mix(0.42, 1.0, day);
+
+  float cover = clamp(0.5 - (dmin - 1.0) / max(fwidth(dmin), 1e-6), 0.0, 1.0) * step(b, 0.0);
+  outColor = vec4(mix(sky, col, cover), 1.0);
+}`;
+
+let gl = null, prog = null, U = {}, tex = {}, aniso = null, anisoMax = 1, maxTex = 4096, epoch = 0;
+const size = { euTop: [1, 1], euBot: [1, 1], jp: [1, 1] };
+const loaded = { base: false, eu: 0, jp: false, sharp: 0, sharpFailed: false };
+
+function compile(type, src) {
+  const s = gl.createShader(type); gl.shaderSource(s, src); gl.compileShader(s);
+  if (!gl.getShaderParameter(s, gl.COMPILE_STATUS)) throw new Error(gl.getShaderInfoLog(s) || 'shader');
+  return s;
+}
+function blankTexture(unit, rgb) {
+  const t = gl.createTexture();
+  gl.activeTexture(gl.TEXTURE0 + unit); gl.bindTexture(gl.TEXTURE_2D, t);
+  gl.texImage2D(gl.TEXTURE_2D, 0, gl.RGBA, 1, 1, 0, gl.RGBA, gl.UNSIGNED_BYTE, new Uint8Array([rgb[0], rgb[1], rgb[2], 255]));
+  gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_MIN_FILTER, gl.LINEAR);
+  gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_MAG_FILTER, gl.LINEAR);
+  return t;
+}
+function noiseTexture(unit) {
+  let s = 0x2F6E2B1;                                   // fixed seed: the same sky and cloud every visit
+  const rnd = () => { s |= 0; s = s + 0x6D2B79F5 | 0; let t = Math.imul(s ^ s >>> 15, 1 | s); t = t + Math.imul(t ^ t >>> 7, 61 | t) ^ t; return ((t ^ t >>> 14) >>> 0) / 4294967296; };
+  const data = new Uint8Array(64 * 64 * 4);
+  for (let i = 0; i < data.length; i++) data[i] = rnd() * 256;
+  const t = gl.createTexture();
+  gl.activeTexture(gl.TEXTURE0 + unit); gl.bindTexture(gl.TEXTURE_2D, t);
+  gl.texImage2D(gl.TEXTURE_2D, 0, gl.RGBA, 64, 64, 0, gl.RGBA, gl.UNSIGNED_BYTE, data);
+  gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_MIN_FILTER, gl.LINEAR);
+  gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_MAG_FILTER, gl.LINEAR);
+  gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_WRAP_S, gl.REPEAT);
+  gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_WRAP_T, gl.REPEAT);
+  return t;
+}
+function finish(repeat) {
+  gl.generateMipmap(gl.TEXTURE_2D);
+  gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_MIN_FILTER, gl.LINEAR_MIPMAP_LINEAR);
+  gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_MAG_FILTER, gl.LINEAR);
+  gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_WRAP_S, repeat ? gl.REPEAT : gl.CLAMP_TO_EDGE);
+  gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_WRAP_T, gl.CLAMP_TO_EDGE);
+  if (aniso) gl.texParameterf(gl.TEXTURE_2D, aniso.TEXTURE_MAX_ANISOTROPY_EXT, anisoMax);
+}
+function initGL() {
+  epoch++;
+  prog = gl.createProgram();
+  gl.attachShader(prog, compile(gl.VERTEX_SHADER, VERT));
+  gl.attachShader(prog, compile(gl.FRAGMENT_SHADER, FRAG));
+  gl.linkProgram(prog);
+  if (!gl.getProgramParameter(prog, gl.LINK_STATUS)) throw new Error(gl.getProgramInfoLog(prog) || 'link');
+  gl.useProgram(prog);
+  gl.bindVertexArray(gl.createVertexArray());
+  for (const n of ['uRes', 'uCam', 'uRight', 'uUp', 'uFwd', 'uTan', 'uShift', 'uBase', 'uEuTop', 'uEuBot', 'uJp', 'uNoise',
+                   'uTopSize', 'uBotSize', 'uJpSize', 'uHas', 'uJoins', 'uLife', 'uTime', 'uMeteor', 'uMeteorP',
+                   'uEc', 'uEe', 'uEn', 'uJc', 'uJe', 'uJn', 'uSun', 'uPtr', 'uReveal']) U[n] = gl.getUniformLocation(prog, n);
+  aniso = gl.getExtension('EXT_texture_filter_anisotropic');
+  anisoMax = aniso ? Math.min(8, gl.getParameter(aniso.MAX_TEXTURE_MAX_ANISOTROPY_EXT)) : 1;
+  maxTex = gl.getParameter(gl.MAX_TEXTURE_SIZE);
+  gl.pixelStorei(gl.UNPACK_FLIP_Y_WEBGL, false);
+  tex.base = blankTexture(0, [8, 10, 18]);
+  tex.euTop = blankTexture(1, [3, 8, 20]);
+  tex.euBot = blankTexture(2, [3, 8, 20]);
+  tex.jp = blankTexture(3, [8, 24, 60]);
+  tex.noise = noiseTexture(4);
+  size.euTop = [1, 1]; size.euBot = [1, 1]; size.jp = [1, 1];
+  gl.uniform1i(U.uBase, 0); gl.uniform1i(U.uEuTop, 1); gl.uniform1i(U.uEuBot, 2); gl.uniform1i(U.uJp, 3); gl.uniform1i(U.uNoise, 4);
+  gl.uniform3fv(U.uEc, EU.c); gl.uniform3fv(U.uEe, EU.e); gl.uniform3fv(U.uEn, EU.n);
+  gl.uniform3fv(U.uJc, JP.c); gl.uniform3fv(U.uJe, JP.e); gl.uniform3fv(U.uJn, JP.n);
+  gl.uniform3fv(U.uSun, SUN);
+  loaded.base = false; loaded.eu = 0; loaded.jp = false; loaded.sharp = 0; loaded.sharpFailed = false;
+}
+
+async function decode(url, viaFetch) {
+  if (!viaFetch) {
+    const img = new Image(); img.decoding = 'async'; img.src = url;
+    await img.decode();
+    return img;
+  }
+  const res = await fetch(url);
+  if (!res.ok) throw new Error(url + ' ' + res.status);
+  return createImageBitmap(await res.blob());
+}
+/* fetch a picture and hand it to the GPU; tries a second way of loading if the first is refused */
+async function withPicture(url, use) {
+  let lastErr;
+  for (const viaFetch of [false, true]) {
+    try { const img = await decode(url, viaFetch); use(img); if (img.close) img.close(); return; }
+    catch (err) { lastErr = err; }
+  }
+  throw lastErr;
+}
+function fitToGPU(img) {
+  const w = img.naturalWidth || img.width, h = img.naturalHeight || img.height;
+  if (Math.max(w, h) <= maxTex) return img;
+  const k = maxTex / Math.max(w, h), c = document.createElement('canvas');
+  c.width = Math.round(w * k); c.height = Math.round(h * k);
+  c.getContext('2d').drawImage(img, 0, 0, c.width, c.height);
+  return c;
+}
+function loadWhole(url, unit, t, repeat, key) {
+  const mine = epoch;
+  return withPicture(url, img => {
+    if (mine !== epoch) return;
+    const src = fitToGPU(img);
+    gl.activeTexture(gl.TEXTURE0 + unit); gl.bindTexture(gl.TEXTURE_2D, t);
+    gl.texImage2D(gl.TEXTURE_2D, 0, gl.RGBA, gl.RGBA, gl.UNSIGNED_BYTE, src);
+    finish(repeat);
+    if (key) size[key] = [src.naturalWidth || src.width, src.naturalHeight || src.height];
+  });
+}
+/* build the full-sharpness picture tile by tile, then swap it in */
+async function sharpen(key) {
+  const S = SHARP[key], mine = epoch;
+  if (Math.max(S.w, S.h) > maxTex) return;             // a very old phone: keep the lighter picture
+  const SCRATCH = 7;
+  const t = gl.createTexture();
+  gl.activeTexture(gl.TEXTURE0 + SCRATCH); gl.bindTexture(gl.TEXTURE_2D, t);
+  gl.texStorage2D(gl.TEXTURE_2D, Math.floor(Math.log2(Math.max(S.w, S.h))) + 1, gl.RGBA8, S.w, S.h);
+  const todo = [];
+  for (let y = 0; y < S.h; y += S.th) for (let x = 0; x < S.w; x += S.tw) todo.push([x, y]);
+  const worker = async () => {
+    for (let job; (job = todo.shift());) {
+      const [x, y] = job;
+      await withPicture(`t/${S.name}_${x}_${y}_${S.tw}_${S.th}.jpg`, img => {
+        if (mine !== epoch) throw new Error('stale');
+        gl.activeTexture(gl.TEXTURE0 + SCRATCH); gl.bindTexture(gl.TEXTURE_2D, t);
+        gl.texSubImage2D(gl.TEXTURE_2D, 0, x, y, gl.RGBA, gl.UNSIGNED_BYTE, img);
+      });
+    }
+  };
+  await Promise.all([worker(), worker(), worker(), worker()]);
+  if (mine !== epoch) return;
+  gl.activeTexture(gl.TEXTURE0 + SCRATCH); gl.bindTexture(gl.TEXTURE_2D, t);
+  finish(false);
+  gl.activeTexture(gl.TEXTURE0 + S.unit); gl.bindTexture(gl.TEXTURE_2D, t);
+  gl.deleteTexture(tex[key]); tex[key] = t; size[key] = [S.w, S.h];
+  loaded.sharp++;
+}
+
+let failed = false, started = false, touched = false;
+function setNote() {
+  note.classList.toggle('err', failed || loaded.sharpFailed);
+  if (failed) { note.hidden = false; note.textContent = "The pictures didn't load. Reload the page to try again."; return; }
+  if (!loaded.base) { note.hidden = false; note.textContent = 'Loading the map'; return; }
+  if (loaded.eu < 2 || !loaded.jp) { note.hidden = false; note.textContent = 'Loading the artwork'; return; }
+  if (loaded.sharpFailed) { note.hidden = false; note.textContent = "The full-sharpness pictures didn't load. Reload the page to try again."; return; }
+  if (showJoins) {
+    note.hidden = false;
+    note.innerHTML = '<span class="sw edge"></span>Section edges<span class="gap"></span><span class="sw band"></span>Blended join';
+    return;
+  }
+  if (!touched) { note.hidden = false; note.textContent = coarse ? 'Drag to move, pinch to zoom' : 'Drag to move, scroll to zoom'; return; }
+  if (loaded.sharp < 3) { note.hidden = false; note.textContent = 'Sharpening the artwork'; return; }
+  note.hidden = true;
+}
+async function loadAll() {
+  const mine = epoch, live = () => mine === epoch && !gl.isContextLost();
+  try {
+    await loadWhole('base.jpg', 0, tex.base, true);
+    if (!live()) return;
+    loaded.base = true; setNote(); render();
+    await loadWhole(LIGHT.euTop, 1, tex.euTop, false, 'euTop'); loaded.eu++;
+    await loadWhole(LIGHT.euBot, 2, tex.euBot, false, 'euBot'); loaded.eu++;
+    if (!live()) return;
+    render();
+    await loadWhole(LIGHT.jp, 3, tex.jp, false, 'jp'); loaded.jp = true;
+    if (!live()) return;
+    setNote(); render();
+    if (!started) { started = true; if (!touched) flyTo('uk', 2600); }
+  } catch (err) {
+    if (!live()) return;
+    failed = true; setNote(); console.error(err); return;
+  }
+  try {
+    for (const key of ['euTop', 'euBot', 'jp']) { await sharpen(key); if (!live()) return; setNote(); render(); }
+    if (loaded.sharp < 3) loaded.sharp = 3;            // nothing left to wait for on a GPU that keeps the lighter pictures
+    setNote();
+  } catch (err) {
+    if (!live()) return;
+    loaded.sharpFailed = true; setNote(); console.warn(err);
+  }
+}
+
+/* ---------- drawing ---------- */
+let queued = false;
+function render() { if (!queued) { queued = true; requestAnimationFrame(frame); } }
+function resize() {
+  const r = canvas.getBoundingClientRect();
+  cssH = Math.max(1, r.height);
+  const k = fullDpr() * quality;
+  const w = Math.max(1, Math.round(r.width * k)), h = Math.max(1, Math.round(r.height * k));
+  if (w !== canvas.width || h !== canvas.height) { canvas.width = w; canvas.height = h; }
+  W = w; H = h; setLens();
+  /* keep the point you are looking at in the middle of the clear space between the heading and the controls */
+  const lead = document.querySelector('.top p').getBoundingClientRect().bottom || document.querySelector('.top h1').getBoundingClientRect().bottom;
+  const panelTop = document.querySelector('.panel').getBoundingClientRect().top;
+  shift = clamp((cssH / 2 - (lead * 0.6 + panelTop) / 2) / (cssH / 2), 0, 0.25);
+}
+function setQuality(q) { if (q !== quality) { quality = q; resize(); } }
+
+const clock0 = performance.now();
+let meteor = null, nextMeteor = 7;
+function draw(time) {
+  /* left alone, the camera floats a little, as if in orbit; it settles the moment you touch the globe */
+  const k = sway * clamp(view.dist / 0.27, 0.5, 2);
+  const lat = clamp(view.lat + 0.16 * k * Math.sin(swayClock * 0.41 + 1.0), -85, 85);
+  const lon = view.lon + 0.30 * k * Math.sin(swayClock * 0.29) / Math.max(Math.cos(view.lat * DEG), 0.3);
+  const T = dir(lat, lon), B = basis(lat, lon), N = B.n, E = B.e;
+  const d = view.dist * (1 + 0.012 * sway * Math.sin(swayClock * 0.23 + 2.0));
+  const t = tiltFor(view.dist), ct = Math.cos(t), st = Math.sin(t);
+  const cam = [0, 1, 2].map(i => T[i] * (1 + d * ct) - N[i] * d * st);
+  const fwd = [0, 1, 2].map(i => -ct * T[i] + st * N[i]);
+  const up = [0, 1, 2].map(i => ct * N[i] + st * T[i]);
+  gl.viewport(0, 0, W, H);
+  gl.uniform2f(U.uRes, W, H);
+  gl.uniform3fv(U.uCam, cam); gl.uniform3fv(U.uRight, E); gl.uniform3fv(U.uUp, up); gl.uniform3fv(U.uFwd, fwd);
+  gl.uniform2f(U.uTan, tanH, tanV); gl.uniform1f(U.uShift, shift);
+  gl.uniform2fv(U.uTopSize, size.euTop); gl.uniform2fv(U.uBotSize, size.euBot); gl.uniform2fv(U.uJpSize, size.jp);
+  gl.uniform3f(U.uHas, loaded.eu >= 2 ? 1 : 0, loaded.jp ? 1 : 0, loaded.base ? 1 : 0);
+  gl.uniform1f(U.uJoins, showJoins ? 1 : 0);
+  gl.uniform1f(U.uLife, life ? 1 : 0);
+  gl.uniform1f(U.uTime, time);
+  /* the glow around the finger, in canvas pixels; the canvas counts its rows from the bottom */
+  const px = W / Math.max(1, canvas.clientWidth);
+  gl.uniform3f(U.uPtr, glow.x * px, H - glow.y * px, (coarse ? 110 : 90) * px);
+  gl.uniform1f(U.uReveal, glow.v);
+  let mp = -1;
+  if (life && frozenTime === null) {
+    if (!meteor && time > nextMeteor) {
+      const a = W / H, side = Math.random() < 0.5 ? -1 : 1, ang = 0.22 + 0.30 * Math.random();
+      const x0 = (-0.75 + 1.5 * Math.random()) * a, y0 = 0.45 + 0.45 * Math.random(), len = 0.45 + 0.25 * Math.random();
+      meteor = { t0: time, dur: 0.8 + 0.5 * Math.random(), line: [x0, y0, x0 + side * len * Math.cos(ang), y0 - len * Math.sin(ang)] };
+    }
+    if (meteor) {
+      mp = (time - meteor.t0) / meteor.dur;
+      if (mp >= 1) { meteor = null; mp = -1; nextMeteor = time + 9 + 13 * Math.random(); }
+      else gl.uniform4fv(U.uMeteor, meteor.line);
+    }
+  }
+  gl.uniform1f(U.uMeteorP, mp);
+  gl.drawArrays(gl.TRIANGLES, 0, 3);
+}
+
+/* ---------- movement ---------- */
+let fly = null, vel = { lat: 0, lon: 0 }, lastT = 0, lastDraw = 0, lastInput = -1e9, current = null, pace = 16, spin = 0, sway = 0, swayClock = 0;
+const samples = [];
+const glow = { x: -1e4, y: -1e4, v: 0, target: 0 };   // where the roads light up, and how much
+function glowAt(e, on) {
+  const r = canvas.getBoundingClientRect();
+  glow.x = e.clientX - r.left; glow.y = e.clientY - r.top;
+  if (on !== undefined) glow.target = on ? 1 : 0;
+  render();
+}
+function setCurrent(name) {
+  current = name;
+  document.querySelectorAll('#places button').forEach(b => b.setAttribute('aria-current', b.dataset.place === name ? 'true' : 'false'));
+}
+function pan(dx, dy) {
+  const k = view.dist * 2 * tanV / cssH / DEG;
+  const dLat = dy * k / Math.max(Math.cos(tiltFor(view.dist)), 0.4);
+  const dLon = -dx * k / Math.max(Math.cos(view.lat * DEG), 0.15);
+  view.lat = clamp(view.lat + dLat, -84, 84);
+  view.lon = wrap(view.lon + dLon);
+  return [dLat, dLon];
+}
+function zoomBy(f) { view.dist = clamp(view.dist * f, minDist, maxDist); }
+function userMoved() {
+  fly = null; lastInput = performance.now(); spin = 0;
+  if (current) setCurrent(null);
+  if (!touched) { touched = true; setNote(); }
+}
+function flyTo(name, ms) {
+  const p = PLACES[name]; if (!p) return;
+  const dist = clamp(p.dist, minDist, maxDist);
+  vel.lat = vel.lon = 0; setCurrent(name); lastInput = performance.now(); spin = 0;
+  if (reduceMotion) { view.lat = p.lat; view.lon = p.lon; view.dist = dist; fly = null; render(); return; }
+  const a = dir(view.lat, view.lon), b = dir(p.lat, p.lon);
+  const ang = Math.acos(clamp(a[0] * b[0] + a[1] * b[1] + a[2] * b[2], -1, 1)) / DEG;
+  fly = { t0: performance.now(), dur: ms || 900 + 1000 * Math.min(1, ang / 90),
+          lat0: view.lat, lon0: view.lon, ld0: Math.log(view.dist),
+          dLat: p.lat - view.lat, dLon: wrap(p.lon - view.lon), ld1: Math.log(dist),
+          bump: Math.log(1 + ang / 35) * 0.9 };
+  render();
+}
+function frame(now) {
+  queued = false;
+  if (!gl || gl.isContextLost()) return;
+  const gliding = pointers.size === 0 && (Math.abs(vel.lat) > 0.02 || Math.abs(vel.lon) > 0.02);
+  const fading = Math.abs(glow.v - glow.target) > 0.002;
+  const moving = !!fly || gliding || pointers.size > 0 || fading;
+  const ambient = life && frozenTime === null;
+  /* when only the gentle background motion is running, 30 pictures a second is plenty */
+  if (!moving && ambient && now - lastDraw < 30) { render(); return; }
+  const dt = Math.min(0.05, lastT ? (now - lastT) / 1000 : 0.016);
+  if (moving && lastT) pace += ((now - lastT) - pace) * 0.15;
+  lastT = now; lastDraw = now;
+  /* the glow comes up quickly under the finger and fades gently after it lifts */
+  glow.v += (glow.target - glow.v) * Math.min(1, dt * (glow.target > glow.v ? 10 : 3.5));
+  if (Math.abs(glow.v - glow.target) <= 0.002) glow.v = glow.target;
+
+  if (fly) {
+    const x = clamp((now - fly.t0) / fly.dur, 0, 1), e = x < 0.5 ? 4 * x * x * x : 1 - Math.pow(-2 * x + 2, 3) / 2;
+    view.lat = fly.lat0 + fly.dLat * e;
+    view.lon = wrap(fly.lon0 + fly.dLon * e);
+    view.dist = clamp(Math.exp(fly.ld0 + (fly.ld1 - fly.ld0) * e + fly.bump * Math.sin(Math.PI * e)), minDist, maxDist);
+    if (x >= 1) { fly = null; lastInput = now; }
+  } else if (gliding) {
+    view.lat = clamp(view.lat + vel.lat * dt, -84, 84);
+    view.lon = wrap(view.lon + vel.lon * dt);
+    const decay = Math.exp(-dt / 0.32); vel.lat *= decay; vel.lon *= decay;
+  } else if (ambient && pointers.size === 0 && view.dist > maxDist * 0.8 && now - lastInput > 3500) {
+    spin = Math.min(1, spin + dt / 2.5);                // seen from far away and left alone, the Earth turns slowly
+    view.lon = wrap(view.lon + 1.6 * spin * spin * dt);
+  }
+
+  const resting = ambient && !moving && now - lastInput > 1200;
+  sway += ((resting ? 1 : 0) - sway) * Math.min(1, dt * (resting ? 0.7 : 7));
+  if (ambient) swayClock += dt;
+
+  /* full sharpness whenever the picture is still; ease off only while it is moving and only if the device needs it */
+  if (!lockQuality) {
+    if (moving) {
+      if (pace > 24 && moveQuality > 0.55) { moveQuality = Math.max(0.55, moveQuality - 0.12); pace = 17; }
+      else if (pace < 12.5 && moveQuality < 1) { moveQuality = Math.min(1, moveQuality + 0.06); pace = 16; }
+      setQuality(moveQuality);
+    } else setQuality(1);
+  }
+
+  draw(frozenTime !== null ? frozenTime : (now - clock0) / 1000);
+  if (moving || ambient) render(); else lastT = 0;
+}
+
+/* ---------- input ---------- */
+const pointers = new Map();
+let pinch = 0;
+const span = () => { const [a, b] = [...pointers.values()]; return Math.hypot(a.x - b.x, a.y - b.y); };
+canvas.addEventListener('pointerdown', e => {
+  try { canvas.setPointerCapture(e.pointerId); } catch (err) { /* capture is a nicety, not a need */ }
+  if (pointers.size === 0 && moveQuality < 1) moveQuality = Math.min(1, moveQuality + 0.06);
+  pointers.set(e.pointerId, { x: e.clientX, y: e.clientY });
+  glowAt(e, pointers.size === 1);
+  vel.lat = vel.lon = 0; samples.length = 0;
+  if (pointers.size === 2) pinch = span();
+  canvas.classList.add('dragging');
+  userMoved(); render();
+});
+canvas.addEventListener('pointermove', e => {
+  const p = pointers.get(e.pointerId);
+  if (pointers.size <= 1 && (p || e.pointerType === 'mouse')) glowAt(e, true);   // a mouse lights the roads just by hovering
+  if (!p) return;
+  const dx = e.clientX - p.x, dy = e.clientY - p.y;
+  p.x = e.clientX; p.y = e.clientY; lastInput = performance.now();
+  if (pointers.size === 1) {
+    const [dLat, dLon] = pan(dx, dy);
+    samples.push({ t: e.timeStamp, dLat, dLon });
+    while (samples.length && e.timeStamp - samples[0].t > 90) samples.shift();
+  } else if (pointers.size === 2) {
+    pan(dx / 2, dy / 2);
+    const s = span();
+    if (pinch > 0 && s > 0) zoomBy(pinch / s);
+    pinch = s;
+  }
+  render();
+});
+function release(e) {
+  if (!pointers.delete(e.pointerId)) return;
+  lastInput = performance.now();
+  if (pointers.size === 0) {
+    canvas.classList.remove('dragging');
+    if (e.pointerType !== 'mouse') glow.target = 0;
+    if (!reduceMotion && samples.length > 1 && e.timeStamp - samples[samples.length - 1].t < 60) {
+      const secs = Math.max(16, samples[samples.length - 1].t - samples[0].t) / 1000;
+      vel.lat = samples.reduce((s, q) => s + q.dLat, 0) / secs;
+      vel.lon = samples.reduce((s, q) => s + q.dLon, 0) / secs;
+    }
+    samples.length = 0; render();
+  } else { pinch = 0; samples.length = 0; }
+}
+canvas.addEventListener('pointerup', release);
+canvas.addEventListener('pointercancel', release);
+canvas.addEventListener('pointerleave', e => { if (e.pointerType === 'mouse' && !pointers.size) { glow.target = 0; render(); } });
+canvas.addEventListener('wheel', e => {
+  e.preventDefault();
+  userMoved(); vel.lat = vel.lon = 0;
+  const unit = e.deltaMode === 1 ? 16 : e.deltaMode === 2 ? 400 : 1;
+  zoomBy(Math.exp(clamp(e.deltaY * unit, -400, 400) * (e.ctrlKey ? 0.010 : 0.0016)));
+  render();
+}, { passive: false });
+canvas.addEventListener('keydown', e => {
+  const step = 60;
+  const moves = { ArrowLeft: [step, 0], ArrowRight: [-step, 0], ArrowUp: [0, step], ArrowDown: [0, -step] };
+  if (moves[e.key]) { userMoved(); pan(moves[e.key][0], moves[e.key][1]); }
+  else if (e.key === '+' || e.key === '=') { userMoved(); zoomBy(0.8); }
+  else if (e.key === '-' || e.key === '_') { userMoved(); zoomBy(1.25); }
+  else return;
+  e.preventDefault(); render();
+});
+$('#places').addEventListener('click', e => {
+  const b = e.target.closest('button[data-place]'); if (!b) return;
+  if (!touched) { touched = true; setNote(); }
+  flyTo(b.dataset.place);
+});
+$('#joins').addEventListener('click', e => {
+  showJoins = !showJoins;
+  e.currentTarget.setAttribute('aria-checked', showJoins ? 'true' : 'false');
+  setNote(); render();
+});
+$('#motion').addEventListener('click', e => {
+  life = !life; meteor = null; spin = 0; if (!life) sway = 0;
+  e.currentTarget.setAttribute('aria-checked', life ? 'true' : 'false');
+  render();
+});
+$('#motion').setAttribute('aria-checked', life ? 'true' : 'false');
+$('#zin').addEventListener('click', () => { userMoved(); zoomBy(0.7); render(); });
+$('#zout').addEventListener('click', () => { userMoved(); zoomBy(1 / 0.7); render(); });
+
+/* ---------- start ---------- */
+function showFlat() { $('#flat').hidden = false; canvas.hidden = true; document.querySelector('.top').hidden = true; document.querySelector('.dock').hidden = true; }
+try {
+  gl = canvas.getContext('webgl2', { antialias: false, alpha: false, powerPreference: 'high-performance' });
+  if (!gl) throw new Error('no webgl2');
+  initGL();
+} catch (err) { console.error(err); gl = null; showFlat(); }
+
+if (gl) {
+  canvas.addEventListener('webglcontextlost', e => { e.preventDefault(); epoch++; });
+  canvas.addEventListener('webglcontextrestored', () => { try { initGL(); resize(); setNote(); render(); loadAll(); } catch (err) { showFlat(); } });
+  new ResizeObserver(() => { resize(); render(); }).observe(canvas);
+  resize();
+  view.dist = maxDist;
+  setNote(); render(); loadAll();
+  /* handles for checking the page by script */
+  window.__globe = { view, places: PLACES, flyTo, render, loaded, size,
+    limits: () => ({ minDist, maxDist, quality, life, canvas: [canvas.width, canvas.height] }),
+    set(lat, lon, dist) { fly = null; vel.lat = vel.lon = 0; lastInput = performance.now(); spin = 0; view.lat = lat; view.lon = lon; view.dist = clamp(dist, minDist, maxDist); render(); },
+    still(time) { frozenTime = time; lockQuality = time !== null; if (lockQuality) { setQuality(1); sway = 0; } render(); } };
+}
+})();
+</script>
+</body>
+</html>
