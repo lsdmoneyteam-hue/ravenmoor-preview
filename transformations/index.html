@@ -56,6 +56,14 @@ h1{font:500 clamp(48px,9vw,104px)/.98 'Cormorant Garamond',Georgia,serif;letter-
 .full:hover{background:var(--bone);color:var(--ink)}
 .ba:fullscreen{aspect-ratio:auto;width:100vw;height:100vh;background:#000}
 .ba:fullscreen img{object-fit:contain}
+.more{padding:0 0 clamp(64px,8vw,104px)}
+.more h2{font:500 clamp(30px,4vw,44px)/1.05 'Cormorant Garamond',Georgia,serif;margin:0 0 8px}
+.more>p{color:var(--mute);margin:0 0 24px;font-size:15px}
+.gal{display:grid;grid-template-columns:1fr;gap:16px}
+@media (min-width:760px){.gal{grid-template-columns:1fr 1fr}}
+.gal figure{margin:0}
+.gal img{display:block;width:100%;aspect-ratio:4/3;object-fit:cover;background:#1a1612}
+.gal figcaption{color:var(--mute);font-size:14px;padding-top:8px}
 .smallprint{color:var(--mute);font-size:14px;margin:0}
 .cta{border-top:1px solid var(--rule);padding:clamp(56px,8vw,96px) 0}
 .cta h2{font:500 clamp(36px,6vw,64px)/1 'Cormorant Garamond',Georgia,serif;margin:0 0 18px;max-width:16ch}
@@ -88,6 +96,12 @@ h1{font:500 clamp(48px,9vw,104px)/.98 'Cormorant Garamond',Georgia,serif;letter-
 </section>
 
 <section class="wrap rooms" id="rooms" role="tabpanel" aria-labelledby="t-Modern_Cottage"></section>
+
+<section class="wrap more" aria-labelledby="more-h">
+<h2 id="more-h">More of the room</h2>
+<p>Same layout, same furniture, seen from new angles.</p>
+<div class="gal" id="gal"></div>
+</section>
 
 <section class="cta" aria-labelledby="cta-h"><div class="wrap">
 <h2 id="cta-h">Got a place that needs work?</h2>
@@ -148,8 +162,13 @@ h1{font:500 clamp(48px,9vw,104px)/.98 'Cormorant Garamond',Georgia,serif;letter-
       attach(a.querySelector('.ba'), r);
     });
   }
+
+  var ANG = [['A','Across to the sofa wall'],['B','The wood burner'],['C','Sofa corner and the hall'],['D','From the hall doorway']];
+  var gal = document.getElementById('gal');
+  ANG.forEach(function(x){ var f=document.createElement('figure'); f.innerHTML='<img loading="lazy" decoding="async" sizes="(min-width: 760px) 50vw, 100vw" alt=""><figcaption>'+x[1]+'</figcaption>'; gal.appendChild(f); });
+  function setGal(style){ gal.querySelectorAll('img').forEach(function(img,i){ var a=ANG[i][0]; img.srcset='/transformations/img/'+style+'_angle'+a+'-1200.webp 1200w, /transformations/img/'+style+'_angle'+a+'-2400.webp 2400w'; img.src='/transformations/img/'+style+'_angle'+a+'-1200.webp'; img.alt=ANG[i][1]+', '+LABEL[style]+' style'; }); }
   function setStyle(style){
-    cur = style; note.textContent = STYLES[style];
+    cur = style; setGal(style); note.textContent = STYLES[style];
     document.querySelectorAll('.tab').forEach(function(t){ var on = t.dataset.style === style; t.setAttribute('aria-selected', on); t.tabIndex = on ? 0 : -1; if (on) grid.setAttribute('aria-labelledby', t.id); });
     grid.querySelectorAll('.ba').forEach(function(el, i){
       var r = ROOMS[i], img = el.querySelector('img.after');
