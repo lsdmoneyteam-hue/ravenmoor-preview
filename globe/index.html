@@ -377,11 +377,7 @@ void main(){
   vec3 pc = normalize(uCam - min(b, 0.0) * rd);
   float skyDay = smoothstep(-0.25, 0.35, dot(pc, uSun));
   float hgt = max(dmin - 1.0, 0.0);
-  /* a thin blue rim of air, as a camera in orbit sees it: bright only on the day side, almost nothing at night */
-  sky += vec3(0.24, 0.50, 1.0) * (exp(-hgt / 0.011) * 0.95 + exp(-hgt / 0.045) * 0.10) * mix(0.10, 1.0, skyDay);
-  /* airglow: the faint green band that floats just above the night horizon in photos from the space station */
-  float ag = (hgt - 0.014) / 0.0045;
-  sky += vec3(0.18, 0.50, 0.26) * exp(-ag * ag) * 0.15 * (1.0 - skyDay) * step(1e-5, hgt);
+  sky += vec3(0.20, 0.46, 1.0) * (exp(-hgt / 0.020) * 0.85 + exp(-hgt / 0.085) * 0.16) * mix(0.34, 1.0, skyDay);
   if (uMeteorP >= 0.0) {
     vec2 mq = vec2(scr.x * uRes.x / uRes.y, scr.y);
     vec2 along = normalize(uMeteor.zw - uMeteor.xy);
@@ -441,22 +437,6 @@ void main(){
   col *= min(gain, max(1.0, mix(1.06, 1.52, nearPtr) / max(peak, 0.001)));     // only under the pointer may it go past full brightness
   col += vec3(1.0, 0.74, 0.36) * (glow * nearPtr * 0.10 + warm * nearPtr * nearPtr * 0.03);
 
-  /* the satellite-photo grade: daylight a touch less saturated with a little more bite; the dark side a cold,
-     near-black grey under the moon; town lights sodium orange with white-hot centres and a soft dome of glow */
-  {
-    float night = 1.0 - day;
-    float nl = clamp(glow * 1.3, 0.0, 1.0) * night;
-    vec3 grey = vec3(dot(col, vec3(0.2126, 0.7152, 0.0722)));
-    vec3 dayG = pow(mix(grey, col, 0.88), vec3(1.07)) * 1.05;
-    vec3 nightG = mix(grey, col, 0.40) * vec3(0.80, 0.88, 1.0) * 0.74;
-    col = mix(mix(nightG, dayG, day), col, nl);
-    col = mix(col, col * vec3(1.06, 0.90, 0.68), nl * 0.45 * (1.0 - smoothstep(0.75, 1.0, peak)));
-    col = mix(col, vec3(max(col.r, max(col.g, col.b))), nl * smoothstep(0.80, 1.0, peak) * 0.45);
-    vec3 bl = textureLod(uCube, q, 3.2).rgb;
-    float bw = smoothstep(0.02, 0.14, bl.r - bl.b);
-    col += vec3(1.0, 0.60, 0.26) * max(bl.r - 0.05, 0.0) * bw * night * 0.30 * (1.0 - 0.65 * hold * (1.0 - nearPtr));
-  }
-
   /* clouds: grey-blue under the moon, white in daylight, a warm edge along the line between them */
   if (uClouds > 0.0) {
     float c = cloudAt(p, rho, 1.0) * uClouds;
@@ -495,15 +475,10 @@ void main(){
 
   /* haze toward the horizon */
   float nv = clamp(dot(p, -rd), 0.0, 1.0);
-  col += vec3(0.16, 0.38, 0.95) * pow(1.0 - nv, 4.0) * mix(0.16, 0.85, smoothstep(-0.25, 0.35, mu));
+  col += vec3(0.15, 0.36, 0.95) * pow(1.0 - nv, 3.2) * mix(0.42, 1.0, smoothstep(-0.25, 0.35, mu));
 
   float cover = clamp(0.5 - (dmin - 1.0) / max(fwidth(dmin), 1e-6), 0.0, 1.0) * step(b, 0.0);
-  vec3 fin = mix(sky, col, cover);
-  /* camera feel: fine moving sensor grain, mostly in the shadows, and a gentle fall-off to the corners */
-  float lumF = dot(fin, vec3(0.299, 0.587, 0.114));
-  fin += (hash(vec3(floor(gl_FragCoord.xy), floor(t * 24.0))) - 0.5) * 0.024 * (1.0 - smoothstep(0.0, 0.45, lumF)) * uLife;
-  ${HERO ? '' : 'fin *= 1.0 - 0.22 * smoothstep(0.55, 1.45, length(scr * vec2(uRes.x / uRes.y, 1.0)) / max(1.0, uRes.x / uRes.y));'}
-  outColor = vec4(max(fin, 0.0), 1.0);
+  outColor = vec4(mix(sky, col, cover), 1.0);
 }`;
 
 let gl = null, prog = null, U = {}, tex = {}, epoch = 0;

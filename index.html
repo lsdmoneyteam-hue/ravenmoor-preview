@@ -1241,15 +1241,6 @@ class Component extends DCLogic {
         'float gain=1.-hold*glw*(1.-nearP)+nearP*glw*.80+uLife*glowing*shim*(.75+1.6*nearP)+nearP*warm*smoothstep(.05,.30,peak)*.55;',
         'col*=min(gain,max(1.,mix(1.06,1.52,nearP)/max(peak,.001)));',
         'col+=vec3(1.,.74,.36)*(glw*nearP*.10+warm*nearP*nearP*.03);',
-        // satellite-photo grade: daylight a touch less saturated with more bite; the dark side a cold near-black grey;
-        // town lights sodium orange with white-hot centres and a soft dome of glow
-        '{float night=1.-day,nl=clamp(glw*1.3,0.,1.)*night;vec3 grey=vec3(dot(col,vec3(.2126,.7152,.0722)));',
-        'vec3 dG=pow(mix(grey,col,.88),vec3(1.07))*1.05,nG=mix(grey,col,.40)*vec3(.80,.88,1.)*.74;',
-        'col=mix(mix(nG,dG,day),col,nl);',
-        'col=mix(col,col*vec3(1.06,.90,.68),nl*.45*(1.-smoothstep(.75,1.,peak)));',
-        'col=mix(col,vec3(max(col.r,max(col.g,col.b))),nl*smoothstep(.80,1.,peak)*.45);',
-        'vec3 bl=texture2D(uT,clamp(vec2((lon-uMap.x)*uMap.y,(uMap.z-lat)*uMap.w),0.,1.),4.).rgb;',
-        'col+=vec3(1.,.60,.26)*max(bl.r-.05,0.)*smoothstep(.02,.14,bl.r-bl.b)*night*.30*(1.-.65*hold*(1.-nearP));}',
         // clouds: grey-blue under the moon, white in daylight, a warm edge along the line between them
         'float c=cloud(lonr,s,1.)*uWx.z;',
         'vec3 p2=normalize(p+normalize(SUN-p*mu)*.006);',
@@ -1268,12 +1259,10 @@ class Component extends DCLogic {
         'col+=air*(1.-day);}',
         // haze toward the horizon, then the thin bright line of air and its glow above it
         'float lightSide=smoothstep(-.25,.35,mu);',
-        'col+=vec3(.16,.38,.95)*pow(1.-z,5.2)*mix(.16,.85,lightSide);',
+        'col+=vec3(.15,.36,.95)*pow(1.-z,4.6)*mix(.40,.95,lightSide);',
         'float line=exp(-abs(d-1.)*uR/2.2),halo=exp(-max(d-1.,0.)*uR/28.);',
-        'float ag=(d-1.014)/.0045,agw=exp(-ag*ag)*.16*(1.-lightSide)*(1.-inside);',
-        'vec3 air=(vec3(.5,.78,1.)*line*.9+vec3(.1,.36,1.)*halo*.45*(1.-inside))*mix(.30,1.2,lightSide)+vec3(.18,.50,.26)*agw;',
-        'float a=max(inside,min(1.,line*.9+halo*.5*(1.-inside)+agw));',
-        'col+=(fract(sin(dot(floor(gl_FragCoord.xy)+floor(uTime*24.)*vec2(7.1,3.3),vec2(12.9898,78.233)))*43758.5453)-.5)*.024*(1.-smoothstep(0.,.45,dot(col,vec3(.299,.587,.114))))*uLife;',
+        'vec3 air=(vec3(.5,.78,1.)*line*.9+vec3(.1,.36,1.)*halo*.55*(1.-inside))*mix(.8,1.25,lightSide);',
+        'float a=max(inside,min(1.,line*.9+halo*.5*(1.-inside)));',
         'gl_FragColor=vec4((col*inside+air)*uA,a*uA);}'
       ]).join('\n'), ['uC', 'uR', 'uLon', 'uTilt', 'uA', 'uTime', 'uLife', 'uFp', 'uT', 'uCl', 'uWi', 'uNo', 'uMap', 'uWx', 'uPtr', 'uPl', 'uPd', 'uDim']);
       if (!P) return false;
