@@ -1,2 +1,7 @@
 User-agent: *
-Disallow: /
+Allow: /
+Disallow: /admin
+Disallow: /api/
+Disallow: /globe/
+
+Sitemap: https://ravenmoor-digital.com/sitemap.xml
