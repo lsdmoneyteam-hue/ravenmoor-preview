@@ -281,6 +281,8 @@ function classify(s, data, fi) {
   if ((A && A.type === 'core') || (B && B.type === 'core')) return 'none';
   if (A && B && COMMUNAL.has(A.type) && A.type === B.type) return 'none';
   if (A && B && OUTSIDE.has(A.type) && OUTSIDE.has(B.type)) return 'none';
+  if (A && B && A.type === 'void' && B.type === 'void') return 'none';
+  if (A && B && (A.type === 'void' || B.type === 'void') && !OUTSIDE.has(A.type) && !OUTSIDE.has(B.type)) return 'rail';          // a gallery looking down into the room below
   if (!A || !B) {
     const q = A || B;
     if (OUTSIDE.has(q.type)) return 'rail';
@@ -695,6 +697,8 @@ function towerRoof(R, data, plate, y) {
     // raised sun deck behind it, steps up, loungers
     R.box('deck', w + 1.2, hT - .04, 2.2, cx - .6, yT + (hT - .04) / 2, z0 - 1.1); for (let k = 0; k < 4; k++) R.box('deck', .34, hT * (k + 1) / 5, 2.2, x0 - 1.37 - k * .34, yT + hT * (k + 1) / 10, z0 - 1.1);
     for (let k = 0; k < 4; k++) { const lx = x0 + 1.2 + k * (w - 2.4) / 3; R.rbox('white', .7, .1, 1.9, lx, yT + hT + .22, z0 - 1.15, .04); R.rbox('fabric', .62, .08, 1.3, lx, yT + hT + .31, z0 - .9, .03); R.rbox('fabric', .62, .08, .6, lx, yT + hT + .42, z0 - 1.82, .03); }
+    for (let k = 0; k < 4; k++) { const lx = x0 + 1.2 + k * (w - 2.4) / 3; R.rbox(k % 2 ? 'throw_' : 'linen', .5, .03, .7, lx, yT + hT + .37, z0 - .7, .01); if (k % 2 === 0) { R.cyl('metal', .03, 2.3, lx + .75, yT + hT + 1.15, z0 - 1.6); R.cyl('fabric', 1.25, .5, lx + .75, yT + hT + 2.45, z0 - 1.6, .05, 24); } }
+    for (let k = 0; k < 6; k++) { R.cyl('downlight', .09, .02, x0 + .9 + k * (w - 1.8) / 5, yT + .12, z0 + 1.2, .09, 12); R.cyl('downlight', .09, .02, x0 + .9 + k * (w - 1.8) / 5, yT + .12, z1 - 1.2, .09, 12); }          // lights under the water
     R.rbox('pot', 1.2, .7, 1.2, deck.x + 1.3, yT + .35, deck.z + deck.d - 1.3, .05); R.ball('plant', .8, deck.x + 1.3, yT + 1.5, deck.z + deck.d - 1.3, 1.2, 2); R.ball('plant2', .5, deck.x + 1.7, yT + 2.1, deck.z + deck.d - 1.1, 1.1, 2);
   }
   const gd = top.rooms.find(q => q.id && q.id.endsWith('-garden'));
@@ -1361,18 +1365,33 @@ export function run(data, root) {
       v(cx, 0, cz).addScaledVector(f, plate.d / 2 + s * .95).addScaledVector(sd, s * .3).setY(yF + 7), at(11, g * .6, 1.7), at(2.6, g, .25), A, W, B, C];
     const T = [v(cx, 0, cz), v(cx, h * .1, cz), v(cx, h * .3, cz), v(cx, h * .5, cz), v(cx, Math.max(2, yF - 3), cz), wc.clone(), at(-3, g * .5, -.1), at(-2.4, -g, -.15), at(-2.6, -g, -.2), at(-dep + .8, -g * .85, -.25), C.clone().addScaledVector(f, 60).setY(eye - 4)];
     // where there is a pool on the roof, the film carries on: up through the height of the room, out onto the terrace, and ends over the water
-    const pd = data.floors[nF - 1].rooms.find(r => r.pool), sc = pd && fi < nF - 1 ? .8 : 1, K = KP.map(k => k * sc);
-    if (sc < 1) { const yT = (nF - 1) * data.floorH, [px0, px1, pz0] = pd.pool, mx = q.x + q.w / 2, mz = q.z + q.d / 2;
+    const pd = data.floors[nF - 1].rooms.find(r => r.pool); let sc = pd && fi < nF - 1 ? .8 : 1, K = KP.map(k => k * sc), outAt = sc;
+    if (q.tall && pd) {
+      // in through the glass panning left to the city, across to the piano, turn to take in the room, up the stair,
+      // out through the doors, look left, then a long pan right across the pool to the city at night
+      sc = .62; P.length = 7; T.length = 7; K = KP.slice(0, 7).map(k => k * sc); const yT = (nF - 1) * data.floorH, Y = yF, [px0, px1, pz0] = pd.pool, x0 = q.x, z1 = q.z + q.d, zb = q.z;
+      const add = (k, p, t) => { K.push(k); P.push(v(...p)); T.push(v(...t)); };
+      P[6] = v(x0 + 9, eye + .15, z1 + 2.4); T[6] = v(x0 + 4, eye + .2, z1 - 3);
+      add(.50, [x0 + 9, eye, z1 - 1.6], [x0 - 14, eye + .6, z1 - 3.2]);          // inside, looking west out over the city
+      add(.57, [x0 + 5.6, eye, z1 - 2.1], [x0 + 2, Y + 1.0, z1 - 2.0]);          // towards the piano
+      add(.65, [x0 + 4.2, eye, z1 - 3.6], [x0 + 11.4, Y + 2.5, zb + 4.6]);       // turn: the room, the fire, the chandelier
+      add(.72, [x0 + 1.2, eye, zb + 2.3], [x0 + 6, Y + 3.3, zb + .7]);           // the foot of the stair
+      add(.80, [x0 + 6.4, yT + 1.55, zb + .75], [x0 + 12, yT + 1.4, zb + .75]);  // the landing
+      add(.87, [x0 + 13.4, yT + 1.6, zb + .9], [x0 + 20, yT + 1.6, zb - 5]);     // out through the doors, looking left
+      add(.94, [x0 + 15.6, yT + 1.8, zb + 1.9], [(px0 + px1) / 2, yT + .8, pz0 + 2.5]);
+      add(1, [x0 + 16.6, yT + 2.2, zb + 2.6], [px1 - 2, yT - 4, plate.z1 + 26]); outAt = .82;
+    } else
+    if (sc < 1 && !(q.tall && pd)) { const yT = (nF - 1) * data.floorH, [px0, px1, pz0] = pd.pool, mx = q.x + q.w / 2, mz = q.z + q.d / 2;
       // to the foot of the stair, up it, across the terrace, and out over the pool
       const sz = q.z + .65, s0 = q.x + .7, s1 = q.x + .7 + 18 * .29;
       P.push(v(s0 - .1, eye, sz + 1.5), v(s1 - .4, yT + 1.55, sz + .9), v(pd.x + 1.6, yT + 1.75, pd.z + 2.6), v(px0 - 1.2, yT + 2.7, pz0 + .6));
       T.push(v(s1, yF + 3.4, sz), v(pd.x + 3, yT + 1.5, pd.z + 3), v((px0 + px1) / 2, yT + 1, pz0 + 2), v(px1 - 1, yT + .2, plate.z1 + 3.4)); K.push(.85, .9, .95, 1); }
     const pc = new THREE.CatmullRomCurve3(P, false, 'centripetal'), tc = new THREE.CatmullRomCurve3(T, false, 'centripetal');
     const u = p => { let i = 0; while (i < K.length - 2 && p > K[i + 1]) i++; return (i + clamp((p - K[i]) / (K[i + 1] - K[i]), 0, 1)) / (K.length - 1); };
-    st = { p: 0, to: 0, h, hr: -1, fi, q, inside: false, sc, pos: { getPoint: p => pc.getPoint(u(p)) }, tgt: { getPoint: p => tc.getPoint(u(p)) } };
+    st = { p: 0, to: 0, h, hr: -1, fi, q, inside: false, sc, outAt, pos: { getPoint: p => pc.getPoint(u(p)) }, tgt: { getPoint: p => tc.getPoint(u(p)) } };
     fly = null; controls.enabled = false; root.classList.add('story'); camera.fov = 40; reframe(); storyAt(0);
   }
-  const storyFov = (p0, sc = (st || stHold || { sc: 1 }).sc) => { const p = Math.min(1, p0 / sc), f = camera.aspect < 1 ? 58 : 40, ext = f + 14 * (1 - sstep(0, .4, p)), inn = ext + (walkFov() * .88 - ext) * sstep(.64, .8, p); return inn + (f + 12 - inn) * sstep(sc + .02, sc + .1, p0); };
+  const storyFov = (p0, sc = (st || stHold || { sc: 1 }).sc, oa = (st || stHold || {}).outAt ?? sc) => { const p = Math.min(1, p0 / sc), f = camera.aspect < 1 ? 58 : 40, ext = f + 14 * (1 - sstep(0, .4, p)), inn = ext + (walkFov() * .88 - ext) * sstep(.64, .8, p); return inn + (f + 14 - inn) * sstep(oa + .02, oa + .1, p0); };
   function storyAt(p) {
     camera.position.copy(st.pos.getPoint(p)); controls.target.copy(st.tgt.getPoint(p)); camera.lookAt(controls.target);
     const fov = storyFov(p); if (Math.abs(fov - camera.fov) > .05) { camera.fov = fov; camera.updateProjectionMatrix(); }
@@ -1381,7 +1400,7 @@ export function run(data, root) {
     if (b >= 1) { cut = cutTo = cutEnd = BIG; clip.constant = BIG; clipUp.constant = -BIG; ghost.visible = false; scan.visible = false; }
     else { cut = cutTo = cutEnd = .15 + (st.h + .6) * b; clip.constant = cut; clipUp.constant = -cut; ghost.visible = p > .04; scan.visible = b > 0; scan.position.y = cut; scan.material.opacity = .9; }
     if (p > .44 && !st.inside) { st.inside = true; showInner(data.single ? data.floors.map((x, i) => i) : [st.fi]); const sv = walk; walk = { unit: st.q.unit }; setRoomLights(st.fi, st.q.unit); walk = sv; }
-    const hr = Math.round((data.startHour + (18.5 - data.startHour) * sstep(.36, .66, p) + 2.1 * sstep(st.sc + .06, 1, p0) * (st.sc < 1 ? 1 : 0)) * 8) / 8; if (st.lock != null && p0 < .96) st.lock = null; const hrU = st.lock != null ? st.lock : hr; if (hrU !== st.hr) { const hr = hrU; st.hr = hr; if (ui.slider) ui.slider.value = hr; setTime(hr); }
+    const hr = Math.round((data.startHour + (18.5 - data.startHour) * sstep(.36, .66, p) + 2.1 * sstep(Math.max(st.sc + .06, st.outAt - .12), 1, p0) * (st.sc < 1 ? 1 : 0)) * 8) / 8; if (st.lock != null && p0 < .96) st.lock = null; const hrU = st.lock != null ? st.lock : hr; if (hrU !== st.hr) { const hr = hrU; st.hr = hr; if (ui.slider) ui.slider.value = hr; setTime(hr); }
     dirty = true;
   }
   // the page asks what is under the pointer; a floor that isn't built yet can't be picked
@@ -1410,7 +1429,7 @@ export function run(data, root) {
   function storyLeave() {
     if (!stHold) return; const h = stHold; stHold = null; if (walk) exitWalk(false); closeFloors(false); closePops(); ui.card.classList.remove('show');
     root.classList.remove('taken'); root.classList.add('story'); controls.enabled = false; reframe();
-    flyArc(h.pos.getPoint(h.p), h.tgt.getPoint(h.p), 2.4, storyFov(h.p, h.sc), () => { st = h; h.hr = -1; storyAt(h.p); });
+    flyArc(h.pos.getPoint(h.p), h.tgt.getPoint(h.p), 2.4, storyFov(h.p, h.sc, h.outAt), () => { st = h; h.hr = -1; storyAt(h.p); });
   }
   const storyMat = new THREE.MeshBasicMaterial({ color: '#f1c56b', transparent: true, opacity: .42, depthWrite: false });
   addEventListener('message', e => {
