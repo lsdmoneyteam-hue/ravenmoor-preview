@@ -550,7 +550,7 @@ function furnish(q, B, rooms, o) {
         rbox('black', 1.5, .3, 2.1, 2.0, .82, 2.0, .3); box('black', 1.4, .03, 1.9, 2.05, 1.25, 2.0, 0, 0); box('black', .06, .7, .06, 1.45, .35, 1.2); box('black', .06, .7, .06, 2.55, .35, 1.2); box('black', .06, .7, .06, 2.0, .35, 2.9); box('white', 1.2, .03, .16, 2.0, .7, .9); rbox('fabric', .7, .1, .4, 2.0, .48, .45, .04); box('black', .05, .46, .05, 1.72, .23, .45); box('black', .05, .46, .05, 2.28, .23, .45);
         plant(.6, .6, 1.6); plant(U - 1.2, .7, 1.4);
         // kitchen along the back wall with a four-metre island, and a glass wine wall
-        kitchen(6.0, 9.4); box('cabinet', 4.0, .9, 1.1, 7.6, .45, V - 2.5); rbox('worktop', 4.2, .06, 1.24, 7.6, .93, V - 2.5, .02); for (let k = 0; k < 5; k++) { const su = 5.9 + k * .85; cyl('fabric', .18, .07, su, .7, V - 3.4); cyl('brass', .02, .68, su, .34, V - 3.4); cyl('brass', .16, .02, su, .01, V - 3.4); }
+        kitchen(6.0, 9.4); box('cabinet', 4.0, .9, 1.1, 7.6, .45, V - 2.5); rbox('worktop', 4.2, .06, 1.24, 7.6, .93, V - 2.5, .02); for (let k = 0; k < 5; k++) { const su = 5.9 + k * .85; cyl('fabric', .18, .07, su, .7, V - 3.45); cyl('brass', .02, .68, su, .34, V - 3.45); cyl('brass', .16, .02, su, .01, V - 3.45); }
         for (let k = 0; k < 3; k++) { box('black', .012, 2.2, .012, 6.6 + k, H2 - 1.1, V - 2.5); cyl('lampShade', .16, .26, 6.6 + k, H2 - 2.3, V - 2.5, .1); }
         box('glass', .5, 2.6, 1.6, U - .4, 1.3, 6.3); for (let k = 0; k < 5; k++) box('darkWood', .42, .04, 1.5, U - .4, .35 + k * .5, 6.3);
         // floating oak stair up to the roof, against the back wall
@@ -580,6 +580,19 @@ function furnish(q, B, rooms, o) {
       return;
     }
     case 'living': {
+      if (q.look === 'cinema') {          // screen wall, two tiers of recliners, a bar at the back
+        box('black', U - 1.2, 2.3, .06, U / 2, 1.45, .08); box('screen', U - 1.8, 1.9, .03, U / 2, 1.45, .13); box('darkWood', U - .4, .3, 2.4, U / 2, .15, V - 2.6);
+        for (let r = 0; r < 2; r++) for (let k = 0; k < 4; k++) { const cu = U / 2 - 2.55 + k * 1.7, cv = 3.2 + r * 2.1, up = r * .3; rbox('sofa', 1.2, .45, 1.2, cu, .25 + up, cv, .12); rbox('sofa', 1.2, .7, .3, cu, .7 + up, cv + .55, .1); rbox('sofa', .2, .3, 1.1, cu - .62, .55 + up, cv, .06); rbox('sofa', .2, .3, 1.1, cu + .62, .55 + up, cv, .06); }
+        box('cabinet', 3.4, 1.05, .6, U / 2, .52, V - .36); box('worktop', 3.5, .05, .7, U / 2, 1.07, V - .36); for (let k = 0; k < 6; k++) cyl('glass', .04, .26, U / 2 - 1.2 + k * .48, 1.23, V - .3, .03); rbox('rug2', U - 1.4, .014, 2.2, U / 2, .007, 2.0, .005);
+        return;
+      }
+      if (q.look === 'bar') {          // sky lounge: a long bar, sofas facing the view, a telescope at the glass
+        box('darkWood', 4.6, 1.08, .7, U / 2, .54, V - 1.3); rbox('worktop', 4.8, .06, .85, U / 2, 1.11, V - 1.3, .02); box('mirror', 4.4, 1.4, .03, U / 2, 1.7, V - .05); for (let k = 0; k < 3; k++) box('glass', 4.2, .02, .26, U / 2, 1.25 + k * .4, V - .2);
+        for (let k = 0; k < 6; k++) { const su = U / 2 - 2 + k * .8; cyl('fabric', .18, .07, su, .76, V - 2.1); cyl('brass', .02, .74, su, .37, V - 2.1); cyl('brass', .16, .02, su, .01, V - 2.1); pendant(su, V - 1.3, .55, .1); }
+        rbox('rug', 6, .014, 3.2, U / 2, .007, 2.6, .005); rbox('sofa', 3.2, .42, 1.0, U / 2, .23, 3.8, .1); rbox('sofa', 3.2, .5, .26, U / 2, .6, 4.2, .09); rbox('fabric', 1.0, .42, 1.0, U / 2 - 2.6, .23, 2.4, .12); rbox('fabric', 1.0, .42, 1.0, U / 2 + 2.6, .23, 2.4, .12); cyl('stone', .6, .3, U / 2, .17, 2.4);
+        box('black', .03, 1.3, .03, 1.2, .65, .9); box('black', .03, 1.3, .03, 1.5, .65, 1.2); box('black', .03, 1.3, .03, .9, .65, 1.2); cyl('brass', .07, .9, 1.2, 1.42, 1.0, .05); plant(U - .8, .8, 1.5);
+        return;
+      }
       rbox('rug', Math.min(U - 1.4, 2.8), .012, Math.min(V - 1.2, 3), U / 2, .006, V / 2, .005);
       sofa(1, V / 2, Math.min(2.5, V - 1.6)); rbox('sofa', .9, .42, .85, U / 2, .23, V - .8, .09); rbox('sofa', .9, .5, .22, U / 2, .58, V - .42, .09);
       cyl('oak', .5, .05, U / 2, .38, V / 2); cyl('black', .03, .36, U / 2, .18, V / 2);
@@ -599,6 +612,7 @@ function furnish(q, B, rooms, o) {
       rbox('rug2', bw + 1, .012, 1.5, bu, .006, bv - bl / 2 + .1, .005); artBack(bu, 1.2, .6, x * 3 + fi);
       if (V > 4.2 && U > 2.9) { const wl = Math.min(2, V - 2.9); box('white', .58, 2.25, wl, .31, 1.125, .5 + wl / 2); for (let k = 1; k < wl / .5 - .5; k++) box('black', .004, 2.2, .006, .602, 1.125, .5 + k * .5); box('brass', .014, .3, .014, .615, 1.1, .5 + wl / 2 - .06); box('brass', .014, .3, .014, .615, 1.1, .5 + wl / 2 + .06); }
       if (V > 4.4) rbox('fabric', bw * .8, .42, .4, bu, .22, bv - bl / 2 - .32, .06);
+      if (U > 6 && V > 6) { rbox('fabric', .9, .42, .9, 1.4, .23, 1.5, .14); rbox('fabric', .9, .5, .2, 1.4, .58, 1.1, .08); rbox('fabric', .9, .42, .9, 3.0, .23, 1.5, .14); rbox('fabric', .9, .5, .2, 3.0, .58, 1.1, .08); cyl('stone', .32, .5, 2.2, .25, 1.6); plant(U - .7, .7, 1.4); }
       curtains();
       return;
     }
@@ -949,7 +963,7 @@ export function run(data, root) {
     const u = sky.material.uniforms; u.top.value.copy(top); u.hor.value.copy(hor); u.sun.value.copy(dir); u.sunCol.value.copy(sc).multiplyScalar(1 - night); u.night.value = night;
     u.cloud.value.set('#ffffff').lerp(new THREE.Color('#f6c9a4'), dusk).lerp(new THREE.Color('#1a1f2b'), night);
     scene.fog.color.copy(hor); horizon.material.color.copy(hor).lerp(new THREE.Color(night > .5 ? '#0c1018' : '#ffffff'), night > .5 ? .5 : .12); horizon.material.opacity = .8; horizonLit.material.opacity = night; renderer.toneMappingExposure = 1 - .15 * night;
-    [M, Ms].forEach(K => { K.glassLit.emissiveIntensity = night * 1.1; K.glass.opacity = .4 + .2 * night; K.lantern.emissiveIntensity = .15 + night * 1.6; K.lampHead.emissiveIntensity = night * 4; K.downlight.emissiveIntensity = .5 + night * 2.4; K.lampShade.emissiveIntensity = .25 + night * 1.6; K.fire.emissiveIntensity = .9 + night * .6; [K.nbGlass, K.nbBrick, K.nbStone].forEach(m => { m.emissiveIntensity = night * .75; }); });
+    [M, Ms].forEach(K => { K.glassLit.emissiveIntensity = night * 1.1; K.glass.opacity = .4 + .2 * night; K.lantern.emissiveIntensity = .15 + night * 1.6; K.lampHead.emissiveIntensity = night * 4; K.downlight.emissiveIntensity = .5 + night * 2.4; K.pool.emissiveIntensity = .12 + night * 1.5; K.lampShade.emissiveIntensity = .25 + night * 1.6; K.fire.emissiveIntensity = .9 + night * .6; [K.nbGlass, K.nbBrick, K.nbStone].forEach(m => { m.emissiveIntensity = night * .75; }); });
     roomLights.forEach(l => { l.intensity = l.userData.base * (.35 + 2.2 * night); });
     if (ui.time) ui.time.textContent = `${String(Math.floor(h)).padStart(2, '0')}:${String(Math.round((h % 1) * 60)).padStart(2, '0')}`;
     dirty = true;
@@ -1177,7 +1191,8 @@ export function run(data, root) {
     setRoomLights(fi, q.unit); drawPlan(); ui.walk.querySelector('[data-where]').textContent = q.name;
     hint(touch ? 'Use the pad to walk. Drag to look around.' : 'Drag to look around. Click the floor or the plan to walk there, or use W A S D.');
     ui.card.classList.remove('show');
-    if (!data.single) { const fs = data.floors.map((f, i) => f.rooms.some(r => okRoom(r) && r.type === 'hall') ? i : -1).filter(i => i >= 0); let wf = ui.walk.querySelector('.wf'); if (!wf) { wf = document.createElement('div'); wf.className = 'wf'; const row = ui.walk.querySelector('.row'); row.parentNode.insertBefore(wf, row); } wf.innerHTML = '';
+    { let td = ui.walk.querySelector('.tod'); if (!td) { td = document.createElement('div'); td.className = 'wf tod'; const row = ui.walk.querySelector('.row'); row.parentNode.insertBefore(td, row); [['Morning', 8], ['Day', 13], ['Sunset', 19.2], ['Night', 21.5]].forEach(([t, h]) => { const b = document.createElement('button'); b.type = 'button'; b.textContent = t; b.addEventListener('click', () => { if (ui.slider) ui.slider.value = h; setTime(h); td.querySelectorAll('button').forEach(x => x.classList.toggle('on', x === b)); poke(); }); td.append(b); }); } }
+    if (!data.single) { const fs = data.floors.map((f, i) => f.rooms.some(r => okRoom(r) && r.type === 'hall') ? i : -1).filter(i => i >= 0); let wf = ui.walk.querySelector('.wf:not(.tod)'); if (!wf) { wf = document.createElement('div'); wf.className = 'wf'; const row = ui.walk.querySelector('.row'); row.parentNode.insertBefore(wf, row); } wf.innerHTML = '';
       if (fs.length > 1) fs.forEach(i => { const b = document.createElement('button'); b.type = 'button'; b.dataset.wfloor = i; b.textContent = data.floors[i].label; b.classList.toggle('on', i === walk.floor); b.addEventListener('click', () => { if (i !== walk.floor) moveTo(data.floors[i].rooms.find(r => okRoom(r) && r.type === 'hall'), i); poke(); }); wf.append(b); }); }
   }
   function exitWalk(back = true) {
@@ -1210,7 +1225,7 @@ export function run(data, root) {
     rs.forEach(q => { g.fillStyle = walk.room === q ? 'rgba(200,145,58,.55)' : OUTSIDE.has(q.type) ? 'rgba(237,232,223,.08)' : 'rgba(237,232,223,.16)'; g.strokeStyle = 'rgba(237,232,223,.7)'; g.lineWidth = devicePixelRatio; const X = ox + (q.x - x0) * s, Z = oz + (q.z - z0) * s; g.fillRect(X, Z, q.w * s, q.d * s); g.strokeRect(X, Z, q.w * s, q.d * s); });
     const p = camera.position, px = ox + (p.x - x0) * s, pz = oz + (p.z - z0) * s;
     g.fillStyle = '#ede8df'; g.beginPath(); g.arc(px, pz, 4 * devicePixelRatio, 0, 7); g.fill(); g.strokeStyle = '#ede8df'; g.beginPath(); g.moveTo(px, pz); g.lineTo(px + Math.sin(look.yaw) * 1.2 * s, pz + Math.cos(look.yaw) * 1.2 * s); g.stroke();
-    ui.walk.querySelectorAll('[data-wfloor]').forEach(b => b.classList.toggle('on', +b.dataset.wfloor === walk.floor));
+    ui.walk.querySelectorAll('.wf:not(.tod) [data-wfloor], [data-wfloor]').forEach(b => b.classList.toggle('on', +b.dataset.wfloor === walk.floor));
   }
   ui.plan.addEventListener('click', ev => {
     const c = ui.plan, m = c._map; if (!m || !walk) return;
@@ -1345,20 +1360,28 @@ export function run(data, root) {
     const P = [v(cx + s * .2, h + s * 3.6, cz + s * .9), v(cx + s * 1.2, h * .6 + s * 1.9, cz + s * 2.2), v(cx + s * 1.9, h * .45 + s * .7, cz + s * 1.5), v(cx + s * .9, h * .75 + s * .25, cz + s * 2),
       v(cx, 0, cz).addScaledVector(f, plate.d / 2 + s * .95).addScaledVector(sd, s * .3).setY(yF + 7), at(11, g * .6, 1.7), at(2.6, g, .25), A, W, B, C];
     const T = [v(cx, 0, cz), v(cx, h * .1, cz), v(cx, h * .3, cz), v(cx, h * .5, cz), v(cx, Math.max(2, yF - 3), cz), wc.clone(), at(-3, g * .5, -.1), at(-2.4, -g, -.15), at(-2.6, -g, -.2), at(-dep + .8, -g * .85, -.25), C.clone().addScaledVector(f, 60).setY(eye - 4)];
+    // where there is a pool on the roof, the film carries on: up through the height of the room, out onto the terrace, and ends over the water
+    const pd = data.floors[nF - 1].rooms.find(r => r.pool), sc = pd && fi < nF - 1 ? .8 : 1, K = KP.map(k => k * sc);
+    if (sc < 1) { const yT = (nF - 1) * data.floorH, [px0, px1, pz0] = pd.pool, mx = q.x + q.w / 2, mz = q.z + q.d / 2;
+      // to the foot of the stair, up it, across the terrace, and out over the pool
+      const sz = q.z + .65, s0 = q.x + .7, s1 = q.x + .7 + 18 * .29;
+      P.push(v(s0 - .1, eye, sz + 1.5), v(s1 - .4, yT + 1.55, sz + .9), v(pd.x + 1.6, yT + 1.75, pd.z + 2.6), v(px0 - 1.2, yT + 2.7, pz0 + .6));
+      T.push(v(s1, yF + 3.4, sz), v(pd.x + 3, yT + 1.5, pd.z + 3), v((px0 + px1) / 2, yT + 1, pz0 + 2), v(px1 - 1, yT + .2, plate.z1 + 3.4)); K.push(.85, .9, .95, 1); }
     const pc = new THREE.CatmullRomCurve3(P, false, 'centripetal'), tc = new THREE.CatmullRomCurve3(T, false, 'centripetal');
-    const u = p => { let i = 0; while (i < KP.length - 2 && p > KP[i + 1]) i++; return (i + clamp((p - KP[i]) / (KP[i + 1] - KP[i]), 0, 1)) / (KP.length - 1); };
-    st = { p: 0, to: 0, h, hr: -1, fi, q, inside: false, pos: { getPoint: p => pc.getPoint(u(p)) }, tgt: { getPoint: p => tc.getPoint(u(p)) } };
+    const u = p => { let i = 0; while (i < K.length - 2 && p > K[i + 1]) i++; return (i + clamp((p - K[i]) / (K[i + 1] - K[i]), 0, 1)) / (K.length - 1); };
+    st = { p: 0, to: 0, h, hr: -1, fi, q, inside: false, sc, pos: { getPoint: p => pc.getPoint(u(p)) }, tgt: { getPoint: p => tc.getPoint(u(p)) } };
     fly = null; controls.enabled = false; root.classList.add('story'); camera.fov = 40; reframe(); storyAt(0);
   }
-  const storyFov = p => { const f = camera.aspect < 1 ? 58 : 40, ext = f + 14 * (1 - sstep(0, .4, p)); return ext + (walkFov() * .88 - ext) * sstep(.64, .8, p); };
+  const storyFov = (p0, sc = (st || stHold || { sc: 1 }).sc) => { const p = Math.min(1, p0 / sc), f = camera.aspect < 1 ? 58 : 40, ext = f + 14 * (1 - sstep(0, .4, p)), inn = ext + (walkFov() * .88 - ext) * sstep(.64, .8, p); return inn + (f + 12 - inn) * sstep(sc + .02, sc + .1, p0); };
   function storyAt(p) {
     camera.position.copy(st.pos.getPoint(p)); controls.target.copy(st.tgt.getPoint(p)); camera.lookAt(controls.target);
     const fov = storyFov(p); if (Math.abs(fov - camera.fov) > .05) { camera.fov = fov; camera.updateProjectionMatrix(); }
+    const p0 = p; p = Math.min(1, p / st.sc);
     const b = sstep(.1, .42, p);
     if (b >= 1) { cut = cutTo = cutEnd = BIG; clip.constant = BIG; clipUp.constant = -BIG; ghost.visible = false; scan.visible = false; }
     else { cut = cutTo = cutEnd = .15 + (st.h + .6) * b; clip.constant = cut; clipUp.constant = -cut; ghost.visible = p > .04; scan.visible = b > 0; scan.position.y = cut; scan.material.opacity = .9; }
     if (p > .44 && !st.inside) { st.inside = true; showInner(data.single ? data.floors.map((x, i) => i) : [st.fi]); const sv = walk; walk = { unit: st.q.unit }; setRoomLights(st.fi, st.q.unit); walk = sv; }
-    const hr = Math.round((data.startHour + (18.5 - data.startHour) * sstep(.36, .66, p)) * 8) / 8; if (hr !== st.hr) { st.hr = hr; if (ui.slider) ui.slider.value = hr; setTime(hr); }
+    const hr = Math.round((data.startHour + (18.5 - data.startHour) * sstep(.36, .66, p) + 2.1 * sstep(st.sc + .06, 1, p0) * (st.sc < 1 ? 1 : 0)) * 8) / 8; if (st.lock != null && p0 < .96) st.lock = null; const hrU = st.lock != null ? st.lock : hr; if (hrU !== st.hr) { const hr = hrU; st.hr = hr; if (ui.slider) ui.slider.value = hr; setTime(hr); }
     dirty = true;
   }
   // the page asks what is under the pointer; a floor that isn't built yet can't be picked
@@ -1387,13 +1410,14 @@ export function run(data, root) {
   function storyLeave() {
     if (!stHold) return; const h = stHold; stHold = null; if (walk) exitWalk(false); closeFloors(false); closePops(); ui.card.classList.remove('show');
     root.classList.remove('taken'); root.classList.add('story'); controls.enabled = false; reframe();
-    flyArc(h.pos.getPoint(h.p), h.tgt.getPoint(h.p), 2.4, storyFov(h.p), () => { st = h; h.hr = -1; storyAt(h.p); });
+    flyArc(h.pos.getPoint(h.p), h.tgt.getPoint(h.p), 2.4, storyFov(h.p, h.sc), () => { st = h; h.hr = -1; storyAt(h.p); });
   }
   const storyMat = new THREE.MeshBasicMaterial({ color: '#f1c56b', transparent: true, opacity: .42, depthWrite: false });
   addEventListener('message', e => {
     if (e.origin !== location.origin || !e.data) return; const m = e.data;
     if (m.rv === 'story') { if (!st) storyOn(); st.to = clamp(+m.p || 0, 0, 1); if (m.jump || reduce) st.p = st.to - 1e-4; }
     if (m.rv === 'point' && st) { const hit = storyPoint(m.x, m.y); parent.postMessage({ rv: 'pointed', n: m.n, click: !!m.click, hit }, location.origin); if (hit && m.click) setTimeout(() => ensureInner(hit.floor), 30); }      // get the rooms ready while the card is up, so the flight starts at once
+    if (m.rv === 'time' && st) { st.lock = +m.h; storyAt(st.p); }
     if (m.rv === 'enter') storyEnter(m);
     if (m.rv === 'leave') storyLeave();
     if (m.rv === 'floor' && st) { hoverGroup.clear(); if (m.i >= 0 && m.i * data.floorH < cut) paint(hoverGroup, storyMat, m.i, [{ x: plate.x0 - .5, z: plate.z0 - .5, w: plate.w + 1, d: plate.d + 1 }], true); dirty = true; }

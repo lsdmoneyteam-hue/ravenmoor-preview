@@ -250,3 +250,5 @@ section{padding:clamp(64px,10vw,130px) clamp(20px,6vw,80px)}
 
 .cap-line .kicker{font:500 14px var(--sans);margin-bottom:10px;color:rgba(244,239,230,.8)}
 .cap-end h2{font-size:clamp(44px,8vw,110px)}
+
+.tod{display:flex;gap:6px;margin-top:16px;flex-wrap:wrap}.tod button{height:36px;padding:0 14px;border-radius:999px;border:1px solid rgba(244,239,230,.4);background:rgba(8,11,13,.35);color:#f4efe6;font:500 13px var(--sans);backdrop-filter:blur(6px);cursor:pointer}.tod button.on,.tod button:hover{background:#f4efe6;color:#0a0d10}

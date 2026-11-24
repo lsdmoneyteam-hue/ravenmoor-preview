@@ -1,7 +1,7 @@
 // Off-plan development page. One template for any development: a tower, a block of flats or a single house.
 // Plans and homes come from /3d/buildings.js, words and pictures from content.js, and the 3D model opens on tap.
-import * as BUILD from '/3d/buildings.js?v=9';
-import { CONTENT } from './content.js?v=4';
+import * as BUILD from '/3d/buildings.js?v=11';
+import { CONTENT } from './content.js?v=6';
 
 const OUT = new Set(['balcony', 'terrace']), SHARED = new Set(['corridor', 'lobby', 'core']);
 const esc = s => String(s).replace(/[&<>"]/g, c => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;' }[c]));
@@ -34,8 +34,10 @@ export function mount(key) {
       <div class="cap cap-line" data-cap=".44,.57"><p>${esc(C.tagline)}</p></div>
       <div class="cap cap-line" data-cap=".61,.74"><p class="kicker">${esc(C.film[0])}</p><p>${esc(C.film[1])}</p></div>
       <div class="cap cap-line" data-cap=".79,.91"><p>${esc(C.film[2])}</p></div>
-      <div class="cap cap-end" data-cap=".95,2"><p class="kicker">${esc(D.place)}</p><h2>${esc(C.film[3])}</h2>
-        <div class="row"><a class="btn" href="#homes">${D.single ? 'Explore the house' : 'Explore residences'}</a><button class="btn ghost" type="button" data-open3d>Open the 3D model</button></div></div>
+      ${C.film[4] ? `<div class="cap cap-line" data-fix="1" data-cap=".91,.97"><p>${esc(C.film[4])}</p></div>` : ''}
+      <div class="cap cap-end" ${C.film[4] ? 'data-fix="1" data-cap=".985,2"' : 'data-cap=".95,2"'}><p class="kicker">${esc(D.place)}</p><h2>${esc(C.film[3])}</h2>
+        <div class="row"><a class="btn" href="#homes">${D.single ? 'Explore the house' : 'Explore residences'}</a><button class="btn ghost" type="button" data-open3d>Open the 3D model</button></div>
+        <div class="tod" role="group" aria-label="Time of day">${[['Morning', 8], ['Day', 13], ['Sunset', 19.2], ['Night', 21.5]].map(([t, h]) => `<button type="button" data-tod="${h}">${t}</button>`).join('')}</div></div>
       <button type="button" class="viewer-x story-back" data-untake hidden>Back to ${D.single ? 'the house' : 'the building'}</button>
       <div class="pickcard" data-pickcard hidden></div><div class="picktip" data-picktip hidden></div>
       <div class="story-bar"><i data-bar></i></div>
@@ -106,7 +108,7 @@ export function mount(key) {
   $('[data-close3d]').addEventListener('click', close3d);
 
   // ---------- the opening: scrolling flies the camera in and builds the development ----------
-  const story = $('[data-story]'), sframe = story.querySelector('iframe'), caps = [...story.querySelectorAll('[data-cap]')].map(el => [el, ...el.dataset.cap.split(',').map(Number)]);
+  const story = $('[data-story]'), sframe = story.querySelector('iframe'), fs = C.filmScale || 1, caps = [...story.querySelectorAll('[data-cap]')].map(el => { const [a, b] = el.dataset.cap.split(',').map(Number); return el.dataset.fix ? [el, a, b] : [el, a * fs, b >= 2 ? b : b * fs]; });
   const calm = matchMedia('(prefers-reduced-motion: reduce)').matches, sbar = story.querySelector('[data-bar]'), rise = story.querySelector('[data-rise]'), mist = story.querySelector('[data-mist]');
   const levels = D.single ? ['Foundations', 'Ground floor', 'First floor', 'Roof'] : null, nF = D.floors.length;
   let sp = -1, live = false;
@@ -115,12 +117,13 @@ export function mount(key) {
     const r = story.getBoundingClientRect(), p = calm ? 1 : Math.min(1, Math.max(0, -r.top / Math.max(1, r.height - innerHeight)));
     if (p === sp) return; sp = p; post(p); sbar.style.transform = `scaleX(${p})`; mist.style.opacity = Math.max(0, 1 - p / .2);
     caps.forEach(([el, a, b]) => { const o = Math.min(1, Math.max(0, Math.min((p - a) / .05, (b - p) / .05))); el.style.opacity = o; el.style.transform = `translateY(${(1 - o) * (p < a + .05 ? 26 : -26)}px)`; el.classList.toggle('on', o > .5); });
-    let k = Math.min(1, Math.max(0, (p - .1) / .32)); k = k * k * (3 - 2 * k);
+    let k = Math.min(1, Math.max(0, (p / fs - .1) / .32)); k = k * k * (3 - 2 * k);
     rise.textContent = levels ? levels[Math.min(3, Math.floor(k * 4))] : k >= 1 ? 'Topped out' : `Level ${Math.min(nF - 1, Math.floor(k * nF))} of ${nF - 1}`;
   };
   if (calm) story.classList.add('calm'); else { sframe.src = `/3d/${C.model}/?story=1&embed=1`; addEventListener('scroll', () => requestAnimationFrame(paint), { passive: true }); addEventListener('resize', paint); }
   addEventListener('message', e => { if (e.origin === location.origin && e.source === sframe.contentWindow && e.data && e.data.rv === 'ready') { live = true; story.classList.add('live'); post(Math.max(0, sp), true); } });
   paint();
+  story.querySelectorAll('[data-tod]').forEach(b => b.addEventListener('click', () => { if (live) sframe.contentWindow.postMessage({ rv: 'time', h: +b.dataset.tod }, location.origin); story.querySelectorAll('[data-tod]').forEach(x => x.classList.toggle('on', x === b)); }));
   // tap a balcony or a level at any point in the scroll
   const pin = story.querySelector('.story-pin'), pcard = story.querySelector('[data-pickcard]'), ptip = story.querySelector('[data-picktip]'); let pn = 0, ptype = 'mouse', pxy = [0, 0], pt = 0;
   const ask = (e, click) => { if (!live) return; const r = pin.getBoundingClientRect(); pxy = [e.clientX - r.left, e.clientY - r.top]; sframe.contentWindow.postMessage({ rv: 'point', n: ++pn, click, x: pxy[0] / r.width, y: pxy[1] / r.height }, location.origin); };
