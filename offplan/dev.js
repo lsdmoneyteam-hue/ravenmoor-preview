@@ -1,7 +1,7 @@
 // Off-plan development page. One template for any development: a tower, a block of flats or a single house.
 // Plans and homes come from /3d/buildings.js, words and pictures from content.js, and the 3D model opens on tap.
-import * as BUILD from '/3d/buildings.js?v=7';
-import { CONTENT } from './content.js?v=2';
+import * as BUILD from '/3d/buildings.js?v=8';
+import { CONTENT } from './content.js?v=3';
 
 const OUT = new Set(['balcony', 'terrace']), SHARED = new Set(['corridor', 'lobby', 'core']);
 const esc = s => String(s).replace(/[&<>"]/g, c => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;' }[c]));
@@ -29,12 +29,13 @@ export function mount(key) {
       <iframe class="story-frame" title="${esc(D.name)} being built as you scroll" tabindex="-1" aria-hidden="true"></iframe>
       <div class="story-shade"></div>
       <div class="story-mist" data-mist></div>
-      <div class="cap cap-title" data-cap="-1,.15"><p class="kicker">${esc(D.place)}</p><h1>${esc(D.name)}</h1><p class="cue">Scroll to build it</p></div>
-      <div class="cap cap-line" data-cap=".2,.42"><p>${esc(C.tagline)}</p></div>
-      <div class="cap cap-rise" data-cap=".44,.7"><p class="rise" data-rise></p><dl class="numbers">${C.numbers.slice(0, 3).map(([n, l]) => `<div><dt>${esc(l)}</dt><dd>${esc(n)}</dd></div>`).join('')}</dl></div>
-      <div class="cap cap-end" data-cap=".8,2"><p class="kicker">${esc(D.place)}</p><h2>${esc(D.name)}</h2><p class="lede">${esc(C.tagline)}</p>
-        <div class="row"><a class="btn" href="#homes">${D.single ? 'Explore the house' : 'Explore residences'}</a><button class="btn ghost" type="button" data-open3d>Open the 3D model</button></div>
-        ${D.single ? '' : `<p class="rail-h">Or choose a level. You can also tap any balcony on the tower.</p><div class="rail" data-rail>${D.floors.map((f, i) => f.shared ? '' : `<button type="button" data-lv="${i}" class="${f.tag ? 'ph' : ''}">${esc(f.short)}</button>`).reverse().join('')}</div>`}</div>
+      <div class="cap cap-title" data-cap="-1,.08"><p class="kicker">${esc(D.place)}</p><h1>${esc(D.name)}</h1><p class="cue">Scroll</p></div>
+      <div class="cap cap-rise" data-cap=".13,.4"><p class="rise" data-rise></p><dl class="numbers">${C.numbers.slice(0, 3).map(([n, l]) => `<div><dt>${esc(l)}</dt><dd>${esc(n)}</dd></div>`).join('')}</dl></div>
+      <div class="cap cap-line" data-cap=".44,.57"><p>${esc(C.tagline)}</p></div>
+      <div class="cap cap-line" data-cap=".61,.74"><p class="kicker">${esc(C.film[0])}</p><p>${esc(C.film[1])}</p></div>
+      <div class="cap cap-line" data-cap=".79,.91"><p>${esc(C.film[2])}</p></div>
+      <div class="cap cap-end" data-cap=".95,2"><p class="kicker">${esc(D.place)}</p><h2>${esc(C.film[3])}</h2>
+        <div class="row"><a class="btn" href="#homes">${D.single ? 'Explore the house' : 'Explore residences'}</a><button class="btn ghost" type="button" data-open3d>Open the 3D model</button></div></div>
       <button type="button" class="viewer-x story-back" data-untake hidden>Back to ${D.single ? 'the house' : 'the building'}</button>
       <div class="pickcard" data-pickcard hidden></div><div class="picktip" data-picktip hidden></div>
       <div class="story-bar"><i data-bar></i></div>
@@ -114,7 +115,7 @@ export function mount(key) {
     const r = story.getBoundingClientRect(), p = calm ? 1 : Math.min(1, Math.max(0, -r.top / Math.max(1, r.height - innerHeight)));
     if (p === sp) return; sp = p; post(p); sbar.style.transform = `scaleX(${p})`; mist.style.opacity = Math.max(0, 1 - p / .2);
     caps.forEach(([el, a, b]) => { const o = Math.min(1, Math.max(0, Math.min((p - a) / .05, (b - p) / .05))); el.style.opacity = o; el.style.transform = `translateY(${(1 - o) * (p < a + .05 ? 26 : -26)}px)`; el.classList.toggle('on', o > .5); });
-    let k = Math.min(1, Math.max(0, (p - .2) / .5)); k = k * k * (3 - 2 * k);
+    let k = Math.min(1, Math.max(0, (p - .1) / .32)); k = k * k * (3 - 2 * k);
     rise.textContent = levels ? levels[Math.min(3, Math.floor(k * 4))] : k >= 1 ? 'Topped out' : `Level ${Math.min(nF - 1, Math.floor(k * nF))} of ${nF - 1}`;
   };
   if (calm) story.classList.add('calm'); else { sframe.src = `/3d/${C.model}/?story=1&embed=1`; addEventListener('scroll', () => requestAnimationFrame(paint), { passive: true }); addEventListener('resize', paint); }
@@ -137,15 +138,7 @@ export function mount(key) {
     pcard.querySelector('[data-go]').onclick = () => { hideCard(); take(u ? { unit: u } : { floor: h.floor }, u ? '&unit=' + encodeURIComponent(u) : h.single ? '' : '&floor=' + h.floor); };
     const pl = pcard.querySelector('[data-plan]'); if (pl) pl.onclick = () => { hideCard(); toPlan(() => u ? showUnit(u) : showLevel(h.floor)); };
   };
-  pin.addEventListener('pointermove', e => { ptype = e.pointerType; if (e.pointerType !== 'mouse' || e.target.closest('a,button,.pickcard,.rail')) { ptip.hidden = true; return; } const now = performance.now(); if (now - pt > 60) { pt = now; ask(e, false); } });
-  pin.addEventListener('pointerdown', e => { ptype = e.pointerType; });
-  pin.addEventListener('pointerleave', () => { ptip.hidden = true; });
-  pin.addEventListener('click', e => { if (e.target.closest('a,button,.pickcard,.rail')) return; ask(e, true); });
-  addEventListener('message', e => {
-    if (e.origin !== location.origin || e.source !== sframe.contentWindow || !e.data || e.data.rv !== 'pointed' || e.data.n !== pn) return; const h = e.data.hit;
-    if (e.data.click) { ptip.hidden = true; if (!h) return hideCard(); card(h); if (ptype === 'mouse') pcard.querySelector('[data-go]').click(); return; }
-    pin.style.cursor = h ? 'pointer' : ''; ptip.hidden = !h || !pcard.hidden; if (h) { ptip.textContent = h.unit ? `${h.name} · ${h.beds} bed · ${h.status === 'Available' ? h.price : h.status}` : h.single ? 'See inside' : h.label; ptip.style.transform = `translate(${pxy[0] + 16}px, ${pxy[1] + 16}px)`; }
-  });
+  // (the scroll is a film: homes are chosen in the 3D model, not here)
   const rail = story.querySelector('[data-rail]');
   if (rail) { rail.addEventListener('click', e => { const b = e.target.closest('[data-lv]'); if (!b) return; hideCard(); take({ floor: +b.dataset.lv }, '&floor=' + b.dataset.lv); });
     rail.addEventListener('pointerover', e => { const b = e.target.closest('[data-lv]'); if (b && live && e.pointerType === 'mouse' && pcard.hidden) sframe.contentWindow.postMessage({ rv: 'floor', i: +b.dataset.lv }, location.origin); }); }

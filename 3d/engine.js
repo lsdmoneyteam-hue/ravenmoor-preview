@@ -236,7 +236,7 @@ function makeMaterials() {
     car1: S('#2e3a46', { roughness: .3, metalness: .6 }), car2: S('#c9c6c0', { roughness: .3, metalness: .6 }), car3: S('#7a1f22', { roughness: .3, metalness: .6 }),
     boat: S('#21443a', { roughness: .5 }), boatTop: S('#8b2f2a', { roughness: .5 }), lampHead: E('#222222', '#ffcf8a'),
   };
-  { const wv = weaveTex(3), wv2 = weaveTex(5); ['sofa', 'fabric', 'linen', 'throw_', 'curtain', 'rug', 'rug2', 'carpet'].forEach((k, i) => { M[k].map = i % 2 ? wv : wv2; M[k].userData.uv = k === 'carpet' || k.startsWith('rug') ? .5 : .28; }); M.wallInt.map = weaveTex(11); M.wallInt.userData.uv = 1.4; M.downlight = E('#f6efe0', '#ffe2b0'); M.downlight.userData.noShadow = true; M.skirt = S('#f6f3ee', { roughness: .5 }); }
+  { const wv = weaveTex(3), wv2 = weaveTex(5); ['sofa', 'fabric', 'linen', 'throw_', 'curtain', 'rug', 'rug2', 'carpet'].forEach((k, i) => { M[k].map = i % 2 ? wv : wv2; M[k].userData.uv = k === 'carpet' || k.startsWith('rug') ? .5 : .28; }); M.downlight = E('#f6efe0', '#ffe2b0'); M.downlight.userData.noShadow = true; M.skirt = S('#f6f3ee', { roughness: .5 }); }
   M.lampHead.userData.noShadow = true; M.lampShade.userData.noShadow = true;
   const glass = (o = {}) => { const m = new THREE.MeshPhysicalMaterial({ color: '#5f7a8c', roughness: .04, metalness: .3, transparent: true, opacity: .42, envMapIntensity: 2.2, depthWrite: false, side: THREE.DoubleSide, ...o }); m.userData.noShadow = true; return m; };
   M.glass = glass(); M.glassLit = glass({ emissive: new THREE.Color('#ffb15e'), emissiveIntensity: 0 }); M.glassRail = glass({ color: '#a9bcc6', opacity: .2, metalness: .1 });
@@ -1256,20 +1256,32 @@ export function run(data, root) {
   // ---------- story mode: the page scrolls, the building assembles ----------
   let st = null;
   const sstep = (a, b, x) => { x = clamp((x - a) / (b - a), 0, 1); return x * x * (3 - 2 * x); };
+  // The film the scroll plays: empty plot, the building rises, up the front, onto the terrace, through the glass,
+  // across the main room and out to the view. This is also the shot plan for the generated film.
+  const KP = [0, .1, .22, .4, .52, .62, .7, .78, .84, .9, 1];
   function storyOn() {
     const h = Math.max(topY + roofH, 9), s = Math.max(h, Math.max(plate.w, plate.d) * 1.15), cx = plate.cx, cz = plate.cz, v = (x, y, z) => new THREE.Vector3(x, y, z);
-    st = { p: 0, to: 0, h, hr: -1,
-      pos: new THREE.CatmullRomCurve3([v(cx + s * .2, h + s * 3.6, cz + s * .9), v(cx + s * 1.2, h * .6 + s * 1.9, cz + s * 2.2), v(cx + s * 1.9, h * .45 + s * .7, cz + s * 1.5), v(cx + s * .9, h * .75 + s * .25, cz + s * 2), v(cx - s * .7, h * .5 + s * .12, cz + s * 1.9), v(cx - s * .62, Math.max(1.7, h * .05), cz + s * 1.45)], false, 'centripetal'),
-      tgt: new THREE.CatmullRomCurve3([v(cx, 0, cz), v(cx, h * .1, cz), v(cx, h * .3, cz), v(cx, h * .45, cz), v(cx, h * .5, cz), v(cx, h * .54, cz)], false, 'centripetal') };
+    const F = data.story || {}, fi = F.floor ?? 0, q = data.floors[fi].rooms.find(r => r.id === F.room) || data.floors[fi].rooms.find(r => r.type === 'open' || r.type === 'kitchen' || r.type === 'living');
+    ensureInner(fi); const yaw = faceWindow(q), f = v(Math.sin(yaw), 0, Math.cos(yaw)), sd = v(f.z, 0, -f.x), alongX = Math.abs(f.z) > .5, len = alongX ? q.w : q.d, dep = alongX ? q.d : q.w, yF = fi * data.floorH, eye = yF + EYE;
+    const wc = v(q.x + q.w / 2, eye, q.z + q.d / 2).addScaledVector(f, dep / 2), at = (out, along, up = 0) => wc.clone().addScaledVector(f, out).addScaledVector(sd, along).setY(eye + up), g = Math.max(0, len / 2 - 1.6);
+    const A = at(-1.5, g), B = at(-Math.min(dep * .5, 2.6), len > 8 ? -g * .2 : g * .1), C = at(-1.5, -g * .62), W = len > 8 ? at(-Math.min(dep - 1.1, 3.9), len / 2 - 4.4) : A.clone().lerp(B, .5);      // W: round the back of the media wall
+    const P = [v(cx + s * .2, h + s * 3.6, cz + s * .9), v(cx + s * 1.2, h * .6 + s * 1.9, cz + s * 2.2), v(cx + s * 1.9, h * .45 + s * .7, cz + s * 1.5), v(cx + s * .9, h * .75 + s * .25, cz + s * 2),
+      v(cx, 0, cz).addScaledVector(f, plate.d / 2 + s * .95).addScaledVector(sd, s * .3).setY(yF + 7), at(11, g * .6, 1.7), at(2.6, g, .25), A, W, B, C];
+    const T = [v(cx, 0, cz), v(cx, h * .1, cz), v(cx, h * .3, cz), v(cx, h * .5, cz), v(cx, Math.max(2, yF - 3), cz), wc.clone(), at(-3, g * .5, -.1), at(-2.4, -g, -.15), at(-2.6, -g, -.2), at(-dep + .8, -g * .85, -.25), C.clone().addScaledVector(f, 60).setY(eye - 4)];
+    const pc = new THREE.CatmullRomCurve3(P, false, 'centripetal'), tc = new THREE.CatmullRomCurve3(T, false, 'centripetal');
+    const u = p => { let i = 0; while (i < KP.length - 2 && p > KP[i + 1]) i++; return (i + clamp((p - KP[i]) / (KP[i + 1] - KP[i]), 0, 1)) / (KP.length - 1); };
+    st = { p: 0, to: 0, h, hr: -1, fi, q, inside: false, pos: { getPoint: p => pc.getPoint(u(p)) }, tgt: { getPoint: p => tc.getPoint(u(p)) } };
     fly = null; controls.enabled = false; root.classList.add('story'); camera.fov = 40; reframe(); storyAt(0);
   }
+  const storyFov = p => { const f = camera.aspect < 1 ? 58 : 40, ext = f + 14 * (1 - sstep(0, .4, p)); return ext + (walkFov() * .88 - ext) * sstep(.64, .8, p); };
   function storyAt(p) {
     camera.position.copy(st.pos.getPoint(p)); controls.target.copy(st.tgt.getPoint(p)); camera.lookAt(controls.target);
-    const f = camera.aspect < 1 ? 58 : 40, fov = f + 14 * (1 - sstep(0, .5, p)); if (Math.abs(fov - camera.fov) > .05) { camera.fov = fov; camera.updateProjectionMatrix(); }
-    const b = sstep(.2, .7, p);
+    const fov = storyFov(p); if (Math.abs(fov - camera.fov) > .05) { camera.fov = fov; camera.updateProjectionMatrix(); }
+    const b = sstep(.1, .42, p);
     if (b >= 1) { cut = cutTo = cutEnd = BIG; clip.constant = BIG; clipUp.constant = -BIG; ghost.visible = false; scan.visible = false; }
-    else { cut = cutTo = cutEnd = .15 + (st.h + .6) * b; clip.constant = cut; clipUp.constant = -cut; ghost.visible = p > .1; scan.visible = b > 0; scan.position.y = cut; scan.material.opacity = .9; }
-    const hr = Math.round((data.startHour + (18.7 - data.startHour) * sstep(.62, .97, p)) * 8) / 8; if (hr !== st.hr) { st.hr = hr; if (ui.slider) ui.slider.value = hr; setTime(hr); }
+    else { cut = cutTo = cutEnd = .15 + (st.h + .6) * b; clip.constant = cut; clipUp.constant = -cut; ghost.visible = p > .04; scan.visible = b > 0; scan.position.y = cut; scan.material.opacity = .9; }
+    if (p > .44 && !st.inside) { st.inside = true; showInner(data.single ? data.floors.map((x, i) => i) : [st.fi]); const sv = walk; walk = { unit: st.q.unit }; setRoomLights(st.fi, st.q.unit); walk = sv; }
+    const hr = Math.round((data.startHour + (18.5 - data.startHour) * sstep(.36, .66, p)) * 8) / 8; if (hr !== st.hr) { st.hr = hr; if (ui.slider) ui.slider.value = hr; setTime(hr); }
     dirty = true;
   }
   // the page asks what is under the pointer; a floor that isn't built yet can't be picked
@@ -1298,7 +1310,7 @@ export function run(data, root) {
   function storyLeave() {
     if (!stHold) return; const h = stHold; stHold = null; if (walk) exitWalk(false); closeFloors(false); closePops(); ui.card.classList.remove('show');
     root.classList.remove('taken'); root.classList.add('story'); controls.enabled = false; reframe();
-    flyArc(h.pos.getPoint(h.p), h.tgt.getPoint(h.p), 2.4, (camera.aspect < 1 ? 58 : 40) + 14 * (1 - sstep(0, .5, h.p)), () => { st = h; h.hr = -1; storyAt(h.p); });
+    flyArc(h.pos.getPoint(h.p), h.tgt.getPoint(h.p), 2.4, storyFov(h.p), () => { st = h; h.hr = -1; storyAt(h.p); });
   }
   const storyMat = new THREE.MeshBasicMaterial({ color: '#f1c56b', transparent: true, opacity: .42, depthWrite: false });
   addEventListener('message', e => {

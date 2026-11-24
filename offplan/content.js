@@ -4,6 +4,7 @@
 export const CONTENT = {
   tower: {
     slug: 'halden-tower', model: 'tower', developer: 'Halden Estates', theme: 'night',
+    film: ['Level 25', 'The Penthouse.', 'Thirty metres of glass, facing the park.', 'Above the city, within it.'],
     tagline: 'Twenty-six floors that ripple like water.',
     intro: 'Apartments and penthouses above Campbell Park, each with a balcony no other home shares.',
     place: {
@@ -38,6 +39,7 @@ export const CONTENT = {
   },
   block: {
     slug: 'wharf-row', model: 'block', developer: 'Wharf Row Homes', theme: 'brick',
+    film: ['Fourth floor', 'A home on the water.', 'Morning light off the canal.', 'The towpath at your door.'],
     tagline: 'A row of wharf houses, built for the canal.',
     intro: 'Thirty-four apartments in three colours of brick, with the Grand Union at the door and a garden on the roof.',
     place: {
@@ -65,6 +67,7 @@ export const CONTENT = {
   },
   house: {
     slug: 'ashcombe-house', model: 'house', developer: 'Ashcombe Homes', theme: 'sage',
+    film: ['Ground floor', 'The kitchen opens to the garden.', 'One room, wall to wall glass.', 'Home, before it is built.'],
     tagline: 'A modern barn, with a wall of glass to the garden.',
     intro: 'Four bedrooms in white render, black timber and slate, on a quiet road in Newport Pagnell.',
     place: {

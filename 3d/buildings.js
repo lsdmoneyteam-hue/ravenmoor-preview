@@ -117,7 +117,7 @@ export function tower() {
   return {
     key: 'tower', name: 'Halden Tower', place: 'Central Milton Keynes',
     blurb: '26 storeys wrapped in rippling white balconies, no two floors the same. 115 apartments and seven penthouses.',
-    style: 'glass', floorH: H, size: [W, D], floors, units,
+    style: 'glass', story: { floor: 25, room: '25.03-liv' }, floorH: H, size: [W, D], floors, units,
     site: { kind: 'city', water: false, park: 's' },
     roof: 'crown', startHour: 18.5,
     spec: {
@@ -175,7 +175,7 @@ export function block() {
   return {
     key: 'block', name: 'Wharf Row', place: 'Grand Union Canal, Milton Keynes',
     blurb: 'A row of gabled brick wharf houses on the canal. 34 apartments and a roof garden.',
-    style: 'brick', floorH: H, size: [36, 18], floors, units,
+    style: 'brick', story: { floor: 4, room: '4.06-liv' }, floorH: H, size: [36, 18], floors, units,
     site: { kind: 'canal', water: true },
     roof: 'gables', startHour: 16.5,
     spec: {
@@ -245,7 +245,7 @@ export function house() {
   return {
     key: 'house', name: 'Ashcombe House', place: 'Newport Pagnell, Milton Keynes',
     blurb: 'A modern barn-style family home with a glazed gable over the garden. Walk through every room.',
-    style: 'house', floorH: H, size: [12, 9], floors, units, notes,
+    style: 'house', story: { floor: 0, room: 'kitchen' }, floorH: H, size: [12, 9], floors, units, notes,
     site: { kind: 'suburb' }, roof: 'barn', startHour: 15.5, single: true,
     doorAt: { 'hall|study': 0.2 }, wallKind: { 'hall|wc': 'solid' },
     spec: {
