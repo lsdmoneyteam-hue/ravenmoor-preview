@@ -241,7 +241,7 @@ function makeMaterials() {
   const glass = (o = {}) => { const m = new THREE.MeshPhysicalMaterial({ color: '#5f7a8c', roughness: .04, metalness: .3, transparent: true, opacity: .42, envMapIntensity: 2.2, depthWrite: false, side: THREE.DoubleSide, ...o }); m.userData.noShadow = true; return m; };
   M.glass = glass(); M.glassLit = glass({ emissive: new THREE.Color('#ffb15e'), emissiveIntensity: 0 }); M.glassRail = glass({ color: '#a9bcc6', opacity: .2, metalness: .1 });
   M.lantern = glass({ color: '#d9c7a4', opacity: .7, emissive: new THREE.Color('#ffc880'), emissiveIntensity: 0 });
-  M.pool = new THREE.MeshPhysicalMaterial({ color: '#35b6c8', roughness: .04, metalness: 0, transparent: true, opacity: .62, envMapIntensity: 1.6, depthWrite: false, emissive: new THREE.Color('#1aa6c0'), emissiveIntensity: .12 }); M.pool.userData.noShadow = true;
+  M.pool = new THREE.MeshPhysicalMaterial({ color: '#35b6c8', roughness: .04, metalness: 0, transparent: true, opacity: .86, envMapIntensity: 1.6, depthWrite: false, emissive: new THREE.Color('#1aa6c0'), emissiveIntensity: .12 }); M.pool.userData.noShadow = true;
   M.water = new THREE.MeshPhysicalMaterial({ color: '#2a4650', roughness: .06, metalness: .25, envMapIntensity: 1.3 });
   const fac = (map, em) => S('#d8d8d8', { map, emissiveMap: em, emissive: new THREE.Color('#ffffff'), emissiveIntensity: 0, roughness: .6 });
   M.nbGlass = fac(T.fmG, T.feG); M.nbBrick = fac(T.fmB, T.feB); M.nbStone = fac(T.fmS, T.feS);
@@ -375,6 +375,7 @@ function shellFloor(S, fl, segs, data, fi, plate, lit) {
       }
       case 'rail': {
         if (style === 'brick') { put('rail', len, .05, .06, mid, 1.1); put('rail', len, .04, .04, mid, .08); const n = Math.round(len / .13); for (let i = 0; i <= n; i++) put('rail', .018, 1.05, .018, s.a + i * len / n, .58); }
+        else if (q.pool && s.axis === 'z' && s.L > plate.cz) { [[s.a, Math.min(s.b, q.pool[0])], [Math.max(s.a, q.pool[1]), s.b]].forEach(([a, b]) => { if (b - a > .1) { put('glassRail', b - a, 1.05, .02, (a + b) / 2, .55); put('rail', b - a, .04, .06, (a + b) / 2, 1.08); } }); }
         else { put('glassRail', len, 1.05, .02, mid, .55); put('rail', len, .04, .06, mid, 1.08); }
         return;
       }
@@ -477,7 +478,7 @@ const SOLVE = new Set(['open', 'living', 'kitchen', 'dining', 'bed', 'bath', 'st
 function furnishBest(q, B, segs, rooms, o) {
   const glassZ = []; segs.forEach(g => { if ((g.A === q) === (g.B === q) || (g.A && g.B && !OUTSIDE.has((g.A === q ? g.B : g.A).type))) return; if (g.A && g.B && g.kind !== 'slider') return; const d0 = g.A === q ? g.L - .55 : g.L, d1 = g.A === q ? g.L : g.L + .55; glassZ.push(g.axis === 'x' ? [d0, d1, g.a, g.b] : [g.a, g.b, d0, d1]); });
   const SOFT = new Set(['curtain', 'plant', 'plant2', 'pot', 'flower']);
-  const fixed = !SOLVE.has(q.type) || q.tall || (o.house && o.fi === 0 && q.type === 'hall'), zones = fixed ? [] : doorZones(q, segs);
+  const fixed = !SOLVE.has(q.type) || q.tall || q.look === 'kd' || (o.house && o.fi === 0 && q.type === 'hall'), zones = fixed ? [] : doorZones(q, segs);
   const tries = fixed ? [{}] : [{}, { swap: 1 }, { flip: 1 }, { flip: 1, swap: 1 }, { face: 'n' }, { face: 'n', flip: 1 }, { face: 's' }, { face: 's', flip: 1 }, { face: 'e' }, { face: 'e', flip: 1 }, { face: 'w' }, { face: 'w', flip: 1 }];
   const real = c => !((c.y1 - c.y0 < .05 && c.y0 < .1) || c.y0 > 2.0);          // not a rug, not something on the ceiling
   let best = null;
@@ -554,10 +555,9 @@ function furnish(q, B, rooms, o) {
         // a grand piano in the glass corner
         rbox('black', 1.5, .3, 2.1, 2.0, .82, 2.0, .3); box('black', 1.4, .03, 1.9, 2.05, 1.25, 2.0, 0, 0); box('black', .06, .7, .06, 1.45, .35, 1.2); box('black', .06, .7, .06, 2.55, .35, 1.2); box('black', .06, .7, .06, 2.0, .35, 2.9); box('white', 1.2, .03, .16, 2.0, .7, .9); rbox('fabric', .7, .1, .4, 2.0, .48, .45, .04); box('black', .05, .46, .05, 1.72, .23, .45); box('black', .05, .46, .05, 2.28, .23, .45);
         plant(.6, .6, 1.6); plant(U - 1.2, .7, 1.4);
-        // kitchen along the back wall with a four-metre island, and a glass wine wall
-        kitchen(6.0, 9.4); box('cabinet', 4.0, .9, 1.1, 7.6, .45, V - 2.5); rbox('worktop', 4.2, .06, 1.24, 7.6, .93, V - 2.5, .02); for (let k = 0; k < 5; k++) { const su = 5.9 + k * .85; cyl('fabric', .18, .07, su, .7, V - 3.45); cyl('brass', .02, .68, su, .34, V - 3.45); cyl('brass', .16, .02, su, .01, V - 3.45); }
-        for (let k = 0; k < 3; k++) { box('black', .012, 2.2, .012, 6.6 + k, H2 - 1.1, V - 2.5); cyl('lampShade', .16, .26, 6.6 + k, H2 - 2.3, V - 2.5, .1); }
-        box('glass', .5, 2.6, 1.6, U - .4, 1.3, 6.3); for (let k = 0; k < 5; k++) box('darkWood', .42, .04, 1.5, U - .4, .35 + k * .5, 6.3);
+        // nothing crowds the sofas: a console behind them, a glass wine wall on the back wall, and open floor through to the kitchen
+        rbox('darkWood', 2.6, .8, .42, U - 4.3, .4, 6.05, .02); cyl('lampShade', .16, .34, U - 5.2, 1.0, 6.05, .1); cyl('brass', .03, .2, U - 5.2, .86, 6.05); cyl('pot', .1, .3, U - 3.5, .95, 6.05, .07); ball('flower', .16, U - 3.5, 1.22, 6.05, 1.1);
+        box('glass', 3.2, 2.6, .5, 7.9, 1.3, V - .3); for (let k = 0; k < 5; k++) box('darkWood', 3.1, .04, .42, 7.9, .35 + k * .5, V - .3);
         // floating oak stair up to the roof, against the back wall
         { const n = 18, rise = (data_floorH) / n; for (let k = 0; k < n; k++) { const su = .7 + k * .29, sy = rise * (k + 1); box('oak', .3, .06, 1.4, su, sy, V - .75); box('glassRail', .29, 1.0, .02, su, sy + .53, V - 1.47); box('brass', .3, .03, .04, su, sy + 1.05, V - 1.47); } }
         return;
@@ -587,7 +587,7 @@ function furnish(q, B, rooms, o) {
     case 'living': {
       if (q.look === 'cinema') {          // screen on the solid back wall, two tiers of recliners facing it
         box('black', U - 1.2, 2.3, .06, U / 2, 1.45, V - .08); box('screen', U - 1.8, 1.9, .03, U / 2, 1.45, V - .13); box('darkWood', U - .4, .3, 2.4, U / 2, .15, 2.4); rbox('rug2', U - 1.4, .014, 2.2, U / 2, .007, V - 2.0, .005);
-        for (let r = 0; r < 2; r++) for (let k = 0; k < 4; k++) { const cu = U / 2 - 2.55 + k * 1.7, cv = V - 3.4 - r * 2.1, up = r * .3; rbox('sofa', 1.2, .45, 1.2, cu, .25 + up, cv, .12); rbox('sofa', 1.2, .7, .3, cu, .7 + up, cv - .55, .1); rbox('sofa', .2, .3, 1.1, cu - .62, .55 + up, cv, .06); rbox('sofa', .2, .3, 1.1, cu + .62, .55 + up, cv, .06); }
+        for (let r = 0; r < 2; r++) for (let k = 0, nk = U < 8 ? 3 : 4; k < nk; k++) { const cu = U / 2 - (nk - 1) * .85 + k * 1.7, cv = V - 3.4 - r * 2.1, up = r * .3; rbox('sofa', 1.2, .45, 1.2, cu, .25 + up, cv, .12); rbox('sofa', 1.2, .7, .3, cu, .7 + up, cv - .55, .1); rbox('sofa', .2, .3, 1.1, cu - .62, .55 + up, cv, .06); rbox('sofa', .2, .3, 1.1, cu + .62, .55 + up, cv, .06); }
         return;
       }
       if (q.look === 'bar') {          // sky lounge: a long bar, sofas facing the view, a telescope at the glass
@@ -607,7 +607,15 @@ function furnish(q, B, rooms, o) {
       return;
     }
     case 'kitchen': { kitchen(.06, U - .06); island(U / 2, Math.max(1.5, V - 2.3), Math.min(2.4, U - 1.8)); plant(.4, .4, .9); beams(); return; }
-    case 'dining': { if (U > 6 && V > 6) { rbox('rug', 6, .014, 3.4, U / 2, .007, V / 2, .005); longTable(U / 2, V / 2, 4.4, 12); [-1.4, 0, 1.4].forEach(k => pendant(U / 2 + k, V / 2, .55, .2)); rbox('darkWood', 3.2, .8, .45, U / 2, .4, V - .26, .02); artBack(U / 2, 2.4, 1.2, 1); plant(.6, .6, 1.4); return; } longTable(U / 2, V / 2, Math.min(2.2, U - 1), U < 3.4 ? 4 : 6); beams(); return; }
+    case 'dining': {
+      if (q.look === 'kd') {          // kitchen along the back wall with a long island; the table by the glass, well clear of both
+        kitchen(.9, 7.9); box('cabinet', 4.6, .9, 1.15, 4.4, .45, V - 2.5); rbox('worktop', 4.8, .06, 1.3, 4.4, .93, V - 2.5, .02);
+        for (let k = 0; k < 5; k++) { const su = 2.6 + k * .9; cyl('fabric', .18, .07, su, .7, V - 3.5); cyl('brass', .02, .68, su, .34, V - 3.5); cyl('brass', .16, .02, su, .01, V - 3.5); }
+        for (let k = 0; k < 3; k++) pendant(3.1 + k * 1.3, V - 2.5, .55, .16);
+        rbox('rug', 6.2, .014, 3.2, U / 2 - .6, .007, 2.1, .005); longTable(U / 2 - .6, 2.1, 4.4, 12); [-1.4, 0, 1.4].forEach(k => pendant(U / 2 - .6 + k, 2.1, .55, .2)); plant(.7, .7, 1.4); plant(U - .8, .8, 1.3);
+        return;
+      }
+      if (U > 6 && V > 6) { rbox('rug', 6, .014, 3.4, U / 2, .007, V / 2, .005); longTable(U / 2, V / 2, 4.4, 12); [-1.4, 0, 1.4].forEach(k => pendant(U / 2 + k, V / 2, .55, .2)); rbox('darkWood', 3.2, .8, .45, U / 2, .4, V - .26, .02); artBack(U / 2, 2.4, 1.2, 1); plant(.6, .6, 1.4); return; } longTable(U / 2, V / 2, Math.min(2.2, U - 1), U < 3.4 ? 4 : 6); beams(); return; }
     case 'bed': {
       const bw = U > 6 ? 2.1 : U > 3.3 ? 1.65 : 1.4, bl = U > 6 ? 2.2 : 2.05, bu = U / 2, bv = V - bl / 2 - .12;
       rbox('darkWood', bw + .12, .28, bl + .06, bu, .16, bv, .04); rbox('linen', bw, .24, bl - .08, bu, .42, bv, .08); rbox('throw_', bw + .04, .1, .7, bu, .52, bv - bl / 2 + .5, .04);
@@ -679,7 +687,7 @@ function towerExtras(S, data, plate) {
     const sh = new THREE.Shape(pts.map(p => new THREE.Vector2(p[0], p[1])));
     if (!top) sh.holes.push(new THREE.Path([[plate.x0 + .2, plate.z0 + .2], [plate.x1 - .2, plate.z0 + .2], [plate.x1 - .2, plate.z1 - .2], [plate.x0 + .2, plate.z1 - .2]].map(p => new THREE.Vector2(p[0], p[1]))));
     const g = new THREE.ExtrudeGeometry(sh, { depth: top ? .6 : .42, bevelEnabled: false, curveSegments: 1 }); g.rotateX(Math.PI / 2); g.translate(0, y, 0); S.geo('wave', g);
-    S.geo('glassRail', stripGeo(wavePts(base, i, .08, sc), y, y + 1.1));
+    if (!(i === n - 1 && data.floors[n - 1].rooms.some(q => q.pool))) S.geo('glassRail', stripGeo(wavePts(base, i, .08, sc), y, y + 1.1));          // the roof terrace has its own balustrade
   }
   for (let k = 0; k < base.length; k += 9) { const p = base[k]; S.cyl('bronze', .16, data.floorH, p.x + p.nx * .9, data.floorH / 2 - .3, p.z + p.nz * .9); }
   return base;

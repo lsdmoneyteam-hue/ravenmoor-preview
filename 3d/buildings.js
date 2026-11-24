@@ -60,7 +60,7 @@ export function tower() {
   const sky25 = () => [
     r('core', 'core', -2.5, -9, 5, 8, { name: 'Private lift and stairs' }),
     pq('hall', 'hall', -15, -1, 30, 2, 'Gallery'),
-    pq('liv', 'open', -15, 1, 12, 8, 'Great room', { tall: true }), pq('dining', 'dining', -3, 1, 9, 8, 'Dining room'), pq('cinema', 'living', 6, 1, 9, 8, 'Cinema and bar', { look: 'cinema' }),
+    pq('liv', 'open', -15, 1, 12, 8, 'Great room', { tall: true }), pq('dining', 'dining', -3, 1, 12, 8, 'Kitchen and dining', { look: 'kd' }), pq('cinema', 'living', 9, 1, 6, 8, 'Cinema', { look: 'cinema' }),
     pq('b1', 'bed', -15, -9, 7.5, 8, 'Main bedroom'), pq('bath', 'bath', -7.5, -9, 5, 4.5, 'Main bathroom'), pq('dress', 'utility', -7.5, -4.5, 5, 3.5, 'Dressing room'),
     pq('b2', 'bed', 2.5, -9, 6, 8, 'Bedroom 2'), pq('bath2', 'bath', 8.5, -9, 2.5, 4, 'Bathroom 2'), pq('laundry', 'utility', 8.5, -5, 2.5, 4, 'Laundry'), pq('b3', 'bed', 11, -9, 4, 8, 'Bedroom 3'),
   ];
@@ -129,7 +129,7 @@ export function tower() {
   return {
     key: 'tower', name: 'Halden Tower', place: 'Central Milton Keynes',
     blurb: '26 storeys wrapped in rippling white balconies, no two floors the same. 115 apartments, four penthouses and one home across the top two levels.',
-    style: 'glass', story: { floor: 25, room: '25.03-liv' }, wallKind: { '25.03-dining|25.03-liv': 'none', '25.03-stairtop|25.03-void': 'none' }, autoDoor: ['25.03-poolwalk|25.03-stairtop'], doorAt: { '25.03-hall|25.03-liv': 0.88 }, floorH: H, size: [W, D], floors, units,
+    style: 'glass', story: { floor: 25, room: '25.03-liv' }, wallKind: { '25.03-dining|25.03-liv': 'none', '25.03-stairtop|25.03-void': 'none' }, autoDoor: ['25.03-poolwalk|25.03-stairtop'], doorAt: { '25.03-hall|25.03-liv': 0.88, '25.03-dining|25.03-hall': 0.08 }, floorH: H, size: [W, D], floors, units,
     site: { kind: 'city', water: false, park: 's' },
     roof: 'crown', startHour: 18.5,
     spec: {
