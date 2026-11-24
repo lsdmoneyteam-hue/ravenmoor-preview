@@ -241,7 +241,7 @@ function makeMaterials() {
   const glass = (o = {}) => { const m = new THREE.MeshPhysicalMaterial({ color: '#5f7a8c', roughness: .04, metalness: .3, transparent: true, opacity: .42, envMapIntensity: 2.2, depthWrite: false, side: THREE.DoubleSide, ...o }); m.userData.noShadow = true; return m; };
   M.glass = glass(); M.glassLit = glass({ emissive: new THREE.Color('#ffb15e'), emissiveIntensity: 0 }); M.glassRail = glass({ color: '#a9bcc6', opacity: .2, metalness: .1 });
   M.lantern = glass({ color: '#d9c7a4', opacity: .7, emissive: new THREE.Color('#ffc880'), emissiveIntensity: 0 });
-  M.pool = new THREE.MeshPhysicalMaterial({ color: '#35b6c8', roughness: .04, metalness: 0, transparent: true, opacity: .86, envMapIntensity: 1.6, depthWrite: false, emissive: new THREE.Color('#1aa6c0'), emissiveIntensity: .12 }); M.pool.userData.noShadow = true;
+  M.pool = new THREE.MeshPhysicalMaterial({ color: '#35b6c8', roughness: .04, metalness: 0, transparent: true, opacity: .6, envMapIntensity: 1.6, depthWrite: false, emissive: new THREE.Color('#1aa6c0'), emissiveIntensity: .12 }); M.pool.userData.noShadow = true;
   M.water = new THREE.MeshPhysicalMaterial({ color: '#2a4650', roughness: .06, metalness: .25, envMapIntensity: 1.3 });
   const fac = (map, em) => S('#d8d8d8', { map, emissiveMap: em, emissive: new THREE.Color('#ffffff'), emissiveIntensity: 0, roughness: .6 });
   M.nbGlass = fac(T.fmG, T.feG); M.nbBrick = fac(T.fmB, T.feB); M.nbStone = fac(T.fmS, T.feS);
@@ -1411,7 +1411,8 @@ export function run(data, root) {
       add(.895, O2, [bar[0] + 1.5, bar[1], bar[2]]);                // hold on it
       add(.93, S0, [px0 + 4, yT + 1.6, pz + 3.5]);                  // turn right to the pool and start up the steps
       add(.965, S1, [pcx + 2, yT + .9, pz + 5.5]);                  // up on the pool deck
-      add(1, E, [pcx + 1, yT - 5, plate.z1 + 60]);                  // standing at the head of the pool, the city beyond
+      add(.985, E, [pcx + 1, yT - 5, plate.z1 + 60]);               // standing at the head of the pool, the city beyond
+      add(1, [px0 - 3.6, yT + hT + 4.6, pz - 2.6], [pcx + 2.5, yT - 1.5, plate.z1 + 5]);          // then up and back on a wide lens: half the pool hangs out past the edge of the tower
       outAt = .82;
     } else
     if (sc < 1 && !(q.tall && pd)) { const yT = (nF - 1) * data.floorH, [px0, px1, pz0] = pd.pool, mx = q.x + q.w / 2, mz = q.z + q.d / 2;
@@ -1424,7 +1425,7 @@ export function run(data, root) {
     st = { p: 0, to: 0, h, hr: -1, fi, q, inside: false, sc, outAt, pos: { getPoint: p => pc.getPoint(u(p)) }, tgt: { getPoint: p => tc.getPoint(u(p)) } };
     fly = null; controls.enabled = false; root.classList.add('story'); camera.fov = 40; reframe(); storyAt(0);
   }
-  const storyFov = (p0, sc = (st || stHold || { sc: 1 }).sc, oa = (st || stHold || {}).outAt ?? sc) => { const p = Math.min(1, p0 / sc), f = camera.aspect < 1 ? 58 : 40, ext = f + 14 * (1 - sstep(0, .4, p)), inn = ext + (walkFov() * .88 - ext) * sstep(.64, .8, p); return inn + (f + 14 - inn) * sstep(oa + .02, oa + .1, p0); };
+  const storyFov = (p0, sc = (st || stHold || { sc: 1 }).sc, oa = (st || stHold || {}).outAt ?? sc) => { const p = Math.min(1, p0 / sc), f = camera.aspect < 1 ? 58 : 40, ext = f + 14 * (1 - sstep(0, .4, p)), inn = ext + (walkFov() * .88 - ext) * sstep(.64, .8, p); return inn + (f + 14 - inn) * sstep(oa + .02, oa + .1, p0) + (sc < .7 ? 16 * sstep(.975, 1, p0) : 0); };
   function storyAt(p) {
     camera.position.copy(st.pos.getPoint(p)); controls.target.copy(st.tgt.getPoint(p)); camera.lookAt(controls.target);
     const fov = storyFov(p); if (Math.abs(fov - camera.fov) > .05) { camera.fov = fov; camera.updateProjectionMatrix(); }

@@ -1,6 +1,6 @@
 // Off-plan development page. One template for any development: a tower, a block of flats or a single house.
 // Plans and homes come from /3d/buildings.js, words and pictures from content.js, and the 3D model opens on tap.
-import * as BUILD from '/3d/buildings.js?v=17';
+import * as BUILD from '/3d/buildings.js?v=18';
 import { CONTENT } from './content.js?v=8';
 
 const OUT = new Set(['balcony', 'terrace']), SHARED = new Set(['corridor', 'lobby', 'core']);
@@ -29,14 +29,14 @@ export function mount(key) {
       <iframe class="story-frame" title="${esc(D.name)} being built as you scroll" tabindex="-1" aria-hidden="true"></iframe>
       <div class="story-shade"></div>
       <div class="story-mist" data-mist></div>
-      <div class="cap cap-title" data-cap="-1,.08"><p class="kicker">${esc(D.place)}</p><h1>${esc(D.name)}</h1><p class="cue">Scroll <span class="build">build 17</span></p></div>
+      <div class="cap cap-title" data-cap="-1,.08"><p class="kicker">${esc(D.place)}</p><h1>${esc(D.name)}</h1><p class="cue">Scroll <span class="build">build 18</span></p></div>
       <div class="cap cap-rise" data-cap=".13,.4"><p class="rise" data-rise></p><dl class="numbers">${C.numbers.slice(0, 3).map(([n, l]) => `<div><dt>${esc(l)}</dt><dd>${esc(n)}</dd></div>`).join('')}</dl></div>
       <div class="cap cap-line" data-cap=".44,.57"><p>${esc(C.tagline)}</p></div>
       <div class="cap cap-line" data-cap=".61,.74"><p class="kicker">${esc(C.film[0])}</p><p>${esc(C.film[1])}</p></div>
       <div class="cap cap-line" data-cap=".79,.91"><p>${esc(C.film[2])}</p></div>
       ${(C.filmMore || []).map(([a, b, t]) => `<div class="cap cap-line" data-fix="1" data-cap="${a},${b}"><p>${esc(t)}</p></div>`).join('')}
       ${C.film[4] ? `<div class="cap cap-line" data-fix="1" data-cap=".91,.97"><p>${esc(C.film[4])}</p></div>` : ''}
-      <div class="cap cap-end" ${C.film[4] ? 'data-fix="1" data-cap=".985,2"' : 'data-cap=".95,2"'}><p class="kicker">${esc(D.place)}</p><h2>${esc(C.film[3])}</h2>
+      <div class="cap cap-end" ${C.film[4] ? 'data-fix="1" data-cap=".992,2"' : 'data-cap=".95,2"'}><p class="kicker">${esc(D.place)}</p><h2>${esc(C.film[3])}</h2>
         <div class="row"><a class="btn" href="#homes">${D.single ? 'Explore the house' : 'Explore residences'}</a><button class="btn ghost" type="button" data-open3d>Open the 3D model</button></div>
         <div class="tod" role="group" aria-label="Time of day">${[['Morning', 8], ['Day', 13], ['Sunset', 19.2], ['Night', 21.5]].map(([t, h]) => `<button type="button" data-tod="${h}">${t}</button>`).join('')}</div></div>
       <button type="button" class="viewer-x story-back" data-untake hidden>Back to ${D.single ? 'the house' : 'the building'}</button>
