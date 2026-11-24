@@ -129,7 +129,7 @@ export function tower() {
   return {
     key: 'tower', name: 'Halden Tower', place: 'Central Milton Keynes',
     blurb: '26 storeys wrapped in rippling white balconies, no two floors the same. 115 apartments, four penthouses and one home across the top two levels.',
-    style: 'glass', story: { floor: 25, room: '25.03-liv' }, wallKind: { '25.03-dining|25.03-liv': 'none', '25.03-stairtop|25.03-void': 'none' }, autoDoor: ['25.03-poolwalk|25.03-stairtop'], doorAt: { '25.03-hall|25.03-liv': 0.88, '25.03-dining|25.03-hall': 0.08 }, floorH: H, size: [W, D], floors, units,
+    style: 'glass', story: { floor: 25, room: '25.03-liv', hours: [[0, 7.5], [.136, 12], [.26, 17.5], [.33, 19.5], [.434, 21.5], [.5, 30.75], [.6, 33], [.72, 37], [.81, 40.5], [.895, 43.4], [.965, 44.25], [1, 45.5]] }, props: '/3d/props/halden_props.glb', wallKind: { '25.03-dining|25.03-liv': 'none', '25.03-stairtop|25.03-void': 'none' }, autoDoor: ['25.03-poolwalk|25.03-stairtop'], doorAt: { '25.03-hall|25.03-liv': 0.88, '25.03-dining|25.03-hall': 0.08 }, floorH: H, size: [W, D], floors, units,
     site: { kind: 'city', water: false, park: 's' },
     roof: 'crown', startHour: 18.5,
     spec: {

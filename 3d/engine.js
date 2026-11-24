@@ -135,8 +135,23 @@ function boxGeo(w, h, d, uvS) {
   return g;
 }
 // collects shapes per material, then merges them into one mesh per material
+// Props modelled in Blender (3d/props/*.glb): each assembly is a list of { geometry, material name, where every copy sits }.
+export const PROPS = {};
+export async function loadProps(url) {
+  try {
+    const buf = await (await fetch(url)).arrayBuffer(), dv = new DataView(buf); if (dv.getUint32(0, true) !== 0x46546C67) throw new Error('not a glb');
+    const jl = dv.getUint32(12, true), J = JSON.parse(new TextDecoder().decode(new Uint8Array(buf, 20, jl))), bin = buf.slice(20 + jl + 8);
+    const acc = i => { const a = J.accessors[i], bv = J.bufferViews[a.bufferView], n = { SCALAR: 1, VEC2: 2, VEC3: 3 }[a.type], C = { 5126: Float32Array, 5123: Uint16Array, 5125: Uint32Array, 5121: Uint8Array }[a.componentType]; return new THREE.BufferAttribute(new C(bin, (bv.byteOffset || 0) + (a.byteOffset || 0), a.count * n), n); };
+    const geos = J.meshes.map(m => m.primitives.map(pr => { const g = new THREE.BufferGeometry(); g.setAttribute('position', acc(pr.attributes.POSITION)); g.setAttribute('normal', acc(pr.attributes.NORMAL)); g.setIndex(acc(pr.indices)); return { geo: g, mat: J.materials[pr.material].name }; }));
+    const walk = (ni, M, out) => { const n = J.nodes[ni], L = new THREE.Matrix4(); if (n.matrix) L.fromArray(n.matrix); else L.compose(new THREE.Vector3(...(n.translation || [0, 0, 0])), new THREE.Quaternion(...(n.rotation || [0, 0, 0, 1])), new THREE.Vector3(...(n.scale || [1, 1, 1]))); const W = M.clone().multiply(L);
+      if (n.mesh != null) geos[n.mesh].forEach(pr => { let e = out.find(o => o.geo === pr.geo); if (!e) out.push(e = { geo: pr.geo, mat: pr.mat, at: [] }); e.at.push(W); }); (n.children || []).forEach(c => walk(c, W, out)); };
+    J.scenes[J.scene || 0].nodes.forEach(ni => { const out = []; walk(ni, new THREE.Matrix4(), out); PROPS[J.nodes[ni].name] = out; });
+  } catch (e) { console.warn('props not loaded', e); }
+}
 class Bucket {
-  constructor(mats) { this.mats = mats; this.parts = {}; }
+  constructor(mats) { this.mats = mats; this.parts = {}; this.props = []; }
+  // place a Blender-built assembly; false if it has not loaded, so the caller can fall back to simple shapes
+  prop(name, x, y, z, ry = 0) { if (!PROPS[name]) return false; this.props.push([name, x, y, z, ry]); return true; }
   mat(name) { const m = this.mats[name]; if (!m) throw new Error('no material ' + name); return m; }
   add(name, g) { (this.parts[name] ||= []).push(g); }
   box(mat, w, h, d, x, y, z, ry = 0, rx = 0, rz = 0) {
@@ -163,7 +178,11 @@ class Bucket {
       mesh.castShadow = cast && !m.transparent && !m.userData.noShadow; mesh.receiveShadow = receive && !m.userData.noShadow;
       group.add(mesh);
     }
-    this.parts = {};
+    for (const [name, x, y, z, ry] of this.props) { const base = new THREE.Matrix4().makeRotationY(ry).setPosition(x, y, z);
+      for (const it of PROPS[name]) { const m = this.mats[it.mat === 'downlight' ? 'led' : it.mat]; if (!m) { console.warn('prop material missing', it.mat); continue; }
+        const im = new THREE.InstancedMesh(it.geo, m, it.at.length); it.at.forEach((w, i) => im.setMatrixAt(i, new THREE.Matrix4().multiplyMatrices(base, w))); im.instanceMatrix.needsUpdate = true; im.computeBoundingSphere();
+        im.castShadow = cast && !m.transparent && !m.userData.noShadow; im.receiveShadow = receive && !m.userData.noShadow; group.add(im); } }
+    this.parts = {}; this.props = [];
     return group;
   }
 }
@@ -229,6 +248,9 @@ function makeMaterials() {
     metal: S('#a3a7ab', { roughness: .25, metalness: .85 }), screen: S('#0e1012', { roughness: .15, metalness: .3 }), mirror: S('#cfd8dc', { roughness: .03, metalness: 1 }),
     art0: S('#fff', { map: T.art[0], roughness: .9 }), art1: S('#fff', { map: T.art[1], roughness: .9 }), art2: S('#fff', { map: T.art[2], roughness: .9 }), books: S('#fff', { map: T.books, uv: 1, roughness: .9 }),
     lampShade: E('#efe6d4', '#ffcf8f'), fire: E('#2a1a10', '#ff7a2a'),
+    // the bar and the wine wall (names match the Blender prop library)
+    bottle: S('#16241a', { roughness: .1, metalness: .25 }), wineLabel: S('#efe7d6', { roughness: .7 }), foil: S('#5a1620', { roughness: .35, metalness: .6 }), whisky: S('#b5701f', { roughness: .08, metalness: .2 }), gin: S('#9ec3c0', { roughness: .06, transparent: true, opacity: .7 }), frost: S('#e6ecee', { roughness: .4 }),
+    led: E('#ffe2b8', '#ffcf8f'), wineBack: E('#cfae84', '#ffb25c'), crystal: S('#eef4f4', { roughness: .03, transparent: true, opacity: .28, depthWrite: false }), steel: S('#c9ccd0', { roughness: .2, metalness: .95 }), lemon: S('#e8b735', { roughness: .5 }), ice: S('#f3f8fa', { roughness: .15 }),
     slate: S('#fff', { map: T.slate, uv: 1.6, roughness: .8 }), zinc: S('#fff', { map: T.zinc, uv: 1.8, roughness: .45, metalness: .5 }), ridge: S('#1e2022', { roughness: .6 }), roofFlat: S('#55585b', { roughness: .95 }),
     ground: S('#c9d4b8', { map: T.grass, uv: 8, roughness: 1 }), lawn: S('#d4dcc0', { map: T.lawn, uv: 3.2, roughness: 1 }), hedge: S('#3f5a30', { roughness: 1 }),
     road: S('#34363a', { roughness: .95 }), pave: S('#fff', { map: T.pave, uv: 3, roughness: .9 }), blockPave: S('#fff', { map: T.block, uv: 1.6, roughness: .9 }), gravel: S('#b6ab98', { roughness: 1 }),
@@ -458,6 +480,7 @@ class Rec {
   rbox(m, w, h, d, x, y, z, r) { this.put('rbox', [m, w, h, d, x, y, z, r], x - w / 2, x + w / 2, z - d / 2, z + d / 2, y - h / 2, y + h / 2); }
   cyl(m, r, h, x, y, z, rt) { this.put('cyl', [m, r, h, x, y, z, rt], x - r, x + r, z - r, z + r, y - h / 2, y + h / 2); }
   ball(m, r, x, y, z, sy = 1) { this.put('ball', [m, r, x, y, z, sy], x - r, x + r, z - r, z + r, y - r * sy, y + r * sy); }
+  prop(name, x, y, z, ry = 0, fw = .1, fd = .1, fh = .1) { if (!PROPS[name]) return false; this.put('prop', [name, x, y, z, ry], x - fw / 2, x + fw / 2, z - fd / 2, z + fd / 2, y, y + fh); return true; }
 }
 // the floor a door needs kept clear on this room's side of it: [x0, x1, z0, z1]
 function doorZones(q, segs) {
@@ -556,8 +579,8 @@ function furnish(q, B, rooms, o) {
         rbox('black', 1.5, .3, 2.1, 2.0, .82, 2.0, .3); box('black', 1.4, .03, 1.9, 2.05, 1.25, 2.0, 0, 0); box('black', .06, .7, .06, 1.45, .35, 1.2); box('black', .06, .7, .06, 2.55, .35, 1.2); box('black', .06, .7, .06, 2.0, .35, 2.9); box('white', 1.2, .03, .16, 2.0, .7, .9); rbox('fabric', .7, .1, .4, 2.0, .48, .45, .04); box('black', .05, .46, .05, 1.72, .23, .45); box('black', .05, .46, .05, 2.28, .23, .45);
         plant(.6, .6, 1.6); plant(U - 1.2, .7, 1.4);
         // nothing crowds the sofas: a console behind them, a glass wine wall on the back wall, and open floor through to the kitchen
-        rbox('darkWood', 2.6, .8, .42, U - 4.3, .4, 6.05, .02); cyl('lampShade', .16, .34, U - 5.2, 1.0, 6.05, .1); cyl('brass', .03, .2, U - 5.2, .86, 6.05); cyl('pot', .1, .3, U - 3.5, .95, 6.05, .07); ball('flower', .16, U - 3.5, 1.22, 6.05, 1.1);
-        box('glass', 3.2, 2.6, .5, 7.9, 1.3, V - .3); for (let k = 0; k < 5; k++) box('darkWood', 3.1, .04, .42, 7.9, .35 + k * .5, V - .3);
+        rbox('darkWood', 2.6, .8, .42, U - 4.3, .4, 6.05, .02); { const [cx, cz] = to(U - 4.3, 6.05); if (!B.prop('Console', cx, y + .8, cz)) { cyl('lampShade', .16, .34, U - 5.2, 1.0, 6.05, .1); cyl('brass', .03, .2, U - 5.2, .86, 6.05); cyl('pot', .1, .3, U - 3.5, .95, 6.05, .07); ball('flower', .16, U - 3.5, 1.22, 6.05, 1.1); } }
+        { const [cx, cz] = to(7.9, V - .3); if (!B.prop('WineWall', cx, y, cz, 0, 3.2, .5, 2.6)) { box('glass', 3.2, 2.6, .5, 7.9, 1.3, V - .3); for (let k = 0; k < 5; k++) box('darkWood', 3.1, .04, .42, 7.9, .35 + k * .5, V - .3); } }
         // floating oak stair up to the roof, against the back wall
         { const n = 18, rise = (data_floorH) / n; for (let k = 0; k < n; k++) { const su = .7 + k * .29, sy = rise * (k + 1); box('oak', .3, .06, 1.4, su, sy, V - .75); box('glassRail', .29, 1.0, .02, su, sy + .53, V - 1.47); box('brass', .3, .03, .04, su, sy + 1.05, V - 1.47); } }
         return;
@@ -713,7 +736,8 @@ function towerRoof(R, data, plate, y) {
   }
   if (deck && deck.bar) {
     const [b0, b1] = deck.bar, bc = (b0 + b1) / 2, bw = b1 - b0, bz = deck.z;          // against the glass of the landing, facing the pool
-    R.box('darkWood', bw, 2.5, .34, bc, yT + 1.25, bz + .2); for (let k = 0; k < 4; k++) { R.box('downlight', bw - .3, .02, .3, bc, yT + .95 + k * .42, bz + .22); for (let x = b0 + .35; x < b1 - .2; x += .28) R.cyl(k % 2 ? 'glass' : 'brass', .045, .26, x, yT + 1.1 + k * .42, bz + .3, .03, 10); }
+    if (!R.prop('BarBack', bc, yT, bz + .2)) { R.box('darkWood', bw, 2.5, .34, bc, yT + 1.25, bz + .2); for (let k = 0; k < 4; k++) { R.box('downlight', bw - .3, .02, .3, bc, yT + .95 + k * .42, bz + .22); for (let x = b0 + .35; x < b1 - .2; x += .28) R.cyl(k % 2 ? 'glass' : 'brass', .045, .26, x, yT + 1.1 + k * .42, bz + .3, .03, 10); } }
+    R.prop('BarCounter', bc, yT + 1.135, bz + 1.15);
     R.box('stone', bw, 1.06, .7, bc, yT + .53, bz + 1.15); R.rbox('worktop', bw + .3, .07, .9, bc, yT + 1.1, bz + 1.15, .02); R.box('downlight', bw, .03, .03, bc, yT + .12, bz + 1.52); R.box('brass', bw, .04, .06, bc, yT + .3, bz + 1.56);
     for (let x = b0 + .6; x < b1 - .3; x += .95) { R.cyl('fabric', .19, .08, x, yT + .8, bz + 1.95); R.cyl('brass', .022, .76, x, yT + .38, bz + 1.95); R.cyl('brass', .17, .02, x, yT + .01, bz + 1.95); }
     R.box('wave', bw + 1.2, .14, 2.9, bc, yT + 2.75, bz + 1.2); for (let x = b0 + .8; x < b1 - .4; x += 1.3) { R.box('black', .012, .7, .012, x, yT + 2.33, bz + 1.15); R.cyl('lampShade', .13, .2, x, yT + 1.9, bz + 1.15, .07); }
@@ -990,7 +1014,7 @@ export function run(data, root) {
     const u = sky.material.uniforms; u.top.value.copy(top); u.hor.value.copy(hor); u.sun.value.copy(dir); u.sunCol.value.copy(sc).multiplyScalar(1 - night); u.night.value = night;
     u.cloud.value.set('#ffffff').lerp(new THREE.Color('#f6c9a4'), dusk).lerp(new THREE.Color('#1a1f2b'), night);
     scene.fog.color.copy(hor); horizon.material.color.copy(hor).lerp(new THREE.Color(night > .5 ? '#0c1018' : '#ffffff'), night > .5 ? .5 : .12); horizon.material.opacity = .8; horizonLit.material.opacity = night; renderer.toneMappingExposure = 1 - .15 * night;
-    [M, Ms].forEach(K => { K.glassLit.emissiveIntensity = night * 1.1; K.glass.opacity = .4 + .2 * night; K.lantern.emissiveIntensity = .15 + night * 1.6; K.lampHead.emissiveIntensity = night * 4; K.downlight.emissiveIntensity = .5 + night * 2.4; K.pool.emissiveIntensity = .12 + night * 1.5; K.lampShade.emissiveIntensity = .25 + night * 1.6; K.fire.emissiveIntensity = .9 + night * .6; [K.nbGlass, K.nbBrick, K.nbStone].forEach(m => { m.emissiveIntensity = night * .75; }); });
+    [M, Ms].forEach(K => { K.glassLit.emissiveIntensity = night * 1.1; K.glass.opacity = .4 + .2 * night; K.lantern.emissiveIntensity = .15 + night * 1.6; K.lampHead.emissiveIntensity = night * 4; K.downlight.emissiveIntensity = .5 + night * 2.4; K.led.emissiveIntensity = 1.1 + night * 1.6; K.wineBack.emissiveIntensity = .75 + night * .7; K.pool.emissiveIntensity = .12 + night * 1.5; K.lampShade.emissiveIntensity = .25 + night * 1.6; K.fire.emissiveIntensity = .9 + night * .6; [K.nbGlass, K.nbBrick, K.nbStone].forEach(m => { m.emissiveIntensity = night * .75; }); });
     roomLights.forEach(l => { l.intensity = l.userData.base * (.35 + 2.2 * night); });
     if (ui.time) ui.time.textContent = `${String(Math.floor(h)).padStart(2, '0')}:${String(Math.round((h % 1) * 60)).padStart(2, '0')}`;
     dirty = true;
@@ -1434,7 +1458,9 @@ export function run(data, root) {
     if (b >= 1) { cut = cutTo = cutEnd = BIG; clip.constant = BIG; clipUp.constant = -BIG; ghost.visible = false; scan.visible = false; }
     else { cut = cutTo = cutEnd = .15 + (st.h + .6) * b; clip.constant = cut; clipUp.constant = -cut; ghost.visible = p > .04; scan.visible = b > 0; scan.position.y = cut; scan.material.opacity = .9; }
     if (p > .44 && !st.inside) { st.inside = true; showInner(data.single ? data.floors.map((x, i) => i) : [st.fi]); const sv = walk; walk = { unit: st.q.unit }; setRoomLights(st.fi, st.q.unit); walk = sv; }
-    const hr = Math.round((data.startHour + (18.5 - data.startHour) * sstep(.36, .66, p) + 2.1 * sstep(Math.max(st.sc + .06, st.outAt - .12), 1, p0) * (st.sc < 1 ? 1 : 0)) * 8) / 8; if (st.lock != null && p0 < .96) st.lock = null; const hrU = st.lock != null ? st.lock : hr; if (hrU !== st.hr) { const hr = hrU; st.hr = hr; if (ui.slider) ui.slider.value = hr; setTime(hr); }
+    const HK = data.story && data.story.hours; let hr;
+    if (HK) { let i = 0; while (i < HK.length - 2 && p0 > HK[i + 1][0]) i++; const a = HK[i], b = HK[i + 1]; hr = Math.round((a[1] + (b[1] - a[1]) * sstep(a[0], b[0], p0)) * 8) / 8 % 24; }      // a full day and night go by over the film
+    else hr = Math.round((data.startHour + (18.5 - data.startHour) * sstep(.36, .66, p) + 2.1 * sstep(Math.max(st.sc + .06, st.outAt - .12), 1, p0) * (st.sc < 1 ? 1 : 0)) * 8) / 8; if (st.lock != null && p0 < .96) st.lock = null; const hrU = st.lock != null ? st.lock : hr; if (hrU !== st.hr) { const hr = hrU; st.hr = hr; if (ui.slider) ui.slider.value = hr; setTime(hr); }
     dirty = true;
   }
   // the page asks what is under the pointer; a floor that isn't built yet can't be picked
