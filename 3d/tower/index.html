@@ -1,0 +1,64 @@
+<!doctype html>
+<html lang="en-GB">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<meta name="robots" content="noindex">
+<title>Halden Tower: explore in 3D · Ravenmoor Digital</title>
+<meta name="description" content="Explore Halden Tower in 3D: open any floor, see every apartment, walk inside.">
+<meta name="theme-color" content="#0E0F11">
+<link rel="icon" href="/favicon.svg" type="image/svg+xml">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Cormorant+Garamond:wght@400;500;600&amp;family=Schibsted+Grotesk:wght@400;500;600&amp;display=swap">
+<link rel="stylesheet" href="/3d/viewer.css?v=1">
+<script type="importmap">{"imports":{"three":"/3d/lib/three.module.js"}}</script>
+</head>
+<body>
+<main class="rv" id="rv">
+  <canvas aria-label="3D model of Halden Tower. Use the floor list and cards to explore."></canvas>
+  <div class="loader" data-loader><p>Building Halden Tower…</p></div>
+  <header class="top">
+    <a class="brand" href="/">Ravenmoor</a>
+    <div class="title"><h1>Halden Tower</h1><p>Central Milton Keynes</p></div>
+    <span class="spacer"></span>
+    <span class="demo">Demo · fictional development</span>
+    <a class="back" href="/3d/">All demos</a>
+  </header>
+  <nav class="tabs panel" data-tabs aria-label="Views"><button type="button" class="on" data-view="homes">Homes</button><button type="button" data-view="street">Street</button><button type="button" data-view="sky">Skyline</button></nav>
+  <nav class="floors panel" data-floors aria-label="Floors"></nav>
+  <aside class="card panel" data-card aria-live="polite"></aside>
+  <div class="timebar panel">
+    <label><span class="sunico" aria-hidden="true"></span><span class="sr">Time of day</span><input type="range" min="5" max="23" step="0.25" data-slider aria-label="Time of day"><span data-time></span></label>
+    <label class="avail"><input type="checkbox" data-avail> Availability</label><span class="legend"><span><i style="background:#c8913a"></i>Available</span><span><i style="background:#a7a29a"></i>Reserved</span><span><i style="background:#8a3a32"></i>Sold</span></span>
+  </div>
+  <div class="hint panel" data-hint role="status"></div>
+  <div class="walkbar panel" data-walkbar>
+    <canvas data-plan aria-label="Floor plan. Tap a room to move there."></canvas>
+    <div class="wi">
+      <span class="small">You are in</span>
+      <strong data-where></strong>
+      
+      <div class="row"><button class="btn ghost" type="button" data-exit>Leave</button><button class="btn" type="button" data-book>Book a viewing</button></div>
+    </div>
+  </div>
+  <div class="tip panel" data-tip hidden></div>
+  <div class="modal" data-modal hidden role="dialog" aria-modal="true" aria-labelledby="mh">
+    <div class="sheet panel">
+      <h2 id="mh">Book a viewing</h2>
+      <p>This is a demo, so nothing is sent. On a live listing this button books a viewing straight into the agent’s diary and tells them exactly which home and rooms the buyer looked at.</p>
+      <p class="small">Want this for your development or your listings?</p>
+      <div class="row"><a class="btn" href="/#sample">Talk to Ravenmoor</a><button class="btn ghost" type="button" data-close>Keep exploring</button></div>
+    </div>
+  </div>
+  <div class="nogl" data-nogl><p>This demo needs WebGL, which this browser has switched off.</p></div>
+</main>
+<script type="module">
+import { run } from '/3d/engine.js?v=1';
+import { tower } from '/3d/buildings.js?v=1';
+const root = document.getElementById('rv');
+const toggle = document.createElement('button'); toggle.className = 'cardtoggle'; toggle.type = 'button'; toggle.setAttribute('aria-label', 'Show or hide details');
+root.querySelector('[data-card]').prepend(toggle);
+try { run(tower(), root); } catch (e) { console.error(e); root.querySelector('[data-loader]').classList.add('done'); root.querySelector('[data-nogl]').style.display = 'grid'; }
+</script>
+</body>
+</html>

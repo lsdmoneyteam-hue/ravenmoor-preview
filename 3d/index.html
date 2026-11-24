@@ -1,0 +1,63 @@
+<!doctype html>
+<html lang="en-GB">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<meta name="robots" content="noindex">
+<title>Explore in 3D: demos · Ravenmoor Digital</title>
+<meta name="description" content="Three demo developments you can explore in 3D in your browser: open a floor, pick a flat, walk inside.">
+<meta name="theme-color" content="#0E0F11">
+<link rel="icon" href="/favicon.svg" type="image/svg+xml">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Cormorant+Garamond:wght@400;500;600&amp;family=Schibsted+Grotesk:wght@400;500;600&amp;display=swap">
+<style>
+:root{--ink:#0E0F11;--bone:#EDE8DF;--amber:#C8913A;--mute:rgba(237,232,223,.7);--rule:rgba(237,232,223,.16)}
+*{box-sizing:border-box}
+body{margin:0;background:var(--ink);color:var(--bone);font:17px/1.6 'Schibsted Grotesk',system-ui,sans-serif;-webkit-font-smoothing:antialiased}
+a{color:inherit}
+:focus-visible{outline:2px solid var(--amber);outline-offset:3px}
+.top{display:flex;justify-content:space-between;align-items:center;padding:22px clamp(20px,5vw,56px);border-bottom:1px solid var(--rule);font-size:15px}
+.brand{font:500 24px/1 'Cormorant Garamond',Georgia,serif;text-decoration:none}
+.top a:not(.brand){display:inline-flex;min-height:44px;align-items:center;text-decoration:none}
+.top a:hover{color:var(--amber)}
+main{max-width:1180px;margin:0 auto;padding:clamp(40px,7vw,80px) clamp(20px,5vw,40px) 80px}
+h1{font:500 clamp(44px,8vw,84px)/.98 'Cormorant Garamond',Georgia,serif;letter-spacing:-.015em;margin:0 0 18px;max-width:14ch}
+.lede{font-size:20px;line-height:1.45;max-width:36rem;margin:0 0 10px}
+.meta{color:var(--mute);font-size:15px;max-width:38rem;margin:0}
+.grid{display:grid;grid-template-columns:repeat(3,1fr);gap:22px;margin:56px 0 64px}
+.demo{display:flex;flex-direction:column;text-decoration:none;border:1px solid var(--rule);border-radius:3px;overflow:hidden;background:#15171a;transition:border-color .2s}
+.demo:hover{border-color:var(--amber)}
+.demo img{display:block;width:100%;aspect-ratio:3/2;object-fit:cover}
+.demo div{padding:18px 20px 22px;display:flex;flex-direction:column;gap:6px;flex:1}
+.demo h2{margin:0;font:500 32px/1.05 'Cormorant Garamond',Georgia,serif}
+.demo p{margin:0;color:var(--mute);font-size:15px}
+.demo .go{margin-top:auto;padding-top:12px;color:var(--amber);font-weight:500}
+.how{display:grid;grid-template-columns:repeat(3,1fr);gap:28px;border-top:1px solid var(--rule);padding-top:36px}
+.how h3{font:500 26px/1.1 'Cormorant Garamond',Georgia,serif;margin:0 0 8px}
+.how p{margin:0;color:var(--mute);font-size:15px}
+.cta{margin-top:64px;display:flex;flex-wrap:wrap;gap:12px;align-items:center}
+.btn{display:inline-flex;align-items:center;min-height:48px;padding:0 22px;background:var(--amber);color:var(--ink);border-radius:2px;font-weight:600;text-decoration:none}
+.note{color:var(--mute);font-size:14px}
+@media (max-width:860px){.grid,.how{grid-template-columns:1fr}.grid{gap:16px;margin:40px 0}}
+</style>
+</head>
+<body>
+<header class="top"><a class="brand" href="/">Ravenmoor Digital</a><a href="/">Back to the site</a></header>
+<main>
+  <h1>Walk round a home before it&rsquo;s built.</h1>
+  <p class="lede">Open any floor, see which flats are left, step inside and watch the light move through the day. It runs in the browser on any phone, with nothing to install.</p>
+  <p class="meta">These three are demos. The buildings, prices and availability are made up.</p>
+  <section class="grid" aria-label="Demos">
+    <a class="demo" href="/3d/tower/"><img src="/3d/img/tower.webp" alt="Halden Tower, a 26-storey glass tower, at golden hour" width="900" height="600"><div><h2>Halden Tower</h2><p>26 storeys of glass. Open any floor, check availability flat by flat, step out onto a balcony.</p><span class="go">Explore the tower</span></div></a>
+    <a class="demo" href="/3d/block/"><img src="/3d/img/block.webp" alt="Wharf Row, a five-storey brick block on a canal" width="900" height="600"><div><h2>Wharf Row</h2><p>Five storeys of brick on the canal. Lift the roof, pick a flat, then look out over the water.</p><span class="go">Explore the block</span></div></a>
+    <a class="demo" href="/3d/house/"><img src="/3d/img/house.webp" alt="Ashcombe House with the first floor lifted away to show the ground-floor rooms" width="900" height="600"><div><h2>Ashcombe House</h2><p>A four-bedroom family home. Lift the floors away, then walk through it room by room.</p><span class="go">Walk through the house</span></div></a>
+  </section>
+  <section class="how" aria-label="What buyers can do">
+    <div><h3>Find the right home</h3><p>Every flat is coloured by availability. Tap one for its price, size, aspect and room sizes.</p></div>
+    <div><h3>Stand inside it</h3><p>Look around each room, move between rooms on the plan, and see the view from the window.</p></div>
+    <div><h3>Book the viewing</h3><p>One button sends the agent the exact home the buyer was looking at.</p></div>
+  </section>
+  <div class="cta"><a class="btn" href="/#sample">Get this for your development</a><span class="note">We build it from your floor plans.</span></div>
+</main>
+</body>
+</html>
