@@ -241,6 +241,7 @@ function makeMaterials() {
   const glass = (o = {}) => { const m = new THREE.MeshPhysicalMaterial({ color: '#5f7a8c', roughness: .04, metalness: .3, transparent: true, opacity: .42, envMapIntensity: 2.2, depthWrite: false, side: THREE.DoubleSide, ...o }); m.userData.noShadow = true; return m; };
   M.glass = glass(); M.glassLit = glass({ emissive: new THREE.Color('#ffb15e'), emissiveIntensity: 0 }); M.glassRail = glass({ color: '#a9bcc6', opacity: .2, metalness: .1 });
   M.lantern = glass({ color: '#d9c7a4', opacity: .7, emissive: new THREE.Color('#ffc880'), emissiveIntensity: 0 });
+  M.pool = new THREE.MeshPhysicalMaterial({ color: '#35b6c8', roughness: .04, metalness: 0, transparent: true, opacity: .62, envMapIntensity: 1.6, depthWrite: false, emissive: new THREE.Color('#1aa6c0'), emissiveIntensity: .12 }); M.pool.userData.noShadow = true;
   M.water = new THREE.MeshPhysicalMaterial({ color: '#2a4650', roughness: .06, metalness: .25, envMapIntensity: 1.3 });
   const fac = (map, em) => S('#d8d8d8', { map, emissiveMap: em, emissive: new THREE.Color('#ffffff'), emissiveIntensity: 0, roughness: .6 });
   M.nbGlass = fac(T.fmG, T.feG); M.nbBrick = fac(T.fmB, T.feB); M.nbStone = fac(T.fmS, T.feS);
@@ -279,6 +280,7 @@ function classify(s, data, fi) {
   if (A && B && data.wallKind) { const k = data.wallKind[[A.id, B.id].sort().join('|')]; if (k) return k; }
   if ((A && A.type === 'core') || (B && B.type === 'core')) return 'none';
   if (A && B && COMMUNAL.has(A.type) && A.type === B.type) return 'none';
+  if (A && B && OUTSIDE.has(A.type) && OUTSIDE.has(B.type)) return 'none';
   if (!A || !B) {
     const q = A || B;
     if (OUTSIDE.has(q.type)) return 'rail';
@@ -327,8 +329,10 @@ function shellFloor(S, fl, segs, data, fi, plate, lit) {
   fl.rooms.forEach(q => {
     const cx = q.x + q.w / 2, cz = q.z + q.d / 2, out = OUTSIDE.has(q.type);
     if (q.type === 'core') { S.box('core', q.w, data.floorH, q.d, cx, y0 + data.floorH / 2 - .3, cz); return; }
+    if (q.type === 'void') return;
     S.box(out ? 'rail' : 'slab', q.w + (out ? 0 : .02), out ? .16 : .3, q.d + (out ? 0 : .02), cx, y0 - (out ? .1 : .15), cz);
     if (out) S.box('deck', q.w - .1, .04, q.d - .1, cx, y0, cz);
+    if (out && fi > 0 && q.w * q.d > 12) S.box('slab', q.w, .06, q.d, cx, y0 - .21, cz);          // a pale soffit, so the room under a terrace has a ceiling
   });
   segs.forEach(s => {
     const len = s.b - s.a, mid = (s.a + s.b) / 2, outSign = s.A && !s.B ? 1 : -1, q = s.A || s.B;
@@ -419,7 +423,7 @@ const FINISH = ['wood', 'tile', 'carpet', 'corridor', 'lobbyFloor', 'doorInt', '
 function innerFloor(B, fl, segs, data, fi) {
   const Hc = data.floorH - .3, house = data.style === 'house';
   fl.rooms.forEach(q => {
-    if (q.type === 'core' || OUTSIDE.has(q.type)) return;
+    if (q.type === 'core' || q.type === 'void' || OUTSIDE.has(q.type)) return;
     const fin = q.type === 'bath' || q.type === 'utility' ? 'tile' : q.type === 'bed' ? 'carpet' : q.type === 'corridor' ? 'corridor' : q.type === 'lobby' ? 'lobbyFloor' : 'wood';
     B.box(fin, q.w - .02, .02, q.d - .02, q.x + q.w / 2, .01, q.z + q.d / 2);
   });
@@ -436,8 +440,9 @@ function innerFloor(B, fl, segs, data, fi) {
     [-1, 1].forEach(side => { const R = side < 0 ? s.A : s.B; if (R.type === 'core') return; runs.forEach(([a, b]) => { if (b - a < .08) return; const off = s.L + side * .075; if (s.axis === 'x') B.box('skirt', .016, .1, b - a, off, .05, (a + b) / 2); else B.box('skirt', b - a, .1, .016, (a + b) / 2, .05, off); }); });
     if (s.kind !== 'solid' && s.b - s.a >= 1.3) { const j = (c, w, h, y) => { if (s.axis === 'x') B.box('skirt', .17, h, w, s.L, y, c); else B.box('skirt', w, h, .17, c, y, s.L); }; j(s.dc - s.dw / 2 - .03, .06, 2.14, 1.07); j(s.dc + s.dw / 2 + .03, .06, 2.14, 1.07); j(s.dc, s.dw + .12, .06, 2.13); }
   });
-  fl.rooms.forEach(q => { if (q.type === 'core' || OUTSIDE.has(q.type) || q.w * q.d < 2.2) return; const nx = Math.max(1, Math.round(q.w / 1.7)), nz = Math.max(1, Math.round(q.d / 1.7)); for (let i = 0; i < nx; i++) for (let k = 0; k < nz; k++) B.cyl('downlight', .055, .012, q.x + q.w * (i + .5) / nx, Hc - .008, q.z + q.d * (k + .5) / nz, .055, 16); });
-  fl.rooms.forEach(q => furnishBest(q, B, segs, fl.rooms, { Hc, house, glass: data.style === 'glass', fi }));
+  const HcOf = q => q.tall ? data.floorH * 2 - .3 : Hc;
+  fl.rooms.forEach(q => { if (q.type === 'core' || q.type === 'void' || OUTSIDE.has(q.type) || q.w * q.d < 2.2) return; const Hc = HcOf(q); const nx = Math.max(1, Math.round(q.w / 1.7)), nz = Math.max(1, Math.round(q.d / 1.7)); for (let i = 0; i < nx; i++) for (let k = 0; k < nz; k++) B.cyl('downlight', .055, .012, q.x + q.w * (i + .5) / nx, Hc - .008, q.z + q.d * (k + .5) / nz, .055, 16); });
+  fl.rooms.forEach(q => furnishBest(q, B, segs, fl.rooms, { Hc: HcOf(q), house, glass: data.style === 'glass', fi }));
 }
 // Records what furnish() would draw, so a layout can be checked before it is built.
 class Rec {
@@ -467,7 +472,7 @@ const SOLVE = new Set(['open', 'living', 'kitchen', 'dining', 'bed', 'bath', 'st
 function furnishBest(q, B, segs, rooms, o) {
   const glassZ = []; segs.forEach(g => { if ((g.A === q) === (g.B === q) || (g.A && g.B && !OUTSIDE.has((g.A === q ? g.B : g.A).type))) return; if (g.A && g.B && g.kind !== 'slider') return; const d0 = g.A === q ? g.L - .55 : g.L, d1 = g.A === q ? g.L : g.L + .55; glassZ.push(g.axis === 'x' ? [d0, d1, g.a, g.b] : [g.a, g.b, d0, d1]); });
   const SOFT = new Set(['curtain', 'plant', 'plant2', 'pot', 'flower']);
-  const fixed = !SOLVE.has(q.type) || (o.house && o.fi === 0 && q.type === 'hall'), zones = fixed ? [] : doorZones(q, o.house ? segs.filter(g => g.kind === 'door') : segs);
+  const fixed = !SOLVE.has(q.type) || q.tall || (o.house && o.fi === 0 && q.type === 'hall'), zones = fixed ? [] : doorZones(q, o.house ? segs.filter(g => g.kind === 'door') : segs);
   const tries = fixed ? [{}] : o.house ? [{}, { flip: 1 }] : [{}, { swap: 1 }, { flip: 1 }, { flip: 1, swap: 1 }, { face: 'n' }, { face: 'n', flip: 1 }, { face: 's' }, { face: 's', flip: 1 }, { face: 'e' }, { face: 'e', flip: 1 }, { face: 'w' }, { face: 'w', flip: 1 }];
   const real = c => !((c.y1 - c.y0 < .05 && c.y0 < .1) || c.y0 > 2.0);          // not a rug, not something on the ceiling
   let best = null;
@@ -480,10 +485,12 @@ function furnishBest(q, B, segs, rooms, o) {
   best.R.calls.forEach(c => {
     if (real(c) && (zones.some(z => overlap(c, z) > .02) || c.x0 < q.x - .06 || c.x1 > q.x + q.w + .06 || c.z0 < q.z - .06 || c.z1 > q.z + q.d + .06)) return;   // last resort: leave the piece out
     B[c.fn](...c.args);
+    if (q.pool && !q.solids.length) { q.solids.push(q.pool); q.all.push(q.pool); }
     if (real(c) && c.y0 < 1.1 && c.y1 - c.y0 >= .12 && c.y1 > .3) { q.all.push([c.x0, c.x1, c.z0, c.z1]); if (c.y1 > .5 && (c.x1 - c.x0) * (c.z1 - c.z0) >= .5) q.solids.push([c.x0, c.x1, c.z0, c.z1]); }      // you can brush past chairs and lamps, not through tables, beds and units
   });
 }
 function furnish(q, B, rooms, o) {
+  const data_floorH = (q.tall ? (o.Hc + .3) / 2 : o.Hc + .3);
   const { x, z, w, d, type } = q, { Hc, house, glass, fi } = o, y = .02, e = q.ext || {};
   const win = o.face || (e.s ? 's' : e.n ? 'n' : e.e ? 'e' : e.w ? 'w' : 'n'), alongX = win === 'n' || win === 's';
   const U = alongX ? w : d, V = alongX ? d : w;         // U runs along the window wall, V runs back into the room
@@ -527,6 +534,29 @@ function furnish(q, B, rooms, o) {
   const freeRun = (v, lo = .06, hi = U - .06) => { let best = [lo, lo], a = null; for (let u = lo; u <= hi + 1e-6; u += .05) { const [wx, wz] = to(u, v), hit = (o.zones || []).some(z => wx > z[0] && wx < z[1] && wz > z[2] && wz < z[3]); if (!hit && a === null) a = u; if ((hit || u + .05 > hi) && a !== null) { const b = hit ? u - .05 : u; if (b - a > best[1] - best[0]) best = [a, b]; a = null; } } return best; };
   switch (type) {
     case 'open': {
+      if (q.tall) {          // the great room: six metres high, glass to the south and west
+        const H2 = Hc; o.flip = !o.flip;          // measured from the west wall
+        // stone chimney the full height of the room, fire on the lounge side, at the opening to the dining room
+        box('stone', .7, H2, 3.4, U - .45, H2 / 2, 3.4); box('black', .06, .5, 2.4, U - .83, .75, 3.4); box('fire', .02, .2, 2.1, U - .86, .7, 3.4); box('glass', .01, .42, 2.3, U - .87, .75, 3.4); box('screen', .05, 1.0, 1.8, U - .83, 2.1, 3.4);
+        // a deep U of sofas round a pair of stone tables
+        rbox('rug', 5.6, .014, 4.6, U - 4.3, .007, 3.4, .005);
+        rbox('sofa', 1.05, .42, 3.6, U - 6.3, .23, 3.4, .1); rbox('sofa', .28, .5, 3.6, U - 6.7, .6, 3.4, .09);
+        rbox('sofa', 3.0, .42, 1.05, U - 4.3, .23, 1.45, .1); rbox('sofa', 3.0, .5, .28, U - 4.3, .6, 1.06, .09); rbox('fabric', .95, .42, .95, U - 3.4, .23, 5.3, .12); rbox('fabric', .95, .42, .95, U - 4.9, .23, 5.3, .12);
+        [[-5.9, 2.4], [-5.9, 4.4], [-5.0, 1.5], [-3.6, 1.5]].forEach(([a, b], i) => rbox(i % 2 ? 'throw_' : 'linen', .42, .36, .42, U + a, .62, b, .08));
+        cyl('stone', .65, .3, U - 4.6, .17, 3.1); cyl('stone', .45, .24, U - 3.6, .14, 3.9); box('books', .3, .06, .22, U - 4.6, .35, 3.1); cyl('pot', .06, .2, U - 3.6, .36, 3.9, .04); ball('flower', .12, U - 3.6, .52, 3.9, 1.1);
+        // a chandelier dropping through the height of the room
+        for (let k = 0; k < 14; k++) { const a = k * 2.4, rr = .25 + (k % 5) * .22, dr = 1.2 + (k * .37 % 2.6); box('black', .01, dr, .01, U - 4.3 + Math.cos(a) * rr, H2 - dr / 2, 3.4 + Math.sin(a) * rr); ball('lampShade', .11, U - 4.3 + Math.cos(a) * rr, H2 - dr - .08, 3.4 + Math.sin(a) * rr, 1); }
+        // a grand piano in the glass corner
+        rbox('black', 1.5, .3, 2.1, 2.0, .82, 2.0, .3); box('black', 1.4, .03, 1.9, 2.05, 1.25, 2.0, 0, 0); box('black', .06, .7, .06, 1.45, .35, 1.2); box('black', .06, .7, .06, 2.55, .35, 1.2); box('black', .06, .7, .06, 2.0, .35, 2.9); box('white', 1.2, .03, .16, 2.0, .7, .9); rbox('fabric', .7, .1, .4, 2.0, .48, .45, .04); box('black', .05, .46, .05, 1.72, .23, .45); box('black', .05, .46, .05, 2.28, .23, .45);
+        plant(.6, .6, 1.6); plant(U - 1.2, .7, 1.4);
+        // kitchen along the back wall with a four-metre island, and a glass wine wall
+        kitchen(6.0, 9.4); box('cabinet', 4.0, .9, 1.1, 7.6, .45, V - 2.5); rbox('worktop', 4.2, .06, 1.24, 7.6, .93, V - 2.5, .02); for (let k = 0; k < 5; k++) { const su = 5.9 + k * .85; cyl('fabric', .18, .07, su, .7, V - 3.4); cyl('brass', .02, .68, su, .34, V - 3.4); cyl('brass', .16, .02, su, .01, V - 3.4); }
+        for (let k = 0; k < 3; k++) { box('black', .012, 2.2, .012, 6.6 + k, H2 - 1.1, V - 2.5); cyl('lampShade', .16, .26, 6.6 + k, H2 - 2.3, V - 2.5, .1); }
+        box('glass', .5, 2.6, 1.6, U - .4, 1.3, 6.3); for (let k = 0; k < 5; k++) box('darkWood', .42, .04, 1.5, U - .4, .35 + k * .5, 6.3);
+        // floating oak stair up to the roof, against the back wall
+        { const n = 18, rise = (data_floorH) / n; for (let k = 0; k < n; k++) { box('oak', .3, .06, 1.1, .7 + k * .29, rise * (k + 1), V - .65); } box('glassRail', n * .29, 1.0, .02, .7 + n * .29 / 2, data_floorH / 2 + .9, V - 1.2); }
+        return;
+      }
       // where the hall door comes in on the back wall, so the kitchen leaves it clear
       const hall = rooms.find(r => r.unit === q.unit && r.type === 'hall');
       let kA = .06, kB = U - .06;
@@ -560,7 +590,7 @@ function furnish(q, B, rooms, o) {
       return;
     }
     case 'kitchen': { kitchen(.06, U - .06); island(U / 2, Math.max(1.5, V - 2.3), Math.min(2.4, U - 1.8)); plant(.4, .4, .9); beams(); return; }
-    case 'dining': { longTable(U / 2, V / 2, Math.min(2.2, U - 1), U < 3.4 ? 4 : 6); beams(); return; }
+    case 'dining': { if (U > 6 && V > 6) { rbox('rug', 6, .014, 3.4, U / 2, .007, V / 2, .005); longTable(U / 2, V / 2, 4.4, 12); [-1.4, 0, 1.4].forEach(k => pendant(U / 2 + k, V / 2, .55, .2)); rbox('darkWood', 3.2, .8, .45, U / 2, .4, V - .26, .02); artBack(U / 2, 2.4, 1.2, 1); plant(.6, .6, 1.4); return; } longTable(U / 2, V / 2, Math.min(2.2, U - 1), U < 3.4 ? 4 : 6); beams(); return; }
     case 'bed': {
       const bw = U > 3.3 ? 1.65 : 1.4, bl = 2.05, bu = U / 2, bv = V - bl / 2 - .12;
       rbox('darkWood', bw + .12, .28, bl + .06, bu, .16, bv, .04); rbox('linen', bw, .24, bl - .08, bu, .42, bv, .08); rbox('throw_', bw + .04, .1, .7, bu, .52, bv - bl / 2 + .5, .04);
@@ -626,6 +656,7 @@ function wavePts(base, i, inset = 0, scale = 1) { return base.map(p => { const o
 function towerExtras(S, data, plate) {
   const base = roundRect(plate.x0, plate.x1, plate.z0, plate.z1, 1.6, .55), n = data.floors.length;
   for (let i = 1; i <= n; i++) {
+    if (i === n && data.floors[n - 1].rooms.some(q => OUTSIDE.has(q.type))) continue;          // a roof terrace has its own roof
     const top = i === n, sc = top ? 1.15 : 1, pts = wavePts(base, i, 0, sc), y = i * data.floorH + (top ? .2 : 0);
     const sh = new THREE.Shape(pts.map(p => new THREE.Vector2(p[0], p[1])));
     if (!top) sh.holes.push(new THREE.Path([[plate.x0 + .2, plate.z0 + .2], [plate.x1 - .2, plate.z0 + .2], [plate.x1 - .2, plate.z1 - .2], [plate.x0 + .2, plate.z1 - .2]].map(p => new THREE.Vector2(p[0], p[1]))));
@@ -636,15 +667,32 @@ function towerExtras(S, data, plate) {
   return base;
 }
 function towerRoof(R, data, plate, y) {
-  const { cx, cz } = plate;
-  R.box('deck', plate.w - 6, .06, plate.d - 5, cx, y + .23, cz);
-  R.box('lantern', 13, 5.2, 7.5, cx, y + 3.1, cz - .5); R.box('wave', 14.4, .35, 8.9, cx, y + 5.9, cz - .5); R.box('spandrel', 13.2, .5, 7.7, cx, y + .45, cz - .5);
-  for (let i = 0; i <= 13; i++) { const x = cx - 6.5 + i; R.box('bronze', .07, 5.2, .3, x, y + 3.1, cz - 4.3); R.box('bronze', .07, 5.2, .3, x, y + 3.1, cz + 3.3); }
-  for (let i = 0; i <= 7; i++) { const z = cz - 4.25 + i * 7.5 / 7; R.box('bronze', .3, 5.2, .07, cx - 6.55, y + 3.1, z); R.box('bronze', .3, 5.2, .07, cx + 6.55, y + 3.1, z); }
-  [[-11, 5.5], [11, 5.5], [-11, -6], [11, -6]].forEach(([dx, dz]) => { R.rbox('pot', 2.2, .7, 1.2, cx + dx, y + .6, cz + dz, .05); R.ball('plant', .9, cx + dx, y + 1.6, cz + dz, .9, 2); R.ball('plant2', .6, cx + dx + .6, y + 1.9, cz + dz, 1, 2); });
-  R.rbox('fabric', 2.6, .4, .9, cx - 4, y + .45, cz + 6, .1); R.rbox('fabric', 2.6, .4, .9, cx + 4, y + .45, cz + 6, .1); R.cyl('black', .5, .04, cx, y + .65, cz + 6);
+  const top = data.floors[data.floors.length - 1], yT = y - data.floorH;
+  // a thin white roof floating over the enclosed rooms, with a deep overhang
+  top.rooms.forEach(q => { if (OUTSIDE.has(q.type)) return; R.box('wave', q.w + 1.6, .32, q.d + 1.6, q.x + q.w / 2, y - .1, q.z + q.d / 2); });
+  const deck = top.rooms.find(q => q.pool);
+  if (deck) {
+    const [x0, x1, z0] = deck.pool, z1 = plate.z1 + 3.8, cx = (x0 + x1) / 2, cz = (z0 + z1) / 2, w = x1 - x0, d = z1 - z0, hT = 1.25;
+    // glass tank: the outer half hangs past the edge of the tower, with a glass floor you can see the street through
+    R.box('glass', w, .1, d, cx, yT + .05, cz); R.box('pool', w - .16, hT - .22, d - .16, cx, yT + .1 + (hT - .22) / 2, cz);
+    R.box('glass', w, hT, .08, cx, yT + hT / 2, z0); R.box('glass', w, hT, .08, cx, yT + hT / 2, z1); R.box('glass', .08, hT, d, x0, yT + hT / 2, cz); R.box('glass', .08, hT, d, x1, yT + hT / 2, cz);
+    R.box('metal', w + .1, .05, .1, cx, yT + hT, z0); R.box('metal', w + .1, .05, .1, cx, yT + hT, z1); R.box('metal', .1, .05, d, x0, yT + hT, cz); R.box('metal', .1, .05, d, x1, yT + hT, cz);
+    for (let x = x0 + .6; x < x1; x += (w - 1.2) / 4) { R.box('bronze', .16, .5, z1 - plate.z1 + 1.2, x, yT - .32, (z1 + plate.z1) / 2 - .6); }
+    // raised sun deck behind it, steps up, loungers
+    R.box('deck', w + 1.2, hT - .04, 2.2, cx - .6, yT + (hT - .04) / 2, z0 - 1.1); for (let k = 0; k < 4; k++) R.box('deck', .34, hT * (k + 1) / 5, 2.2, x0 - 1.37 - k * .34, yT + hT * (k + 1) / 10, z0 - 1.1);
+    for (let k = 0; k < 4; k++) { const lx = x0 + 1.2 + k * (w - 2.4) / 3; R.rbox('white', .7, .1, 1.9, lx, yT + hT + .22, z0 - 1.15, .04); R.rbox('fabric', .62, .08, 1.3, lx, yT + hT + .31, z0 - .9, .03); R.rbox('fabric', .62, .08, .6, lx, yT + hT + .42, z0 - 1.82, .03); }
+    R.rbox('pot', 1.2, .7, 1.2, deck.x + 1.3, yT + .35, deck.z + deck.d - 1.3, .05); R.ball('plant', .8, deck.x + 1.3, yT + 1.5, deck.z + deck.d - 1.3, 1.2, 2); R.ball('plant2', .5, deck.x + 1.7, yT + 2.1, deck.z + deck.d - 1.1, 1.1, 2);
+  }
+  const gd = top.rooms.find(q => q.id && q.id.endsWith('-garden'));
+  if (gd) {
+    const gx = gd.x + gd.w / 2, gz = gd.z + gd.d / 2;
+    R.cyl('stone', 1.1, .45, gx - 1.5, yT + .22, gz + 1.5, 1.1, 28); R.cyl('black', .8, .06, gx - 1.5, yT + .46, gz + 1.5, .8, 24); R.cyl('fire', .45, .12, gx - 1.5, yT + .52, gz + 1.5, .2, 12);
+    [[0, -2.6, 3.6, .9], [-2.6, 0, .9, 3.6], [2.6, 0, .9, 3.0]].forEach(([dx, dz, sw, sdp]) => { R.rbox('fabric', sw, .42, sdp, gx - 1.5 + dx, yT + .25, gz + 1.5 + dz, .1); R.rbox('fabric', dx ? .25 : sw, .5, dx ? sdp : .25, gx - 1.5 + dx * 1.13, yT + .62, gz + 1.5 + dz * 1.13, .08); });
+    for (let k = 0; k < 4; k++) { const tx = gd.x + 1.6 + k * (gd.w - 3.2) / 3, tz = gd.z + 1.5; R.rbox('pot', 1.3, .8, 1.3, tx, yT + .4, tz, .05); R.cyl('trunk', .09, 1.6, tx, yT + 1.6, tz); R.ball('plant', 1.0, tx, yT + 2.9, tz, 1.1, 2); R.ball('plant2', .7, tx + .4, yT + 3.3, tz + .2, 1, 2); }
+    R.box('cabinet', 3.2, .9, .7, gd.x + 2.2, yT + .45, gd.z + gd.d - 1.2); R.box('worktop', 3.3, .05, .8, gd.x + 2.2, yT + .92, gd.z + gd.d - 1.2); R.box('black', .7, .02, .5, gd.x + 2.6, yT + .95, gd.z + gd.d - 1.2);
+    for (let k = 0; k <= 5; k++) R.box('oak', .14, .16, 4.4, gd.x + .9 + k * .65, yT + 2.75, gd.z + gd.d - 2.2); [[.7, -.2], [4.4, -.2], [.7, -4.2], [4.4, -4.2]].forEach(([a, b]) => R.box('oak', .16, 2.7, .16, gd.x + a, yT + 1.35, gd.z + gd.d + b));
+  }
 }
-// Wharf Row: a row of gabled wharf houses, with a roof garden between them
 function blockRoof(R, data, plate, y) {
   for (let b = 0; b < 6; b++) {
     if (b === 2 || b === 3) continue;
@@ -842,7 +890,7 @@ export function run(data, root) {
   if (data.style === 'house') houseExtras(S, plate);
   S.build(building);
   const roofG = new THREE.Group(); building.add(roofG);
-  { const R = new Bucket(M); if (data.roof === 'crown') { towerRoof(R, data, plate, topY); roofH = 8; } else if (data.roof === 'gables') { blockRoof(R, data, plate, topY); roofH = 5; } else roofH = houseRoof(R, data, plate, topY) + 2.5; R.build(roofG); }
+  { const R = new Bucket(M); if (data.roof === 'crown') { towerRoof(R, data, plate, topY); roofH = 2; } else if (data.roof === 'gables') { blockRoof(R, data, plate, topY); roofH = 5; } else roofH = houseRoof(R, data, plate, topY) + 2.5; R.build(roofG); }
   const inner = data.floors.map(() => null);
   function ensureInner(i) { if (inner[i]) return inner[i]; const B = new Bucket(M); innerFloor(B, data.floors[i], plans[i], data, i); const g = B.build(new THREE.Group()); g.position.y = i * data.floorH; g.visible = false; building.add(g); inner[i] = g; return g; }
   function showInner(list) { inner.forEach((g, i) => { if (g) g.visible = list.includes(i); }); list.forEach(i => { const g = ensureInner(i); g.visible = true; g.children.forEach(m => { m.visible = furnished || FINISH.some(k => m.material === M[k]); }); }); dirty = true; }
@@ -911,7 +959,7 @@ export function run(data, root) {
   // picking volumes: one per floor, one per room
   const pickMat = new THREE.MeshBasicMaterial({ visible: false });
   const floorPick = data.floors.map((fl, i) => { const m = new THREE.Mesh(new THREE.BoxGeometry(plate.w + .6, data.floorH, plate.d + .6), pickMat); m.position.set(plate.cx, i * data.floorH + data.floorH / 2 - .3, plate.cz); m.userData.floor = i; building.add(m); return m; });
-  const roomPick = data.floors.map((fl, i) => fl.rooms.filter(q => q.type !== 'core' && !COMMUNAL.has(q.type)).map(q => { const m = new THREE.Mesh(new THREE.BoxGeometry(q.w, .2, q.d), pickMat); m.position.set(q.x + q.w / 2, i * data.floorH + .1, q.z + q.d / 2); m.userData.room = q; m.userData.floor = i; building.add(m); return m; }));
+  const roomPick = data.floors.map((fl, i) => fl.rooms.filter(q => q.type !== 'core' && q.type !== 'void' && !COMMUNAL.has(q.type)).map(q => { const m = new THREE.Mesh(new THREE.BoxGeometry(q.w, .2, q.d), pickMat); m.position.set(q.x + q.w / 2, i * data.floorH + .1, q.z + q.d / 2); m.userData.room = q; m.userData.floor = i; building.add(m); return m; }));
 
   // availability colours and selection highlights
   const STATUS = { Available: '#c8913a', Reserved: '#a7a29a', Sold: '#8a3a32' };
@@ -1072,7 +1120,7 @@ export function run(data, root) {
     } catch (e) { console.warn('ambient occlusion unavailable', e); aoOff = true; }
     aoLoading = false;
   }
-  const EYE = 1.52, okRoom = r => (data.single || (walk && r.unit === walk.unit)) && r.type !== 'core' && !COMMUNAL.has(r.type);
+  const EYE = 1.52, okRoom = r => (data.single || (walk && r.unit === walk.unit)) && r.type !== 'core' && r.type !== 'void' && !COMMUNAL.has(r.type);
   const gaps = fi => plans[fi].filter(g => g.A && g.B && okRoom(g.A) && okRoom(g.B) && ['door', 'slider', 'bifold', 'none'].includes(g.kind)).map(g => g.kind === 'door' ? { g, a: g.dc - g.dw / 2 + .09, b: g.dc + g.dw / 2 - .09, c: g.dc } : { g, a: g.a + .3, b: g.b - .3, c: (g.a + g.b) / 2 }).filter(o => o.b > o.a);
   const hitsSolid = (r, x, z, pad = .12, all) => ((all ? r.all : r.solids) || []).some(b => x > b[0] - pad && x < b[1] + pad && z > b[2] - pad && z < b[3] + pad);
   // the room you would be standing in at (x, z), or null if that is inside a wall or a piece of furniture
@@ -1129,6 +1177,8 @@ export function run(data, root) {
     setRoomLights(fi, q.unit); drawPlan(); ui.walk.querySelector('[data-where]').textContent = q.name;
     hint(touch ? 'Use the pad to walk. Drag to look around.' : 'Drag to look around. Click the floor or the plan to walk there, or use W A S D.');
     ui.card.classList.remove('show');
+    if (!data.single) { const fs = data.floors.map((f, i) => f.rooms.some(r => okRoom(r) && r.type === 'hall') ? i : -1).filter(i => i >= 0); let wf = ui.walk.querySelector('.wf'); if (!wf) { wf = document.createElement('div'); wf.className = 'wf'; const row = ui.walk.querySelector('.row'); row.parentNode.insertBefore(wf, row); } wf.innerHTML = '';
+      if (fs.length > 1) fs.forEach(i => { const b = document.createElement('button'); b.type = 'button'; b.dataset.wfloor = i; b.textContent = data.floors[i].label; b.classList.toggle('on', i === walk.floor); b.addEventListener('click', () => { if (i !== walk.floor) moveTo(data.floors[i].rooms.find(r => okRoom(r) && r.type === 'hall'), i); poke(); }); wf.append(b); }); }
   }
   function exitWalk(back = true) {
     if (!walk) return;
@@ -1160,7 +1210,7 @@ export function run(data, root) {
     rs.forEach(q => { g.fillStyle = walk.room === q ? 'rgba(200,145,58,.55)' : OUTSIDE.has(q.type) ? 'rgba(237,232,223,.08)' : 'rgba(237,232,223,.16)'; g.strokeStyle = 'rgba(237,232,223,.7)'; g.lineWidth = devicePixelRatio; const X = ox + (q.x - x0) * s, Z = oz + (q.z - z0) * s; g.fillRect(X, Z, q.w * s, q.d * s); g.strokeRect(X, Z, q.w * s, q.d * s); });
     const p = camera.position, px = ox + (p.x - x0) * s, pz = oz + (p.z - z0) * s;
     g.fillStyle = '#ede8df'; g.beginPath(); g.arc(px, pz, 4 * devicePixelRatio, 0, 7); g.fill(); g.strokeStyle = '#ede8df'; g.beginPath(); g.moveTo(px, pz); g.lineTo(px + Math.sin(look.yaw) * 1.2 * s, pz + Math.cos(look.yaw) * 1.2 * s); g.stroke();
-    if (data.single) ui.walk.querySelectorAll('[data-wfloor]').forEach(b => b.classList.toggle('on', +b.dataset.wfloor === walk.floor));
+    ui.walk.querySelectorAll('[data-wfloor]').forEach(b => b.classList.toggle('on', +b.dataset.wfloor === walk.floor));
   }
   ui.plan.addEventListener('click', ev => {
     const c = ui.plan, m = c._map; if (!m || !walk) return;

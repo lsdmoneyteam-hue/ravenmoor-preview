@@ -4,9 +4,9 @@
 export const CONTENT = {
   tower: {
     slug: 'halden-tower', model: 'tower', developer: 'Halden Estates', theme: 'night',
-    film: ['Level 25', 'The Penthouse.', 'Thirty metres of glass, facing the park.', 'Above the city, within it.'],
+    film: ['Level 25 and the roof', 'The Penthouse.', 'Six metres high, glass on two sides.', 'Above the city, within it.'],
     tagline: 'Twenty-six floors that ripple like water.',
-    intro: 'Apartments and penthouses above Campbell Park, each with a balcony no other home shares.',
+    intro: 'Apartments and penthouses above Campbell Park, each with a balcony no other home shares, and one home across the top two levels with a pool in the sky.',
     place: {
       title: 'Why Milton Keynes?',
       text: 'A city built around green space, with London half an hour away and more new jobs each year than almost anywhere in Britain.',
@@ -19,10 +19,10 @@ export const CONTENT = {
       ['The view', 'view', 'The city by day, the lights by night.'],
     ],
     feature: {
-      unit: '25.03', kicker: 'Level 25 · one home', title: 'The Penthouse',
-      line: 'The whole south side of the top floor. Thirty metres of glass, a terrace as wide as the tower, and nobody above you but the lantern.',
-      facts: [['240 m²', 'inside'], ['3', 'bedrooms'], ['3', 'bathrooms'], ['£1,450,000', 'guide price']],
-      shots: [['pent-dusk', 'The living room at dusk'], ['pent-living', 'Living', 'Eleven metres of glass facing the park.'], ['pent-kitchen', 'Kitchen', 'Stone island, full-height larder, room for ten.'], ['pent-bed', 'Main bedroom', 'Wakes up to the sunrise, with its own dressing room.'], ['pent-terrace', 'The terrace', 'Wraps the whole south side, 80 metres up.']],
+      unit: '25.03', kicker: 'Level 25 and the roof · one home', title: 'The Penthouse',
+      line: 'The whole top floor and the roof above it. A great room six metres high, a private lift, and a glass-bottomed pool that hangs out over the edge of the tower.',
+      facts: [['560 m²', 'inside'], ['3', 'bedroom suites'], ['2', 'levels and a roof garden'], ['£19,500,000', 'guide price']],
+      shots: [['pent-dusk', 'The great room at dusk'], ['pent-living', 'Great room', 'Six metres of glass on two sides, a stone chimney and a floating stair.'], ['pent-kitchen', 'Kitchen', 'A four-metre island under the double-height ceiling.'], ['pent-bed', 'Main bedroom', 'Sixty square metres, with its own dressing room and bathroom.'], ['pent-terrace', 'The pool', 'Swim out past the edge of the building, with the street 80 metres below the glass.']],
     },
     amenTitle: 'Six ways to spend a day',
     amenities: [
@@ -34,7 +34,7 @@ export const CONTENT = {
       ['Campbell Park', 'place', 'A hundred acres across the road.'],
     ],
     spec: [['Structure', 'Concrete frame, triple glazing, bronze fins'], ['Floors', 'Engineered oak; porcelain in bathrooms'], ['Kitchens', 'Stone worktops, integrated appliances'], ['Heating', 'Shared air-source heat network, EPC B'], ['Parking', 'Basement spaces with EV charging']],
-    numbers: [['26', 'storeys'], ['122', 'homes'], ['1–3', 'bedrooms'], ['2028', 'completion']],
+    numbers: [['26', 'storeys'], ['120', 'homes'], ['1–3', 'bedrooms'], ['2028', 'completion']],
     sample: { unit: '16.03', floor: 16 },
   },
   block: {

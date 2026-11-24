@@ -35,7 +35,7 @@ function flat(unit, x0, z0, w, d, face, beds, opts = {}) {
   return rooms;
 }
 
-const sqm = (rooms, unit) => rooms.filter(q => q.unit === unit && q.type !== 'balcony' && q.type !== 'terrace').reduce((a, q) => a + q.w * q.d, 0);
+const sqm = (rooms, unit) => rooms.filter(q => q.unit === unit && q.type !== 'balcony' && q.type !== 'terrace' && q.type !== 'void').reduce((a, q) => a + q.w * q.d, 0);
 const money = n => '£' + n.toLocaleString('en-GB');
 
 // ---------- Halden Tower: 26 storeys of glass, Central Milton Keynes (fictional) ----------
@@ -54,6 +54,23 @@ export function tower() {
     rooms.push(...flat(u(5), 5, 1, 10, 8, 's', 2));
     return rooms;
   };
+  // The Penthouse: the whole 25th floor and the roof above it. A double-height great room, three bedroom suites,
+  // a dining room and a cinema bar; upstairs a glass sky lounge, a roof garden, and a pool that hangs out over the edge.
+  const UP = '25.03', pq = (id, type, x, z, w, d, name, extra = {}) => r(UP + '-' + id, type, x, z, w, d, { unit: UP, name, ...extra });
+  const sky25 = () => [
+    r('core', 'core', -2.5, -9, 5, 8, { name: 'Private lift and stairs' }),
+    pq('hall', 'hall', -15, -1, 30, 2, 'Gallery'),
+    pq('liv', 'open', -15, 1, 12, 8, 'Great room', { tall: true }), pq('dining', 'dining', -3, 1, 9, 8, 'Dining room'), pq('cinema', 'living', 6, 1, 9, 8, 'Cinema and bar'),
+    pq('b1', 'bed', -15, -9, 7.5, 8, 'Main bedroom'), pq('bath', 'bath', -7.5, -9, 5, 4.5, 'Main bathroom'), pq('dress', 'utility', -7.5, -4.5, 5, 3.5, 'Dressing room'),
+    pq('b2', 'bed', 2.5, -9, 6, 8, 'Bedroom 2'), pq('bath2', 'bath', 8.5, -9, 2.5, 4, 'Bathroom 2'), pq('laundry', 'utility', 8.5, -5, 2.5, 4, 'Laundry'), pq('b3', 'bed', 11, -9, 4, 8, 'Bedroom 3'),
+  ];
+  const sky26 = () => [
+    r('core', 'core', -2.5, -9, 5, 8, { name: 'Private lift and stairs' }),
+    pq('void', 'void', -15, 1, 12, 8, 'Open to the great room below'),
+    pq('pooldeck', 'terrace', -3, 1, 18, 8, 'Pool terrace', { pool: [3.2, 14.6, 5.4, 9] }),
+    pq('landing', 'hall', 2.5, -1, 12.5, 2, 'Landing'), pq('bridge', 'terrace', -2.5, -1, 5, 2, 'Terrace'),
+    pq('sky', 'living', 2.5, -9, 12.5, 8, 'Sky lounge'), pq('garden', 'terrace', -15, -9, 12.5, 10, 'Roof garden'),
+  ];
   const penthouse = (f) => {
     const rooms = [
       r('corr', 'corridor', -15, -1, 30, 2, { name: 'Corridor' }),
@@ -62,15 +79,6 @@ export function tower() {
     const u = n => `${f}.${String(n).padStart(2, '0')}`;
     rooms.push(...flat(u(1), -15, -9, 12.5, 8, 'n', 2, { livingLeft: true }));
     rooms.push(...flat(u(2), 2.5, -9, 12.5, 8, 'n', 2));
-    if (f === 25) {
-      // the whole south side of the top floor is one home
-      const unit = u(3), q = (id, type, x, z, w, d, name) => r(unit + '-' + id, type, x, z, w, d, { unit, name });
-      rooms.push(q('liv', 'open', -15, 4, 11, 5, 'Living, kitchen and dining'), q('b1', 'bed', -4, 4, 6.5, 5, 'Main bedroom'), q('b2', 'bed', 2.5, 4, 6.25, 5, 'Bedroom 2'), q('b3', 'bed', 8.75, 4, 6.25, 5, 'Bedroom 3'),
-        q('study', 'study', -15, 1, 4.5, 3, 'Study'), q('pantry', 'utility', -10.5, 1, 2.5, 3, 'Pantry'), q('bath', 'bath', -8, 1, 2.5, 3, 'Bathroom'), q('hall', 'hall', -5.5, 1, 1.5, 3, 'Hall'),
-        q('hall2', 'hall', -4, 2.9, 19, 1.1, 'Hall'), q('ens', 'bath', -4, 1, 3, 1.9, 'En-suite'), q('dress', 'utility', -1, 1, 3.5, 1.9, 'Dressing room'), q('bath2', 'bath', 2.5, 1, 3, 1.9, 'Bathroom 2'),
-        q('laundry', 'utility', 5.5, 1, 3.5, 1.9, 'Laundry'), q('store', 'utility', 9, 1, 6, 1.9, 'Storage'));
-      return rooms;
-    }
     rooms.push(...flat(u(3), -15, 1, 15, 8, 's', 3, { livingLeft: true }));
     rooms.push(...flat(u(4), 0, 1, 15, 8, 's', 3));
     return rooms;
@@ -83,14 +91,16 @@ export function tower() {
     r('core', 'core', -2.5, -9, 5, 8, { name: 'Lifts and stairs' }),
   ], shared: true });
   for (let f = 1; f <= 23; f++) floors.push({ label: 'Floor ' + f, short: String(f), rooms: typical(f) });
-  for (let f = 24; f <= 25; f++) floors.push({ label: 'Floor ' + f, tag: 'Penthouses', short: String(f), rooms: penthouse(f) });
+  floors.push({ label: 'Floor 24', tag: 'Penthouses', short: '24', rooms: penthouse(24) });
+  floors.push({ label: 'Floor 25', tag: 'The Penthouse', short: '25', rooms: sky25() });
+  floors.push({ label: 'Roof', tag: 'The Penthouse, upper level', short: 'R', rooms: sky26(), upper: true });
 
   // homes: price rises with height and size; a few sold or reserved
   const units = {};
   let seed = 7;
   const rnd = () => (seed = (seed * 16807) % 2147483647) / 2147483647;
   floors.forEach((fl, fi) => {
-    if (fl.shared) return;
+    if (fl.shared || fl.upper) return;
     const ids = [...new Set(fl.rooms.filter(q => q.unit).map(q => q.unit))];
     ids.forEach(id => {
       const rs = fl.rooms.filter(q => q.unit === id);
@@ -113,11 +123,11 @@ export function tower() {
       };
     });
   });
-  Object.assign(units['25.03'], { name: 'The Penthouse', price: money(1450000), status: 'Available', baths: 3, aspect: 'The whole south side of the top floor, over the park', features: ['Glass on three sides', 'A terrace the full width of the tower', 'Three bedrooms, three bathrooms and a study', 'Private lift lobby and two parking spaces'] });
+  Object.assign(units['25.03'], { name: 'The Penthouse', price: money(19500000), status: 'Available', area: 560, aspect: 'The whole top floor and the roof, with the park below', features: ['Six-metre great room, glass on two sides', 'Glass-bottomed pool hanging over the edge of the tower', 'Sky lounge, roof garden and fire terrace', 'Private lift, cinema, three bedroom suites'] });
   return {
     key: 'tower', name: 'Halden Tower', place: 'Central Milton Keynes',
-    blurb: '26 storeys wrapped in rippling white balconies, no two floors the same. 115 apartments and seven penthouses.',
-    style: 'glass', story: { floor: 25, room: '25.03-liv' }, floorH: H, size: [W, D], floors, units,
+    blurb: '26 storeys wrapped in rippling white balconies, no two floors the same. 115 apartments, four penthouses and one home across the top two levels.',
+    style: 'glass', story: { floor: 25, room: '25.03-liv' }, wallKind: { '25.03-dining|25.03-liv': 'none' }, doorAt: { '25.03-hall|25.03-liv': 0.88 }, floorH: H, size: [W, D], floors, units,
     site: { kind: 'city', water: false, park: 's' },
     roof: 'crown', startHour: 18.5,
     spec: {
