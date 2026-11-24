@@ -70,6 +70,14 @@ export function tower() {
     const u = n => `${f}.${String(n).padStart(2, '0')}`;
     rooms.push(...flat(u(1), -15, -9, 12.5, 8, 'n', 2, { livingLeft: true }));
     rooms.push(...flat(u(2), 2.5, -9, 12.5, 8, 'n', 2));
+    if (f === 25) {
+      // the whole south side of the top floor is one home
+      const unit = u(3), q = (id, type, x, z, w, d, name) => r(unit + '-' + id, type, x, z, w, d, { unit, name });
+      rooms.push(q('liv', 'open', -15, 4, 11, 5, 'Living, kitchen and dining'), q('b1', 'bed', -4, 4, 6.5, 5, 'Main bedroom'), q('b2', 'bed', 2.5, 4, 6.25, 5, 'Bedroom 2'), q('b3', 'bed', 8.75, 4, 6.25, 5, 'Bedroom 3'),
+        q('study', 'study', -15, 1, 5, 3, 'Study'), q('baL', 'bath', -10, 1, 3.8, 3, 'Bathroom'), q('hall', 'hall', -6.2, 1, 2.2, 3, 'Hall'),
+        q('baR', 'bath', -4, 1, 3.4, 3, 'En-suite bathroom'), q('stR', 'utility', -0.6, 1, 4.6, 3, 'Dressing room'), q('ba3', 'bath', 4, 1, 3.4, 3, 'Bathroom'), q('st3', 'utility', 7.4, 1, 7.6, 3, 'Utility and storage'));
+      return rooms;
+    }
     rooms.push(...flat(u(3), -15, 1, 15, 8, 's', 3, { livingLeft: true }));
     rooms.push(...flat(u(4), 0, 1, 15, 8, 's', 3));
     return rooms;
@@ -112,9 +120,10 @@ export function tower() {
       };
     });
   });
+  Object.assign(units['25.03'], { name: 'The Penthouse', price: money(1450000), status: 'Available', baths: 3, aspect: 'The whole south side of the top floor, over the park', features: ['Glass on three sides', 'A terrace the full width of the tower', 'Three bedrooms, three bathrooms and a study', 'Private lift lobby and two parking spaces'] });
   return {
     key: 'tower', name: 'Halden Tower', place: 'Central Milton Keynes',
-    blurb: '26 storeys wrapped in rippling white balconies, no two floors the same. 115 apartments and eight penthouses.',
+    blurb: '26 storeys wrapped in rippling white balconies, no two floors the same. 115 apartments and seven penthouses.',
     style: 'glass', floorH: H, size: [W, D], floors, units,
     site: { kind: 'city', water: false, park: 's' },
     roof: 'crown', startHour: 18.5,

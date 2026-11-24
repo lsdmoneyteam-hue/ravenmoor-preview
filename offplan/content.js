@@ -17,6 +17,12 @@ export const CONTENT = {
       ['Bedroom', 'bed', 'Quiet, carpeted and facing the sunrise or the park.'],
       ['The view', 'view', 'The city by day, the lights by night.'],
     ],
+    feature: {
+      unit: '25.03', kicker: 'Level 25 · one home', title: 'The Penthouse',
+      line: 'The whole south side of the top floor. Thirty metres of glass, a terrace as wide as the tower, and nobody above you but the lantern.',
+      facts: [['240 m²', 'inside'], ['3', 'bedrooms'], ['3', 'bathrooms'], ['£1,450,000', 'guide price']],
+      shots: [['pent-dusk', 'The living room at dusk'], ['pent-living', 'Living', 'Eleven metres of glass facing the park.'], ['pent-kitchen', 'Kitchen', 'Stone island, full-height larder, room for ten.'], ['pent-bed', 'Main bedroom', 'Wakes up to the sunrise, with its own dressing room.'], ['pent-terrace', 'The terrace', 'Wraps the whole south side, 80 metres up.']],
+    },
     amenTitle: 'Six ways to spend a day',
     amenities: [
       ['Concierge lobby', 'lobby', 'Someone at the desk, day and night.'],
@@ -27,7 +33,7 @@ export const CONTENT = {
       ['Campbell Park', 'place', 'A hundred acres across the road.'],
     ],
     spec: [['Structure', 'Concrete frame, triple glazing, bronze fins'], ['Floors', 'Engineered oak; porcelain in bathrooms'], ['Kitchens', 'Stone worktops, integrated appliances'], ['Heating', 'Shared air-source heat network, EPC B'], ['Parking', 'Basement spaces with EV charging']],
-    numbers: [['26', 'storeys'], ['123', 'homes'], ['1–3', 'bedrooms'], ['2028', 'completion']],
+    numbers: [['26', 'storeys'], ['122', 'homes'], ['1–3', 'bedrooms'], ['2028', 'completion']],
     sample: { unit: '16.03', floor: 16 },
   },
   block: {

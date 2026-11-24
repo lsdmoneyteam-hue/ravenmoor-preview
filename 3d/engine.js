@@ -1120,7 +1120,27 @@ export function run(data, root) {
     const hr = Math.round((data.startHour + (18.7 - data.startHour) * sstep(.62, .97, p)) * 8) / 8; if (hr !== st.hr) { st.hr = hr; if (ui.slider) ui.slider.value = hr; setTime(hr); }
     dirty = true;
   }
-  addEventListener('message', e => { if (e.origin !== location.origin || !e.data || e.data.rv !== 'story') return; if (!st) storyOn(); st.to = clamp(+e.data.p || 0, 0, 1); if (e.data.jump || reduce) st.p = st.to - 1e-4; });
+  // the page asks what is under the pointer; a floor that isn't built yet can't be picked
+  function storyPoint(x, y) {
+    ndc.set(x * 2 - 1, 1 - y * 2); ray.setFromCamera(ndc, camera);
+    const h = ray.intersectObjects(floorPick, false).find(h => h.point.y < cut + .05); hoverGroup.clear(); dirty = true; if (!h) return null;
+    const i = data.single ? 0 : h.object.userData.floor, fl = data.floors[i], out = { floor: i, label: fl.label, tag: fl.tag || '', single: !!data.single, avail: status[i] ? status[i].Available : 0 };
+    const us = fl.rooms.filter(q => q.unit && !OUTSIDE.has(q.type)), px = h.point.x, pz = h.point.z; let best = null, bd = 1e9;
+    us.forEach(q => { const d = Math.hypot(Math.max(q.x - px, 0, px - q.x - q.w), Math.max(q.z - pz, 0, pz - q.z - q.d)); if (d < bd) { bd = d; best = q; } });
+    if (best && !data.single) {
+      const rs = us.filter(q => q.unit === best.unit), x0 = Math.min(...rs.map(q => q.x)), x1 = Math.max(...rs.map(q => q.x + q.w)), z0 = Math.min(...rs.map(q => q.z)), z1 = Math.max(...rs.map(q => q.z + q.d)), u = data.units[best.unit];
+      paint(hoverGroup, storyMat, i, [{ x: x0 - .6, z: z0 - .6, w: x1 - x0 + 1.2, d: z1 - z0 + 1.2 }], true);
+      Object.assign(out, { unit: u.id, name: u.name, beds: u.beds, area: u.area, price: u.price, status: u.status });
+    } else paint(hoverGroup, storyMat, i, [{ x: plate.x0 - .5, z: plate.z0 - .5, w: plate.w + 1, d: plate.d + 1 }], true);
+    return out;
+  }
+  const storyMat = new THREE.MeshBasicMaterial({ color: '#f1c56b', transparent: true, opacity: .42, depthWrite: false });
+  addEventListener('message', e => {
+    if (e.origin !== location.origin || !e.data) return; const m = e.data;
+    if (m.rv === 'story') { if (!st) storyOn(); st.to = clamp(+m.p || 0, 0, 1); if (m.jump || reduce) st.p = st.to - 1e-4; }
+    if (m.rv === 'point' && st) parent.postMessage({ rv: 'pointed', n: m.n, click: !!m.click, hit: storyPoint(m.x, m.y) }, location.origin);
+    if (m.rv === 'floor' && st) { hoverGroup.clear(); if (m.i >= 0 && m.i * data.floorH < cut) paint(hoverGroup, storyMat, m.i, [{ x: plate.x0 - .5, z: plate.z0 - .5, w: plate.w + 1, d: plate.d + 1 }], true); dirty = true; }
+  });
   function reframe(r = root.getBoundingClientRect()) { if (r.width < 760 && !walk && !st) camera.setViewOffset(r.width, r.height * 1.3, 0, r.height * .3, r.width, r.height); else camera.clearViewOffset(); camera.updateProjectionMatrix(); dirty = true; }
   function resize() { const r = root.getBoundingClientRect(); renderer.setSize(r.width, r.height, false); camera.aspect = r.width / r.height; if (walk && !fly) camera.fov = walkFov(); reframe(r); if (walk) drawPlan(); }
   new ResizeObserver(resize).observe(root); resize();

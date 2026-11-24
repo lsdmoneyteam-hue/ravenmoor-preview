@@ -206,3 +206,39 @@ section{padding:clamp(64px,10vw,130px) clamp(20px,6vw,80px)}
 @keyframes mist{to{transform:translate3d(4%,-2%,0) scale(1.08)}}
 .cap-title{color:#14181b}.cap-title .kicker{color:rgba(20,24,27,.7)}.cap-title .cue{color:rgba(20,24,27,.8)}
 @media (prefers-reduced-motion:reduce){.story-mist{display:none}.cap-title{color:inherit}}
+
+/* picking a level or a balcony in the opening */
+.rail-h{margin:22px 0 10px;font-size:14px;color:rgba(244,239,230,.78)}
+.rail{display:flex;flex-wrap:wrap;gap:6px;max-width:640px}
+.rail button{min-width:38px;height:38px;padding:0 8px;border:1px solid rgba(244,239,230,.35);background:rgba(8,11,13,.35);color:#f4efe6;font:500 13px var(--sans);font-variant-numeric:tabular-nums;border-radius:2px;backdrop-filter:blur(6px);cursor:pointer}
+.rail button:hover,.rail button:focus-visible{background:#f4efe6;color:#0a0d10}
+.rail .ph{border-color:#e0b765;color:#f1c56b}
+.pickcard{position:absolute;right:clamp(16px,4vw,56px);top:clamp(72px,14vh,140px);width:min(340px,calc(100% - 32px));padding:22px 22px 20px;background:rgba(10,13,16,.86);backdrop-filter:blur(14px);border:1px solid rgba(244,239,230,.18);color:#f4efe6;z-index:3}
+.pickcard h3{font:400 34px/1 var(--serif);margin:4px 0 8px}.pickcard p{margin:0 0 14px;color:rgba(244,239,230,.82)}.pickcard .kicker{margin:0;font-size:13px}
+.pickcard .row{margin-top:4px}.pickcard .btn.ghost{color:#f4efe6}
+.pick-x{position:absolute;top:8px;right:10px;width:36px;height:36px;border:0;background:none;color:#f4efe6;font-size:24px;cursor:pointer}
+.picktip{position:absolute;left:0;top:0;padding:7px 11px;background:rgba(10,13,16,.9);color:#f4efe6;font-size:13px;white-space:nowrap;pointer-events:none;z-index:3}
+@media (max-width:700px){.rail{flex-wrap:nowrap;overflow-x:auto;margin-right:calc(-1*clamp(24px,6vw,80px));padding-right:24px;scrollbar-width:none}.rail button{flex:none;min-width:44px;height:44px}.pickcard{left:16px;right:16px;top:76px;width:auto}}
+
+/* the penthouse */
+.pent{padding:0;background:#07090b;color:#f4efe6}
+.pent-hero{position:relative;min-height:100svh;display:grid;align-items:end;overflow:hidden}
+.pent-hero img{position:absolute;inset:0;width:100%;height:100%;object-fit:cover;animation:drift 26s ease-in-out infinite alternate}
+@keyframes drift{from{transform:scale(1.02)}to{transform:scale(1.14) translate3d(-2%,-1%,0)}}
+.pent-hero::after{content:"";position:absolute;inset:0;background:linear-gradient(to top,rgba(5,7,9,.94),rgba(5,7,9,.25) 60%,rgba(5,7,9,.35))}
+.pent-text{position:relative;z-index:1;padding:clamp(24px,6vw,80px);max-width:980px}
+.pent-text h2{font:400 clamp(60px,12vw,168px)/.88 var(--serif);margin:6px 0 18px;color:#f1c56b}
+.pent-text .kicker{color:rgba(244,239,230,.75)}.pent-text .lede{max-width:34em;font-size:clamp(17px,1.5vw,21px)}
+.pent-text .numbers{display:flex;flex-wrap:wrap;gap:clamp(20px,5vw,64px);margin:26px 0}
+.pent-text .numbers dt{font-size:13px;color:rgba(244,239,230,.7)}.pent-text .numbers dd{margin:2px 0 0;font:400 clamp(24px,3vw,38px)/1.1 var(--serif);color:#f4efe6}
+.pent-text .btn{background:#f1c56b;color:#0a0d10;border-color:#f1c56b}.pent-text .btn.ghost{background:none;color:#f4efe6;border-color:rgba(244,239,230,.5)}
+.reel{display:flex;gap:clamp(12px,2vw,24px);overflow-x:auto;scroll-snap-type:x mandatory;padding:clamp(24px,5vw,64px) clamp(24px,6vw,80px) clamp(40px,7vw,96px);scrollbar-width:thin;scrollbar-color:rgba(244,239,230,.3) transparent}
+.reel figure{flex:none;width:min(78vw,980px);margin:0;scroll-snap-align:center}
+.reel img{display:block;width:100%;aspect-ratio:16/10;object-fit:cover}
+.reel figcaption{display:flex;gap:14px;align-items:baseline;padding-top:14px}.reel strong{font:400 26px/1 var(--serif)}.reel span{color:rgba(244,239,230,.7);font-size:15px}
+@media (max-width:700px){.reel figure{width:84vw}.reel figcaption{flex-direction:column;gap:4px}}
+@media (prefers-reduced-motion:reduce){.pent-hero img{animation:none}}
+/* explore: the building at night behind the plans */
+.homes{position:relative;isolation:isolate}
+.homes::before{content:"";position:absolute;inset:0;z-index:-1;background:linear-gradient(rgba(7,9,11,.82),rgba(7,9,11,.94)),var(--homes-bg) center/cover fixed}
+@media (max-width:700px){.homes::before{background-attachment:scroll}}
