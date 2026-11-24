@@ -239,7 +239,7 @@ function makeMaterials() {
     render: S('#f0ece3', { roughness: .95 }), clad: S('#fff', { map: T.clad, uv: 1.4, roughness: .8 }), plinth: S('#3a3b3d', { roughness: .9 }), stone: S('#d9d2c3'),
     spandrel: S('#22262b', { roughness: .4, metalness: .5 }), bronze: S('#7a5a3a', { roughness: .35, metalness: .85 }), brass: S('#b08a4a', { roughness: .3, metalness: .9 }),
     frame: S('#1d1f22', { roughness: .45, metalness: .6 }), door: S('#2b4a41', { roughness: .5 }), doorInt: S('#a9865c', { roughness: .5 }), rail: S('#1f2123', { roughness: .4, metalness: .7 }),
-    wood: S('#fff', { map: T.oak, uv: 2.2, roughness: .55 }), tile: S('#fff', { map: T.tile, uv: 2.4, roughness: .3 }), carpet: S('#c9bfae', { roughness: 1 }), corridor: S('#77726a', { roughness: .85 }),
+    wood: S('#fff', { map: T.oak, uv: 2.2, roughness: .55 }), tile: S('#e6dfd3', { map: T.tile, uv: 2.4, roughness: .3 }), carpet: S('#c9bfae', { roughness: 1 }), corridor: S('#77726a', { roughness: .85 }),
     lobbyFloor: S('#fff', { map: T.lobby, uv: 2.4, roughness: .2 }), deck: S('#fff', { map: T.deck, uv: 1.4, roughness: .8 }),
     sofa: S('#6a715a', { roughness: 1 }), fabric: S('#d6c9b3', { roughness: 1 }), linen: S('#f1ede5', { roughness: 1 }), throw_: S('#b57f63', { roughness: 1 }), curtain: S('#e4ddd0', { roughness: 1 }),
     darkWood: S('#4d3b2d', { roughness: .55 }), oak: S('#b99468', { roughness: .55 }), white: S('#f4f2ed', { roughness: .35 }), black: S('#1c1d1f', { roughness: .4 }),
@@ -455,6 +455,15 @@ function innerFloor(B, fl, segs, data, fi) {
     const fin = q.type === 'bath' || q.type === 'utility' ? 'tile' : q.type === 'bed' ? 'carpet' : q.type === 'corridor' ? 'corridor' : q.type === 'lobby' ? 'lobbyFloor' : 'wood';
     B.box(fin, q.w - .02, .02, q.d - .02, q.x + q.w / 2, .01, q.z + q.d / 2);
   });
+  // lift doors on the core, facing the shared corridor, the lobby or (in a whole-floor home) the gallery
+  { const core = fl.rooms.find(r => r.type === 'core'), near = (a, b) => Math.abs(a - b) < .05;
+    if (core && !house) for (const t of ['corridor', 'lobby', 'hall']) {
+      const q = fl.rooms.find(r => r.type === t && ((near(r.z, core.z + core.d) || near(r.z + r.d, core.z)) && Math.min(r.x + r.w, core.x + core.w) - Math.max(r.x, core.x) > 2.6));
+      if (!q) continue;
+      const south = near(q.z, core.z + core.d), zw = south ? core.z + core.d : core.z, g = south ? 1 : -1, cx = (Math.max(q.x, core.x) + Math.min(q.x + q.w, core.x + core.w)) / 2;
+      [-.75, .75].forEach(o => { B.box('black', 1.16, 2.24, .05, cx + o, 1.12, zw + g * .05); B.box('metal', .5, 2.12, .03, cx + o - .255, 1.06, zw + g * .085); B.box('metal', .5, 2.12, .03, cx + o + .255, 1.06, zw + g * .085); B.box('led', .3, .05, .02, cx + o, 2.33, zw + g * .05); });
+      B.box('brass', .09, .22, .02, cx, 1.15, zw + g * .05);
+      break; } }
   // doors standing open in their doorways
   segs.forEach(s => {
     if (s.kind !== 'door' || s.b - s.a < 1.3) return;
@@ -646,22 +655,38 @@ function furnish(q, B, rooms, o) {
       [-1, 1].forEach(g => { if (U > bw + 1.3) { const su = bu + g * (bw / 2 + .36); rbox('oak', .46, .5, .4, su, .25, V - .27, .02); cyl('brass', .07, .02, su, .51, V - .27); box('brass', .015, .26, .015, su, .64, V - .27); cyl('lampShade', .12, .16, su, .82, V - .27, .08); } });
       rbox('rug2', bw + 1, .012, 1.5, bu, .006, bv - bl / 2 + .1, .005); artBack(bu, 1.2, .6, x * 3 + fi);
       if (V > 4.2 && U > 2.9) { const wl = Math.min(2, V - 2.9); box('white', .58, 2.25, wl, .31, 1.125, .5 + wl / 2); for (let k = 1; k < wl / .5 - .5; k++) box('black', .004, 2.2, .006, .602, 1.125, .5 + k * .5); box('brass', .014, .3, .014, .615, 1.1, .5 + wl / 2 - .06); box('brass', .014, .3, .014, .615, 1.1, .5 + wl / 2 + .06); }
+      else if (V > 3.5 && U > 2.9) { const wl = Math.min(1.5, V - 2.75); box('white', .58, 2.25, wl, .31, 1.125, .45 + wl / 2); box('black', .004, 2.2, .006, .602, 1.125, .45 + wl / 2); box('brass', .014, .3, .014, .615, 1.1, .45 + wl / 2 - .06); box('brass', .014, .3, .014, .615, 1.1, .45 + wl / 2 + .06); }
+      // the other side wall: a low dresser with a mirror and flowers
+      if (U > 3.4 && V > 3.9) { const dl = Math.min(1.3, V - 2.9), dv = .55 + dl / 2; rbox('oak', .45, .78, dl, U - .26, .39, dv, .02); box('brass', .01, .02, dl - .2, U - .49, .55, dv); box('mirror', .02, .7, dl * .6, U - .04, 1.45, dv); cyl('pot', .07, .18, U - .26, .87, dv - dl * .25, .05); ball('flower', .1, U - .26, 1.04, dv - dl * .25, 1.1); box('books', .2, .05, .26, U - .26, .805, dv + dl * .25); }
+      // a reading chair by the window in a wider room
+      if (U > 4.3 && !(U > 6 && V > 6)) { rbox('fabric', .75, .4, .75, U - 1.35, .22, 1.05, .12); rbox('fabric', .75, .5, .18, U - 1.35, .6, .72, .08); cyl('oak', .2, .5, U - 2.05, .25, .95); cyl('brass', .012, 1.45, U - .75, .725, .6); cyl('lampShade', .14, .2, U - .75, 1.5, .6, .09); }
       if (V > 4.4) rbox('fabric', bw * .8, .42, .4, bu, .22, bv - bl / 2 - .32, .06);
-      if (U > 6 && V > 6) { rbox('fabric', .9, .42, .9, 1.4, .23, 1.5, .14); rbox('fabric', .9, .5, .2, 1.4, .58, 1.1, .08); rbox('fabric', .9, .42, .9, 3.0, .23, 1.5, .14); rbox('fabric', .9, .5, .2, 3.0, .58, 1.1, .08); cyl('stone', .32, .5, 2.2, .25, 1.6); plant(U - .7, .7, 1.4); }
+      if (U > 6 && V > 6) { rbox('darkWood', 4.8, 1.7, .06, bu, 1.0, V - .04, .01); box('led', 4.8, .02, .02, bu, 1.87, V - .06); rbox('rug', 4.8, .012, 3.6, bu, .004, bv - .9, .005); plant(bu - 3.0, V - .6, 1.5); plant(bu + 3.0, V - .6, 1.5);
+        rbox('fabric', .9, .42, .9, 1.4, .23, 1.5, .14); rbox('fabric', .9, .5, .2, 1.4, .58, 1.1, .08); rbox('fabric', .9, .42, .9, 3.0, .23, 1.5, .14); rbox('fabric', .9, .5, .2, 3.0, .58, 1.1, .08); cyl('stone', .32, .5, 2.2, .25, 1.6); plant(U - .7, .7, 1.4); rbox('rug', 3.4, .012, 2.4, 2.2, .006, 1.55, .005); cyl('brass', .012, 1.5, .7, .75, .75); cyl('lampShade', .15, .22, .7, 1.55, .75, .1);
+        rbox('oak', .5, .76, 1.8, U - .3, .38, V / 2 - .4, .02); box('mirror', .02, .9, 1.1, U - .04, 1.5, V / 2 - .4); rbox('fabric', .45, .44, .45, U - .95, .22, V / 2 - .4, .1); cyl('pot', .08, .2, U - .3, .86, V / 2 - 1.05, .05); ball('flower', .12, U - .3, 1.05, V / 2 - 1.05, 1.1); }
       curtains();
       return;
     }
     case 'bath': {
+      if (U * V > 14) {          // a principal bathroom: tub by the window on a stone plinth, double vanity on the back wall, walk-in shower at one end
+        rbox('stone', 2.4, .06, 1.35, U / 2, .03, 1.15, .02); rbox('white', 1.8, .58, .85, U / 2, .35, 1.15, .3); cyl('brass', .02, .95, U / 2 + 1.05, .475, 1.15); rbox('oak', .4, .45, .4, U / 2 - 1.45, .23, 1.15, .04); rbox('linen', .32, .08, .3, U / 2 - 1.45, .5, 1.15, .02);
+        const vl = Math.min(2.6, U - 2.4); rbox('oak', vl, .5, .5, U / 2, .55, V - .28, .02); rbox('stone', vl + .04, .06, .52, U / 2, .83, V - .28, .02);
+        [-1, 1].forEach(g => { rbox('white', .5, .05, .34, U / 2 + g * vl / 4, .875, V - .28, .04); cyl('brass', .014, .2, U / 2 + g * vl / 4, .96, V - .1); box('mirror', .8, 1.0, .02, U / 2 + g * vl / 4, 1.6, V - .03); });
+        box('glass', .02, 2.1, 1.5, 1.4, 1.05, V - .8); box('stone', 1.3, .04, 1.5, .7, .03, V - .8); box('metal', .25, .02, .25, .7, Hc - .12, V - .8);
+        rbox('white', .38, .4, .58, U - .3, .2, V - 1.7, .08); rbox('rug2', 1.8, .012, .7, U / 2, .006, V - .95, .005); plant(U - .5, .6, 1.0); box('metal', .02, .02, .6, U - .05, 1.1, 2.0); rbox('throw_', .03, .55, .5, U - .07, .85, 2.0, .01);
+        return;
+      }
       if (U * V < 5.6) {          // a shower room: everything along the wall opposite the door
         box('glass', .02, 2, .9, .96, 1, V - .47); box('white', .9, .05, .9, .5, .03, V - .47); box('metal', .22, .02, .22, .5, Hc - .12, V - .5);
         if (U > 2.1) { rbox('oak', .6, .5, .42, U / 2 + .22, .5, V - .24, .02); rbox('white', .64, .06, .44, U / 2 + .22, .78, V - .24, .02); box('mirror', .56, .8, .02, U / 2 + .22, 1.45, V - .03); }
-        rbox('white', .38, .4, .56, U - .28, .2, V - .32, .08);
+        rbox('white', .38, .4, .56, U - .28, .2, V - .32, .08); if (U > 1.6 && V > 1.9) rbox('rug2', Math.min(.8, U - .8), .012, .5, U / 2, .006, V - 1.3, .005);
         return;
       }
       if (U >= 1.75 && V >= 1.9) { rbox('white', Math.min(1.7, U - .12), .56, .76, Math.min(1.7, U - .12) / 2 + .06, .29, V - .42, .12); box('metal', .03, .3, .03, .25, .72, V - .42); }
       else if (V > 1.6) { box('glass', .9, 2, .02, U / 2, 1, V - .95); box('metal', .25, .02, .25, U / 2, Hc - .1, V - .45); }
       rbox('oak', Math.min(.8, U - .3), .5, .44, U - .46, .5, .26, .02); rbox('white', Math.min(.84, U - .26), .06, .46, U - .46, .78, .26, .02); box('mirror', Math.min(.7, U - .4), .8, .02, U - .46, 1.45, .03); cyl('metal', .014, .16, U - .46, .9, .12); box('metal', .016, .016, .12, U - .46, .97, .18); box('metal', .5, .02, .02, Math.max(.4, U * .28), 1.2, .05); rbox('linen', .44, .5, .03, Math.max(.4, U * .28), .96, .07, .01);
       if (U > 1.5) rbox('white', .38, .4, .58, Math.max(.3, U * .28), .2, .36, .08);
+      if (V > 2.2) { rbox('rug2', .8, .012, .5, U - .46, .006, .82, .005); rbox('throw_', .44, .2, .03, Math.max(.4, U * .28), 1.08, .075, .01); }
       return;
     }
     case 'study': {
@@ -678,6 +703,10 @@ function furnish(q, B, rooms, o) {
         box('glassRail', .02, 1.0, n * run, sx - .46, Hc * .62, V - .5 - (n - 1) * run / 2);
         rbox('oak', .34, .8, 1.0, .2, .4, 1.5, .02); box('mirror', .02, .9, .7, .03, 1.5, 1.5); plant(.35, 2.5, .8); rbox('rug', 1.0, .012, 2.0, .9, .006, 1.7, .005);
       } else if (U > 1.5 && V > 1.5) { rbox('oak', Math.min(.9, U - .5), .8, .32, U / 2, .4, V - .18, .02); box('mirror', Math.min(.7, U - .6), .8, .02, U / 2, 1.5, V - .02); }
+      // a long hall gets a runner and a line of pendants
+      if (!(house && fi === 0) && Math.max(U, V) > 5 && Math.min(U, V) > 1.2) { const lu = U >= V, L = lu ? U : V, Wd = lu ? V : U, rw = Math.min(1.2, Wd - .7);
+        if (lu) rbox('rug', L - 1.4, .012, rw, U / 2, .006, V / 2, .005); else rbox('rug', rw, .012, L - 1.4, U / 2, .006, V / 2, .005);
+        for (let k = 0, n = Math.max(2, Math.round(L / 3.2)); k < n; k++) { const t = (k + .5) / n * L; pendant(lu ? t : U / 2, lu ? V / 2 : t, .35, .12); } }
       return;
     }
     case 'balcony': case 'terrace': {
@@ -689,12 +718,15 @@ function furnish(q, B, rooms, o) {
     case 'lobby': {
       if (w * d > 60) {
         rbox('oak', 3.2, 1.05, .8, U / 2, .53, V * .32, .04); rbox('worktop', 3.3, .05, .9, U / 2, 1.08, V * .32, .02);
-        rbox('rug', 4.4, .012, 3.4, U / 2, .006, V * .7, .005); sofa(0, V * .7, 2.4); sofa(1, V * .7, 2.4); cyl('oak', .6, .05, U / 2, .38, V * .7); cyl('black', .04, .36, U / 2, .18, V * .7);
+        rbox('rug', 5.4, .012, 4.2, U / 2, .006, V * .7, .005); cyl('stone', .7, .34, U / 2, .17, V * .7); cyl('stone', .4, .28, U / 2 + .95, .14, V * .7 + .35); box('books', .32, .05, .24, U / 2 - .1, .365, V * .7); cyl('pot', .07, .2, U / 2 + .25, .44, V * .7 - .15, .05); ball('flower', .13, U / 2 + .25, .63, V * .7 - .15, 1.1);
+        [-1, 1].forEach(g => { const sv = V * .7 + g * 1.5; rbox('sofa', 2.6, .42, .95, U / 2, .23, sv, .1); rbox('sofa', 2.6, .5, .26, U / 2, .6, sv + g * .4, .09); rbox('linen', .42, .36, .42, U / 2 - .8, .62, sv + g * .1, .08); rbox('throw_', .42, .36, .42, U / 2 + .8, .62, sv + g * .1, .08);
+          const cu = U / 2 + g * 2.25; rbox('fabric', .85, .42, .85, cu, .23, V * .7, .12); rbox('fabric', .2, .5, .85, cu + g * .34, .6, V * .7, .08); });
+        cyl('lampShade', .13, .3, U / 2 - 1.2, 1.25, V * .32, .1); cyl('brass', .02, .12, U / 2 - 1.2, 1.14, V * .32);
         plant(1.4, 1, 1.5); plant(U - 1.4, 1, 1.5); plant(1.2, V - 1, 1.3); [-.6, 0, .6].forEach((o2, i) => pendant(U / 2 + o2 * 1.4, V * .32, .7 + (i % 2) * .3, .2));
       } else { rbox('metal', 1.6, .9, .5, U / 2, .45, V - .3, .03); plant(.7, .7, 1.3); pendant(U / 2, V / 2, .7, .22); }
       return;
     }
-    case 'corridor': { rbox('rug', U - .6, .012, V - .7, U / 2, .006, V / 2, .005); return; }
+    case 'corridor': { rbox('rug', U - .6, .012, V - .7, U / 2, .006, V / 2, .005); { const lu = U >= V, L = lu ? U : V; for (let k = 0, n = Math.max(2, Math.round(L / 3.5)); k < n; k++) { const t = (k + .5) / n * L; pendant(lu ? t : U / 2, lu ? V / 2 : t, .3, .13); } if (lu) { plant(.55, V / 2, 1.1); plant(U - .55, V / 2, 1.1); } else { plant(U / 2, .55, 1.1); plant(U / 2, V - .55, 1.1); } } return; }
   }
 }
 
