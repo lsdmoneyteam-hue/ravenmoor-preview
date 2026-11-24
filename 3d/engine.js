@@ -319,6 +319,7 @@ function planFloor(fl, data, fi) {
     if (s.A && !s.B) s.A.ext[s.axis === 'x' ? 'e' : 's'] = true;
     if (s.B && !s.A) s.B.ext[s.axis === 'x' ? 'w' : 'n'] = true;
     if (s.kind === 'slider') { const q = OUTSIDE.has(s.A.type) ? s.B : s.A; q.ext[s.axis === 'x' ? (q === s.A ? 'e' : 'w') : (q === s.A ? 's' : 'n')] = true; }
+    if (s.A && s.B && data.autoDoor && data.autoDoor.includes([s.A.id, s.B.id].sort().join('|'))) s.auto = true;
     if (s.kind === 'door' || s.kind === 'entry') { const t = (data.doorAt && data.doorAt[[s.A.id, s.B.id].sort().join('|')]) ?? (data.style !== 'house' && (s.A.type === 'bed' || s.B.type === 'bed') ? .2 : .5); const dw = Math.min(.95, s.b - s.a - .3); s.dw = dw; s.dc = clamp(s.a + (s.b - s.a) * t, s.a + dw / 2 + .12, s.b - dw / 2 - .12); }
   });
   return segs;
@@ -367,7 +368,8 @@ function shellFloor(S, fl, segs, data, fi, plate, lit) {
       case 'door': wallWithDoor('wallInt', .12); return;
       case 'entry': wallWithDoor('wallInt', .14); if (len >= 1.3) put('door', s.dw, 2.1, .05, s.dc, 1.05); return;
       case 'slider': {
-        put('frame', len, .08, .1, mid, H - .04); put('glass', len, H - .1, .03, mid, (H - .1) / 2);
+        put('frame', len, .08, .1, mid, H - .04); if (s.auto) { put('frame', .06, H, .1, s.a, H / 2); put('frame', .06, H, .1, s.b, H / 2); return; }          // these doors are separate, so they can slide open
+        put('glass', len, H - .1, .03, mid, (H - .1) / 2);
         const n = Math.max(2, Math.round(len / 1.5)); for (let i = 0; i <= n; i++) put('frame', .05, H, .08, s.a + i * len / n, H / 2);
         return;
       }
@@ -488,7 +490,7 @@ function furnishBest(q, B, segs, rooms, o) {
   best.R.calls.forEach(c => {
     if (real(c) && (zones.some(z => overlap(c, z) > .02) || c.x0 < q.x - .06 || c.x1 > q.x + q.w + .06 || c.z0 < q.z - .06 || c.z1 > q.z + q.d + .06)) return;   // last resort: leave the piece out
     B[c.fn](...c.args);
-    if (q.pool && !q.solids.length) { q.solids.push(q.pool); q.all.push(q.pool); }
+    if (q.pool && !q.solids.length) { [q.pool, ...(q.blocks || [])].forEach(b => { q.solids.push(b); q.all.push(b); }); }
     if (real(c) && c.y0 < 1.1 && c.y1 - c.y0 >= .12 && c.y1 > .3) { q.all.push([c.x0, c.x1, c.z0, c.z1]); if (c.y1 > .5 && (c.x1 - c.x0) * (c.z1 - c.z0) >= .5) q.solids.push([c.x0, c.x1, c.z0, c.z1]); }      // you can brush past chairs and lamps, not through tables, beds and units
   });
 }
@@ -557,7 +559,7 @@ function furnish(q, B, rooms, o) {
         for (let k = 0; k < 3; k++) { box('black', .012, 2.2, .012, 6.6 + k, H2 - 1.1, V - 2.5); cyl('lampShade', .16, .26, 6.6 + k, H2 - 2.3, V - 2.5, .1); }
         box('glass', .5, 2.6, 1.6, U - .4, 1.3, 6.3); for (let k = 0; k < 5; k++) box('darkWood', .42, .04, 1.5, U - .4, .35 + k * .5, 6.3);
         // floating oak stair up to the roof, against the back wall
-        { const n = 18, rise = (data_floorH) / n; for (let k = 0; k < n; k++) { box('oak', .3, .06, 1.1, .7 + k * .29, rise * (k + 1), V - .65); } box('glassRail', n * .29, 1.0, .02, .7 + n * .29 / 2, data_floorH / 2 + .9, V - 1.2); }
+        { const n = 18, rise = (data_floorH) / n; for (let k = 0; k < n; k++) { const su = .7 + k * .29, sy = rise * (k + 1); box('oak', .3, .06, 1.4, su, sy, V - .75); box('glassRail', .29, 1.0, .02, su, sy + .53, V - 1.47); box('brass', .3, .03, .04, su, sy + 1.05, V - 1.47); } }
         return;
       }
       // where the hall door comes in on the back wall, so the kitchen leaves it clear
@@ -700,6 +702,14 @@ function towerRoof(R, data, plate, y) {
     for (let k = 0; k < 4; k++) { const lx = x0 + 1.2 + k * (w - 2.4) / 3; R.rbox(k % 2 ? 'throw_' : 'linen', .5, .03, .7, lx, yT + hT + .37, z0 - .7, .01); if (k % 2 === 0) { R.cyl('metal', .03, 2.3, lx + .75, yT + hT + 1.15, z0 - 1.6); R.cyl('fabric', 1.25, .5, lx + .75, yT + hT + 2.45, z0 - 1.6, .05, 24); } }
     for (let k = 0; k < 6; k++) { R.cyl('downlight', .09, .02, x0 + .9 + k * (w - 1.8) / 5, yT + .12, z0 + 1.2, .09, 12); R.cyl('downlight', .09, .02, x0 + .9 + k * (w - 1.8) / 5, yT + .12, z1 - 1.2, .09, 12); }          // lights under the water
     R.rbox('pot', 1.2, .7, 1.2, deck.x + 1.3, yT + .35, deck.z + deck.d - 1.3, .05); R.ball('plant', .8, deck.x + 1.3, yT + 1.5, deck.z + deck.d - 1.3, 1.2, 2); R.ball('plant2', .5, deck.x + 1.7, yT + 2.1, deck.z + deck.d - 1.1, 1.1, 2);
+  }
+  if (deck && deck.bar) {
+    const [b0, b1] = deck.bar, bc = (b0 + b1) / 2, bw = b1 - b0, bz = deck.z;          // against the glass of the landing, facing the pool
+    R.box('darkWood', bw, 2.5, .34, bc, yT + 1.25, bz + .2); for (let k = 0; k < 4; k++) { R.box('downlight', bw - .3, .02, .3, bc, yT + .95 + k * .42, bz + .22); for (let x = b0 + .35; x < b1 - .2; x += .28) R.cyl(k % 2 ? 'glass' : 'brass', .045, .26, x, yT + 1.1 + k * .42, bz + .3, .03, 10); }
+    R.box('stone', bw, 1.06, .7, bc, yT + .53, bz + 1.15); R.rbox('worktop', bw + .3, .07, .9, bc, yT + 1.1, bz + 1.15, .02); R.box('downlight', bw, .03, .03, bc, yT + .12, bz + 1.52); R.box('brass', bw, .04, .06, bc, yT + .3, bz + 1.56);
+    for (let x = b0 + .6; x < b1 - .3; x += .95) { R.cyl('fabric', .19, .08, x, yT + .8, bz + 1.95); R.cyl('brass', .022, .76, x, yT + .38, bz + 1.95); R.cyl('brass', .17, .02, x, yT + .01, bz + 1.95); }
+    R.box('wave', bw + 1.2, .14, 2.9, bc, yT + 2.75, bz + 1.2); for (let x = b0 + .8; x < b1 - .4; x += 1.3) { R.box('black', .012, .7, .012, x, yT + 2.33, bz + 1.15); R.cyl('lampShade', .13, .2, x, yT + 1.9, bz + 1.15, .07); }
+    [b0 - .25, b1 + .25].forEach(x => { R.box('bronze', .12, 2.7, .12, x, yT + 1.35, bz + 2.5); });
   }
   const gd = top.rooms.find(q => q.id && q.id.endsWith('-garden'));
   if (gd) {
@@ -909,6 +919,11 @@ export function run(data, root) {
   S.build(building);
   const roofG = new THREE.Group(); building.add(roofG);
   { const R = new Bucket(M); if (data.roof === 'crown') { towerRoof(R, data, plate, topY); roofH = 2; } else if (data.roof === 'gables') { blockRoof(R, data, plate, topY); roofH = 5; } else roofH = houseRoof(R, data, plate, topY) + 2.5; R.build(roofG); }
+  const autoDoors = [];
+  plans.forEach((segs, fi) => segs.forEach(sg => { if (!sg.auto) return; const len = sg.b - sg.a, Hd = data.floorH - .42, mk = () => { const m = new THREE.Mesh(new THREE.BoxGeometry(sg.axis === 'x' ? .04 : len / 2, Hd, sg.axis === 'x' ? len / 2 : .04), M.glass); building.add(m); return m; }; autoDoors.push({ sg, fi, len, Hd, a: mk(), b: mk(), open: -1 }); }));
+  function doorsTick(dt) { autoDoors.forEach(d => { const sg = d.sg, y = d.fi * data.floorH, mid = (sg.a + sg.b) / 2, cx = sg.axis === 'x' ? sg.L : mid, cz = sg.axis === 'x' ? mid : sg.L, p = camera.position;
+    const want = Math.hypot(p.x - cx, p.z - cz) + Math.abs(p.y - y - 1.5) * 2 < 4.4 ? 1 : 0; if (d.open < 0) d.open = want; else if (Math.abs(want - d.open) > .002) { d.open += (want - d.open) * Math.min(1, dt * 2.6); dirty = true; } else if (d.open === d.o2) return; d.o2 = d.open;
+    const off = d.len / 4 + d.open * d.len * .47; [[d.a, -off], [d.b, off]].forEach(([m, o]) => { if (sg.axis === 'x') m.position.set(sg.L, y + d.Hd / 2, mid + o); else m.position.set(mid + o, y + d.Hd / 2, sg.L); }); }); }
   const inner = data.floors.map(() => null);
   function ensureInner(i) { if (inner[i]) return inner[i]; const B = new Bucket(M); innerFloor(B, data.floors[i], plans[i], data, i); const g = B.build(new THREE.Group()); g.position.y = i * data.floorH; g.visible = false; building.add(g); inner[i] = g; return g; }
   function showInner(list) { inner.forEach((g, i) => { if (g) g.visible = list.includes(i); }); list.forEach(i => { const g = ensureInner(i); g.visible = true; g.children.forEach(m => { m.visible = furnished || FINISH.some(k => m.material === M[k]); }); }); dirty = true; }
@@ -1382,11 +1397,14 @@ export function run(data, root) {
       add(.72, on(1), aim(on(1), 8, 1.6));                          // across the living room: sofas, fire, chandelier
       add(.76, [x0 + 3.2, Y + 2.6, zb + 1.0], aim([x0 + 3.2, Y + 2.6, zb + 1.0], 2, 1.2));          // on the stair
       add(.81, [x0 + 6.6, yT + 1.55, zb + .75], aim([x0 + 6.6, yT + 1.55, zb + .75], 0, -.1));     // the landing
-      const O1 = [x0 + 13.3, yT + 1.6, zb + .85], O2 = [x0 + 14.6, yT + 1.7, zb + 1.5], O3 = [x0 + 16.2, yT + 2.0, zb + 2.4];
-      add(.86, O1, aim(O1, -42, 0));                                // out through the doors, looking left
-      add(.90, O2, aim(O2, -30, 0));                                // hold the left for a beat
-      add(.95, O3, aim(O3, 38, -1.2));                              // then right, across the pool
-      add(1, [x0 + 16.8, yT + 2.3, zb + 2.9], aim([x0 + 16.8, yT + 2.3, zb + 2.9], 78, -3.5, 30)); outAt = .82;
+      const bar = pd.bar ? [(pd.bar[0] + pd.bar[1]) / 2, yT + 1.3, pd.z + .9] : aim([x0 + 13.3, yT + 1.6, zb + .85], -42, 0), hT = 1.25, pz = pd.pool[2], pcx = (px0 + px1) / 2;
+      const O1 = [x0 + 13.4, yT + 1.6, zb + .85], O2 = [x0 + 14.7, yT + 1.65, zb + 2.0], S0 = [px0 - 2.9, yT + 1.7, pz - 1.1], S1 = [px0 + .9, yT + hT + 1.62, pz - 1.1], E = [pcx - 1.5, yT + hT + 1.7, pz - .45];
+      add(.86, O1, bar);                                            // through the doors as they slide open, looking left at the bar
+      add(.895, O2, [bar[0] + 1.5, bar[1], bar[2]]);                // hold on it
+      add(.93, S0, [px0 + 4, yT + 1.6, pz + 3.5]);                  // turn right to the pool and start up the steps
+      add(.965, S1, [pcx + 2, yT + .9, pz + 5.5]);                  // up on the pool deck
+      add(1, E, [pcx + 1, yT - 5, plate.z1 + 60]);                  // standing at the head of the pool, the city beyond
+      outAt = .82;
     } else
     if (sc < 1 && !(q.tall && pd)) { const yT = (nF - 1) * data.floorH, [px0, px1, pz0] = pd.pool, mx = q.x + q.w / 2, mz = q.z + q.d / 2;
       // to the foot of the stair, up it, across the terrace, and out over the pool
@@ -1466,6 +1484,7 @@ export function run(data, root) {
       clip.constant = cut; clipUp.constant = -cut;
       const moving = cut < BIG / 2 && Math.abs(cutTo - cut) > .05; scanA += ((moving ? 1 : 0) - scanA) * Math.min(1, dt * 5); scan.visible = cut < BIG / 2 && scanA > .02; scan.position.y = Math.min(cut, topY + roofH); scan.material.opacity = scanA * .9; if (scan.visible) dirty = true;
     }
+    doorsTick(dt);
     if (Math.abs(offT - offK) > .002) { offK += (offT - offK) * Math.min(1, dt * 3); if (Math.abs(offT - offK) <= .002) offK = offT; applyOff(); }
     if (st) { const d = st.to - st.p; if (Math.abs(d) > 2e-5) { st.p = Math.abs(d) < 4e-4 ? st.to : st.p + d * Math.min(1, dt * 5.5); storyAt(st.p); } }
     else if (fly) {
