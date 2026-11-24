@@ -4,7 +4,7 @@
 export const CONTENT = {
   tower: {
     slug: 'halden-tower', model: 'tower', developer: 'Halden Estates', theme: 'night',
-    filmScale: .62, film: ['Level 25 and the roof', 'The Penthouse.', 'Six metres high, glass on two sides.', 'Above the city, within it.', 'Swim out past the edge of the building.'], filmMore: [[.6, .7, 'A stone fire, a piano in the glass corner.'], [.74, .84, 'Up the stair to the roof.']],
+    filmScale: .62, film: ['Level 25 and the roof', 'The Penthouse.', 'Six metres high, glass on two sides.', 'Above the city, within it.', 'Swim out past the edge of the building.'], filmMore: [[.58, .7, 'A piano in the glass corner, the city all round.'], [.74, .84, 'Up the stair to the roof.']],
     tagline: 'Twenty-six floors that ripple like water.',
     intro: 'Apartments and penthouses above Campbell Park, each with a balcony no other home shares, and one home across the top two levels with a pool in the sky.',
     place: {

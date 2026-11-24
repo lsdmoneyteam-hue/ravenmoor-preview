@@ -1372,14 +1372,21 @@ export function run(data, root) {
       sc = .62; P.length = 7; T.length = 7; K = KP.slice(0, 7).map(k => k * sc); const yT = (nF - 1) * data.floorH, Y = yF, [px0, px1, pz0] = pd.pool, x0 = q.x, z1 = q.z + q.d, zb = q.z;
       const add = (k, p, t) => { K.push(k); P.push(v(...p)); T.push(v(...t)); };
       P[6] = v(x0 + 9, eye + .15, z1 + 2.4); T[6] = v(x0 + 4, eye + .2, z1 - 3);
-      add(.50, [x0 + 9, eye, z1 - 1.6], [x0 - 14, eye + .6, z1 - 3.2]);          // inside, looking west out over the city
-      add(.57, [x0 + 5.6, eye, z1 - 2.1], [x0 + 2, Y + 1.0, z1 - 2.0]);          // towards the piano
-      add(.65, [x0 + 4.2, eye, z1 - 3.6], [x0 + 11.4, Y + 2.5, zb + 4.6]);       // turn: the room, the fire, the chandelier
-      add(.72, [x0 + 1.2, eye, zb + 2.3], [x0 + 6, Y + 3.3, zb + .7]);           // the foot of the stair
-      add(.80, [x0 + 6.4, yT + 1.55, zb + .75], [x0 + 12, yT + 1.4, zb + .75]);  // the landing
-      add(.87, [x0 + 13.4, yT + 1.6, zb + .9], [x0 + 20, yT + 1.6, zb - 5]);     // out through the doors, looking left
-      add(.94, [x0 + 15.6, yT + 1.8, zb + 1.9], [(px0 + px1) / 2, yT + .8, pz0 + 2.5]);
-      add(1, [x0 + 16.6, yT + 2.2, zb + 2.6], [px1 - 2, yT - 4, plate.z1 + 26]); outAt = .82;
+      // one unbroken pan to the left: piano, the city through the corner glass, round across the living room to the stair
+      const aim = (p, deg, up = 0, dist = 18) => [p[0] + Math.cos(deg * Math.PI / 180) * dist, p[1] + up, p[2] + Math.sin(deg * Math.PI / 180) * dist];          // 0 = east, 90 = south, 180 = west
+      const A0 = [x0 + 9, eye, z1 - 1.6], F0 = [x0 + 1.3, eye, zb + 2.4], on = t => [A0[0] + (F0[0] - A0[0]) * t, eye, A0[2] + (F0[2] - A0[2]) * t];
+      add(.50, on(0), [x0 + 2, Y + 1.0, z1 - 2.0]);                 // in through the glass, eyes on the piano
+      add(.55, on(.2), aim(on(.2), 150, .2));                       // past it, out over the city to the south-west
+      add(.60, on(.42), aim(on(.42), 105, .3));                     // the south glass
+      add(.66, on(.68), aim(on(.68), 50, .6));                      // coming round
+      add(.72, on(1), aim(on(1), 8, 1.6));                          // across the living room: sofas, fire, chandelier
+      add(.76, [x0 + 3.2, Y + 2.6, zb + 1.0], aim([x0 + 3.2, Y + 2.6, zb + 1.0], 2, 1.2));          // on the stair
+      add(.81, [x0 + 6.6, yT + 1.55, zb + .75], aim([x0 + 6.6, yT + 1.55, zb + .75], 0, -.1));     // the landing
+      const O1 = [x0 + 13.3, yT + 1.6, zb + .85], O2 = [x0 + 14.6, yT + 1.7, zb + 1.5], O3 = [x0 + 16.2, yT + 2.0, zb + 2.4];
+      add(.86, O1, aim(O1, -42, 0));                                // out through the doors, looking left
+      add(.90, O2, aim(O2, -30, 0));                                // hold the left for a beat
+      add(.95, O3, aim(O3, 38, -1.2));                              // then right, across the pool
+      add(1, [x0 + 16.8, yT + 2.3, zb + 2.9], aim([x0 + 16.8, yT + 2.3, zb + 2.9], 78, -3.5, 30)); outAt = .82;
     } else
     if (sc < 1 && !(q.tall && pd)) { const yT = (nF - 1) * data.floorH, [px0, px1, pz0] = pd.pool, mx = q.x + q.w / 2, mz = q.z + q.d / 2;
       // to the foot of the stair, up it, across the terrace, and out over the pool
