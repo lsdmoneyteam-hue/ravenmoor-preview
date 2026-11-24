@@ -490,7 +490,7 @@ function furnishBest(q, B, segs, rooms, o) {
   best.R.calls.forEach(c => {
     if (real(c) && (zones.some(z => overlap(c, z) > .02) || c.x0 < q.x - .06 || c.x1 > q.x + q.w + .06 || c.z0 < q.z - .06 || c.z1 > q.z + q.d + .06)) return;   // last resort: leave the piece out
     B[c.fn](...c.args);
-    if (q.pool && !q.solids.length) { [q.pool, ...(q.blocks || [])].forEach(b => { q.solids.push(b); q.all.push(b); }); }
+    if ((q.pool || q.blocks) && !q.solids.length) { [q.pool, ...(q.blocks || [])].filter(Boolean).forEach(b => { q.solids.push(b); q.all.push(b); }); }
     if (real(c) && c.y0 < 1.1 && c.y1 - c.y0 >= .12 && c.y1 > .3) { q.all.push([c.x0, c.x1, c.z0, c.z1]); if (c.y1 > .5 && (c.x1 - c.x0) * (c.z1 - c.z0) >= .5) q.solids.push([c.x0, c.x1, c.z0, c.z1]); }      // you can brush past chairs and lamps, not through tables, beds and units
   });
 }
@@ -701,7 +701,7 @@ function towerRoof(R, data, plate, y) {
     for (let k = 0; k < 4; k++) { const lx = x0 + 1.2 + k * (w - 2.4) / 3; R.rbox('white', .7, .1, 1.9, lx, yT + hT + .22, z0 - 1.15, .04); R.rbox('fabric', .62, .08, 1.3, lx, yT + hT + .31, z0 - .9, .03); R.rbox('fabric', .62, .08, .6, lx, yT + hT + .42, z0 - 1.82, .03); }
     for (let k = 0; k < 4; k++) { const lx = x0 + 1.2 + k * (w - 2.4) / 3; R.rbox(k % 2 ? 'throw_' : 'linen', .5, .03, .7, lx, yT + hT + .37, z0 - .7, .01); if (k % 2 === 0) { R.cyl('metal', .03, 2.3, lx + .75, yT + hT + 1.15, z0 - 1.6); R.cyl('fabric', 1.25, .5, lx + .75, yT + hT + 2.45, z0 - 1.6, .05, 24); } }
     for (let k = 0; k < 6; k++) { R.cyl('downlight', .09, .02, x0 + .9 + k * (w - 1.8) / 5, yT + .12, z0 + 1.2, .09, 12); R.cyl('downlight', .09, .02, x0 + .9 + k * (w - 1.8) / 5, yT + .12, z1 - 1.2, .09, 12); }          // lights under the water
-    R.rbox('pot', 1.2, .7, 1.2, deck.x + 1.3, yT + .35, deck.z + deck.d - 1.3, .05); R.ball('plant', .8, deck.x + 1.3, yT + 1.5, deck.z + deck.d - 1.3, 1.2, 2); R.ball('plant2', .5, deck.x + 1.7, yT + 2.1, deck.z + deck.d - 1.1, 1.1, 2);
+    { const px = x0 - 4.9, pz2 = plate.z1 - 1.3; R.rbox('pot', 1.2, .7, 1.2, px, yT + .35, pz2, .05); R.ball('plant', .8, px, yT + 1.5, pz2, 1.2, 2); R.ball('plant2', .5, px + .4, yT + 2.1, pz2 + .2, 1.1, 2); }
   }
   if (deck && deck.bar) {
     const [b0, b1] = deck.bar, bc = (b0 + b1) / 2, bw = b1 - b0, bz = deck.z;          // against the glass of the landing, facing the pool
@@ -1398,7 +1398,7 @@ export function run(data, root) {
       add(.76, [x0 + 3.2, Y + 2.6, zb + 1.0], aim([x0 + 3.2, Y + 2.6, zb + 1.0], 2, 1.2));          // on the stair
       add(.81, [x0 + 6.6, yT + 1.55, zb + .75], aim([x0 + 6.6, yT + 1.55, zb + .75], 0, -.1));     // the landing
       const bar = pd.bar ? [(pd.bar[0] + pd.bar[1]) / 2, yT + 1.3, pd.z + .9] : aim([x0 + 13.3, yT + 1.6, zb + .85], -42, 0), hT = 1.25, pz = pd.pool[2], pcx = (px0 + px1) / 2;
-      const O1 = [x0 + 13.4, yT + 1.6, zb + .85], O2 = [x0 + 14.7, yT + 1.65, zb + 2.0], S0 = [px0 - 2.9, yT + 1.7, pz - 1.1], S1 = [px0 + .9, yT + hT + 1.62, pz - 1.1], E = [pcx - 1.5, yT + hT + 1.7, pz - .45];
+      const O1 = [x0 + 13.4, yT + 1.6, zb + .85], O2 = [px0 - .4, yT + 1.65, pd.z + 5.4], S0 = [px0 - 2.9, yT + 1.7, pz - 1.1], S1 = [px0 + .9, yT + hT + 1.62, pz - 1.1], E = [pcx - 1.5, yT + hT + 1.7, pz - .45];
       add(.86, O1, bar);                                            // through the doors as they slide open, looking left at the bar
       add(.895, O2, [bar[0] + 1.5, bar[1], bar[2]]);                // hold on it
       add(.93, S0, [px0 + 4, yT + 1.6, pz + 3.5]);                  // turn right to the pool and start up the steps
