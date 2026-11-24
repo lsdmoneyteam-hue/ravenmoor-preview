@@ -1,6 +1,6 @@
 // Off-plan development page. One template for any development: a tower, a block of flats or a single house.
 // Plans and homes come from /3d/buildings.js, words and pictures from content.js, and the 3D model opens on tap.
-import * as BUILD from '/3d/buildings.js?v=11';
+import * as BUILD from '/3d/buildings.js?v=12';
 import { CONTENT } from './content.js?v=6';
 
 const OUT = new Set(['balcony', 'terrace']), SHARED = new Set(['corridor', 'lobby', 'core']);

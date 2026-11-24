@@ -205,25 +205,22 @@ export function house() {
   const ground = [
     r('hall', 'hall', -1.2, -4.5, 2.6, 4.2, { unit: 'house', name: 'Entrance hall' }),
     r('living', 'living', -6, -4.5, 4.8, 4.2, { unit: 'house', name: 'Living room' }),
-    r('study', 'study', 1.4, -4.5, 4.6, 3.0, { unit: 'house', name: 'Study' }),
-    r('wc', 'bath', 1.4, -1.5, 1.8, 1.2, { unit: 'house', name: 'Cloakroom' }),
-    r('util', 'utility', 3.2, -1.5, 2.8, 1.2, { unit: 'house', name: 'Utility' }),
+    r('study', 'study', 1.4, -4.5, 4.6, 2.8, { unit: 'house', name: 'Study' }),
+    r('wc', 'bath', 1.4, -1.7, 1.8, 1.4, { unit: 'house', name: 'Cloakroom' }),
+    r('util', 'utility', 3.2, -1.7, 2.8, 1.4, { unit: 'house', name: 'Utility' }),
     r('kitchen', 'kitchen', 1.4, -0.3, 4.6, 4.8, { unit: 'house', name: 'Kitchen' }),
     r('dining', 'dining', -1.2, -0.3, 2.6, 4.8, { unit: 'house', name: 'Dining' }),
-    r('family', 'living', -6, 0.3, 4.8, 4.2, { unit: 'house', name: 'Family room' }),
-    r('snug', 'hall', -6, -0.3, 4.8, 0.6, { unit: 'house', name: 'Passage' }),
+    r('family', 'living', -6, -0.3, 4.8, 4.8, { unit: 'house', name: 'Family room' }),
   ];
   const first = [
-    r('land', 'hall', -1.2, -4.5, 2.6, 4.2, { unit: 'house', name: 'Landing' }),
+    r('land', 'hall', -1.2, -4.5, 2.6, 5.7, { unit: 'house', name: 'Landing' }),
     r('b1', 'bed', -6, -4.5, 4.8, 4.2, { unit: 'house', name: 'Main bedroom' }),
-    r('ens', 'bath', 1.4, -4.5, 2.4, 2.2, { unit: 'house', name: 'En-suite' }),
-    r('ward', 'utility', 3.8, -4.5, 2.2, 2.2, { unit: 'house', name: 'Dressing room' }),
+    r('ens', 'bath', 1.4, -4.5, 2.4, 2.2, { unit: 'house', name: 'Shower room' }),
+    r('ward', 'utility', 3.8, -4.5, 2.2, 2.2, { unit: 'house', name: 'Linen and storage' }),
     r('b4', 'study', 1.4, -2.3, 4.6, 2.0, { unit: 'house', name: 'Bedroom 4 / office' }),
-    r('bath', 'bath', -1.2, -0.3, 2.6, 2.4, { unit: 'house', name: 'Family bathroom' }),
+    r('bath', 'bath', -1.2, 1.2, 2.6, 3.3, { unit: 'house', name: 'Family bathroom' }),
     r('b2', 'bed', 1.4, -0.3, 4.6, 4.8, { unit: 'house', name: 'Bedroom 2' }),
-    r('b3', 'bed', -6, 0.3, 4.8, 4.2, { unit: 'house', name: 'Bedroom 3' }),
-    r('linen', 'utility', -1.2, 2.1, 2.6, 2.4, { unit: 'house', name: 'Linen cupboard' }),
-    r('lp', 'hall', -6, -0.3, 4.8, 0.6, { unit: 'house', name: 'Landing' }),
+    r('b3', 'bed', -6, -0.3, 4.8, 4.8, { unit: 'house', name: 'Bedroom 3' }),
   ];
   const floors = [
     { label: 'Ground floor', short: 'G', rooms: ground },
@@ -257,7 +254,7 @@ export function house() {
     blurb: 'A modern barn-style family home with a glazed gable over the garden. Walk through every room.',
     style: 'house', story: { floor: 0, room: 'kitchen' }, floorH: H, size: [12, 9], floors, units, notes,
     site: { kind: 'suburb' }, roof: 'barn', startHour: 15.5, single: true,
-    doorAt: { 'hall|study': 0.2 }, wallKind: { 'hall|wc': 'solid' },
+    doorAt: { 'hall|study': 0.2 }, wallKind: { 'dining|kitchen': 'none', 'dining|family': 'door' },
     spec: {
       materials: 'White lime render with black charred-timber cladding on the gables, a natural slate roof and an oak-framed porch. The back gable is glazed to the ridge.',
       finishes: 'Oak floors, a quartz island kitchen, a wood burner in the living room and stone-tiled bathrooms. Try the Style button to see other finishes.',
