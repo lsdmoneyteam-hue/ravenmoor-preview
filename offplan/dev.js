@@ -1,6 +1,6 @@
 // Off-plan development page. One template for any development: a tower, a block of flats or a single house.
 // Plans and homes come from /3d/buildings.js, words and pictures from content.js, and the 3D model opens on tap.
-import * as BUILD from '/3d/buildings.js?v=4';
+import * as BUILD from '/3d/buildings.js?v=5';
 import { CONTENT } from './content.js?v=2';
 
 const OUT = new Set(['balcony', 'terrace']), SHARED = new Set(['corridor', 'lobby', 'core']);
@@ -35,6 +35,7 @@ export function mount(key) {
       <div class="cap cap-end" data-cap=".8,2"><p class="kicker">${esc(D.place)}</p><h2>${esc(D.name)}</h2><p class="lede">${esc(C.tagline)}</p>
         <div class="row"><a class="btn" href="#homes">${D.single ? 'Explore the house' : 'Explore residences'}</a><button class="btn ghost" type="button" data-open3d>Open the 3D model</button></div>
         ${D.single ? '' : `<p class="rail-h">Or choose a level. You can also tap any balcony on the tower.</p><div class="rail" data-rail>${D.floors.map((f, i) => f.shared ? '' : `<button type="button" data-lv="${i}" class="${f.tag ? 'ph' : ''}">${esc(f.short)}</button>`).reverse().join('')}</div>`}</div>
+      <button type="button" class="viewer-x story-back" data-untake hidden>Back to ${D.single ? 'the house' : 'the building'}</button>
       <div class="pickcard" data-pickcard hidden></div><div class="picktip" data-picktip hidden></div>
       <div class="story-bar"><i data-bar></i></div>
     </div>
@@ -98,7 +99,7 @@ export function mount(key) {
 
   // ---------- the 3D viewer ----------
   const viewer = $('[data-viewer]'), frame = viewer.querySelector('iframe');
-  const open3d = (q = '') => { const sf = root.querySelector('.story-frame'); if (sf && sf.src && !sf.src.endsWith('about:blank')) { sf.dataset.src = sf.src; sf.src = 'about:blank'; root.querySelector('[data-story]').classList.remove('live'); } frame.src = three(q); viewer.hidden = false; document.body.classList.add('locked'); viewer.querySelector('button').focus(); };
+  const open3d = (q = '') => { if (story.classList.contains('taken')) untake(); const sf = root.querySelector('.story-frame'); if (sf && sf.src && !sf.src.endsWith('about:blank')) { sf.dataset.src = sf.src; sf.src = 'about:blank'; root.querySelector('[data-story]').classList.remove('live'); } frame.src = three(q); viewer.hidden = false; document.body.classList.add('locked'); viewer.querySelector('button').focus(); };
   const close3d = () => { const sf = root.querySelector('.story-frame'); if (sf && sf.dataset.src) { sf.src = sf.dataset.src; delete sf.dataset.src; } viewer.hidden = true; frame.src = 'about:blank'; document.body.classList.remove('locked'); };
   $$('[data-open3d]').forEach(b => b.addEventListener('click', () => open3d()));
   $('[data-close3d]').addEventListener('click', close3d);
@@ -122,13 +123,18 @@ export function mount(key) {
   // tap a balcony or a level at any point in the scroll
   const pin = story.querySelector('.story-pin'), pcard = story.querySelector('[data-pickcard]'), ptip = story.querySelector('[data-picktip]'); let pn = 0, ptype = 'mouse', pxy = [0, 0], pt = 0;
   const ask = (e, click) => { if (!live) return; const r = pin.getBoundingClientRect(); pxy = [e.clientX - r.left, e.clientY - r.top]; sframe.contentWindow.postMessage({ rv: 'point', n: ++pn, click, x: pxy[0] / r.width, y: pxy[1] / r.height }, location.origin); };
+  // hand the scroll scene over to the model: no second viewer, no loading screen
+  const back = story.querySelector('[data-untake]');
+  const take = (msg, q) => { if (!live) return open3d(q); story.classList.add('taken'); document.body.classList.add('locked'); back.hidden = false; sframe.contentWindow.postMessage({ rv: 'enter', ...msg }, location.origin); sframe.removeAttribute('aria-hidden'); sframe.focus(); };
+  const untake = () => { story.classList.remove('taken'); document.body.classList.remove('locked'); back.hidden = true; sframe.setAttribute('aria-hidden', 'true'); if (live) sframe.contentWindow.postMessage({ rv: 'leave' }, location.origin); };
+  back.addEventListener('click', untake); addEventListener('keydown', e => { if (e.key === 'Escape' && story.classList.contains('taken') && document.activeElement !== sframe) untake(); });
   const toPlan = fn => { fn(); stage.scrollIntoView({ behavior: calm ? 'auto' : 'smooth', block: 'start' }); };
   const hideCard = () => { pcard.hidden = true; if (live) sframe.contentWindow.postMessage({ rv: 'floor', i: -1 }, location.origin); };
   const card = h => {
     const u = h.unit, line = u ? `${h.beds} bedroom${h.beds > 1 ? 's' : ''} · ${h.area} m² · ${h.status === 'Available' ? h.price : h.status}` : h.single ? '' : h.avail ? `${h.avail} home${h.avail > 1 ? 's' : ''} available` : 'Shared spaces';
     pcard.innerHTML = `<button type="button" class="pick-x" aria-label="Close">×</button><p class="kicker">${esc(h.single ? D.place : h.label + (h.tag ? ' · ' + h.tag : ''))}</p><h3>${esc(u ? h.name : h.single ? D.name : h.label)}</h3><p>${esc(line)}</p><div class="row"><button class="btn" type="button" data-go>${u ? 'Go to this home' : h.single ? 'See inside' : 'See inside this level'}</button>${h.single ? '' : '<button class="btn ghost" type="button" data-plan>Floor plan</button>'}</div>`;
     pcard.hidden = false; pcard.querySelector('.pick-x').onclick = hideCard;
-    pcard.querySelector('[data-go]').onclick = () => { hideCard(); open3d(u ? '&unit=' + encodeURIComponent(u) : h.single ? '' : '&floor=' + h.floor); };
+    pcard.querySelector('[data-go]').onclick = () => { hideCard(); take(u ? { unit: u } : { floor: h.floor }, u ? '&unit=' + encodeURIComponent(u) : h.single ? '' : '&floor=' + h.floor); };
     const pl = pcard.querySelector('[data-plan]'); if (pl) pl.onclick = () => { hideCard(); toPlan(() => u ? showUnit(u) : showLevel(h.floor)); };
   };
   pin.addEventListener('pointermove', e => { ptype = e.pointerType; if (e.pointerType !== 'mouse' || e.target.closest('a,button,.pickcard,.rail')) { ptip.hidden = true; return; } const now = performance.now(); if (now - pt > 60) { pt = now; ask(e, false); } });
@@ -141,7 +147,7 @@ export function mount(key) {
     pin.style.cursor = h ? 'pointer' : ''; ptip.hidden = !h || !pcard.hidden; if (h) { ptip.textContent = h.unit ? `${h.name} · ${h.beds} bed · ${h.status === 'Available' ? h.price : h.status}` : h.single ? 'See inside' : h.label; ptip.style.transform = `translate(${pxy[0] + 16}px, ${pxy[1] + 16}px)`; }
   });
   const rail = story.querySelector('[data-rail]');
-  if (rail) { rail.addEventListener('click', e => { const b = e.target.closest('[data-lv]'); if (!b) return; const i = +b.dataset.lv, f = D.floors[i]; sframe.contentWindow && live && sframe.contentWindow.postMessage({ rv: 'floor', i }, location.origin); const av = Object.values(D.units).filter(u => u.floor === i && u.status === 'Available').length; card({ floor: i, label: f.label, tag: f.tag || '', avail: av }); });
+  if (rail) { rail.addEventListener('click', e => { const b = e.target.closest('[data-lv]'); if (!b) return; hideCard(); take({ floor: +b.dataset.lv }, '&floor=' + b.dataset.lv); });
     rail.addEventListener('pointerover', e => { const b = e.target.closest('[data-lv]'); if (b && live && e.pointerType === 'mouse' && pcard.hidden) sframe.contentWindow.postMessage({ rv: 'floor', i: +b.dataset.lv }, location.origin); }); }
 
   // ---------- floor plans drawn from the same data as the 3D model ----------

@@ -242,3 +242,8 @@ section{padding:clamp(64px,10vw,130px) clamp(20px,6vw,80px)}
 .homes{position:relative;isolation:isolate}
 .homes::before{content:"";position:absolute;inset:0;z-index:-1;background:linear-gradient(rgba(7,9,11,.82),rgba(7,9,11,.94)),var(--homes-bg) center/cover fixed}
 @media (max-width:700px){.homes::before{background-attachment:scroll}}
+
+/* the scroll scene handed over to the model */
+.story.taken .cap,.story.taken .story-shade,.story.taken .story-mist,.story.taken .story-bar,.story.taken .pickcard,.story.taken .picktip{display:none}
+.story.taken .story-frame{pointer-events:auto}
+.story-back{position:absolute;z-index:5}

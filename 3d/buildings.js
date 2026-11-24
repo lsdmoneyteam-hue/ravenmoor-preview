@@ -5,37 +5,29 @@
 
 const r = (id, type, x, z, w, d, extra = {}) => ({ id, type, x, z, w, d, ...extra });
 
-// One flat laid out in a rectangle. `face` is the side with the windows ('n' or 's'); the other side
-// opens onto the corridor. Front strip: open-plan living plus bedrooms. Back strip: hall, bath, storage.
+// One flat laid out in a rectangle. `face` is the side with the windows ('n' or 's'); the other side opens onto the
+// shared corridor. Along the windows: open-plan living, then the bedrooms. Behind them: an entrance hall that opens
+// into the living room, and a hall running behind the bedrooms with a door to each. Bathrooms and storage sit
+// between that hall and the corridor. Every room has exactly one door, and it is off the hall.
 function flat(unit, x0, z0, w, d, face, beds, opts = {}) {
-  const rooms = [];
-  const back = Math.min(3, d * 0.38);
-  const front = d - back;
-  const fz = face === 's' ? z0 + back : z0;            // front strip z
-  const bz = face === 's' ? z0 : z0 + front;           // back strip z
+  const rooms = [], back = Math.min(3, d * 0.38), front = d - back, strip = 1.1, svc = back - strip, eW = 1.5;
+  const fz = face === 's' ? z0 + back : z0;                                            // window-side rooms
+  const zb = (t, depth) => face === 's' ? z0 + t : z0 + d - t - depth;                 // t = distance from the corridor wall
   const liv = beds === 0 ? w : Math.max(beds === 1 ? 4.5 : 4, Math.round(w * (beds >= 3 ? 0.36 : beds === 2 ? 0.4 : 0.46) * 4) / 4);
-  const livX = opts.livingLeft ? x0 : x0 + w - liv;
-  rooms.push(r(unit + '-liv', 'open', livX, fz, liv, front, { unit, name: 'Living, kitchen and dining' }));
-  const bw = (w - liv) / Math.max(beds, 1);
-  for (let i = 0; i < beds; i++) {
-    const bx = opts.livingLeft ? x0 + liv + i * bw : x0 + i * bw;
-    rooms.push(r(unit + '-b' + (i + 1), 'bed', bx, fz, bw, front, { unit, name: i === 0 ? 'Main bedroom' : 'Bedroom ' + (i + 1) }));
+  const L = opts.livingLeft, livX = L ? x0 : x0 + w - liv, add = (id, type, x, z, ww, dd, name) => rooms.push(r(unit + '-' + id, type, x, z, ww, dd, { unit, name }));
+  add('liv', 'open', livX, fz, liv, front, 'Living, kitchen and dining');
+  const bw = (w - liv) / Math.max(beds, 1), bedX = i => L ? x0 + liv + i * bw : x0 + w - liv - (i + 1) * bw;       // main bedroom is next to the living room
+  for (let i = 0; i < beds; i++) add('b' + (i + 1), 'bed', bedX(i), fz, bw, front, i === 0 ? 'Main bedroom' : 'Bedroom ' + (i + 1));
+  const eX = L ? livX + liv - eW : livX;
+  add('hall', 'hall', eX, zb(0, back), eW, back, 'Hall');
+  add('bath', 'bath', L ? livX : livX + eW, zb(0, back), liv - eW, back, 'Bathroom');
+  if (beds > 0) {
+    const sX = L ? x0 + liv : x0, sW = w - liv;
+    add('hall2', 'hall', sX, zb(svc, strip), sW, strip, 'Hall');
+    const ens = beds >= 2 && sW >= 3.8 ? 2.4 : 0;
+    if (ens) add('ens', 'bath', L ? sX : sX + sW - ens, zb(0, svc), ens, svc, 'En-suite');
+    add('store', 'utility', L ? sX + ens : sX, zb(0, svc), sW - ens, svc, ens ? 'Utility and storage' : 'Storage');
   }
-  // back strip: hall sits behind the living room (so it opens into it), bath and store share the rest
-  const hallW = Math.min(2.2, liv);
-  const hallX = opts.livingLeft ? x0 + liv - hallW : livX;
-  rooms.push(r(unit + '-hall', 'hall', hallX, bz, hallW, back, { unit, name: 'Hall' }));
-  const restL = hallX - x0, restR = x0 + w - (hallX + hallW);
-  const fill = (rx, rw, tag) => {
-    if (rw < 1.2) return;
-    if (rw > 5.2 && beds >= 2) {
-      rooms.push(r(unit + '-ba' + tag, 'bath', rx, bz, 2.6, back, { unit, name: 'Bathroom' }));
-      rooms.push(r(unit + '-st' + tag, 'utility', rx + 2.6, bz, rw - 2.6, back, { unit, name: 'Utility and storage' }));
-    } else rooms.push(r(unit + '-ba' + tag, rw > 3.6 ? 'bath' : 'utility', rx, bz, rw, back, { unit, name: rw > 3.6 ? 'Bathroom' : 'Storage' }));
-  };
-  if (restL > 0) fill(x0, restL, 'L');
-  if (restR > 0) fill(hallX + hallW, restR, 'R');
-  if (!rooms.some(q => q.type === 'bath')) { const s = rooms.find(q => q.type === 'utility'); if (s) { s.type = 'bath'; s.name = 'Bathroom'; } }
   if (opts.balcony) {
     const bd = 1.6, by = face === 's' ? z0 + d : z0 - bd;
     rooms.push(r(unit + '-bal', 'balcony', livX + 0.4, by, liv - 0.8, bd, { unit, name: 'Balcony' }));
@@ -74,8 +66,9 @@ export function tower() {
       // the whole south side of the top floor is one home
       const unit = u(3), q = (id, type, x, z, w, d, name) => r(unit + '-' + id, type, x, z, w, d, { unit, name });
       rooms.push(q('liv', 'open', -15, 4, 11, 5, 'Living, kitchen and dining'), q('b1', 'bed', -4, 4, 6.5, 5, 'Main bedroom'), q('b2', 'bed', 2.5, 4, 6.25, 5, 'Bedroom 2'), q('b3', 'bed', 8.75, 4, 6.25, 5, 'Bedroom 3'),
-        q('study', 'study', -15, 1, 5, 3, 'Study'), q('baL', 'bath', -10, 1, 3.8, 3, 'Bathroom'), q('hall', 'hall', -6.2, 1, 2.2, 3, 'Hall'),
-        q('baR', 'bath', -4, 1, 3.4, 3, 'En-suite bathroom'), q('stR', 'utility', -0.6, 1, 4.6, 3, 'Dressing room'), q('ba3', 'bath', 4, 1, 3.4, 3, 'Bathroom'), q('st3', 'utility', 7.4, 1, 7.6, 3, 'Utility and storage'));
+        q('study', 'study', -15, 1, 4.5, 3, 'Study'), q('pantry', 'utility', -10.5, 1, 2.5, 3, 'Pantry'), q('bath', 'bath', -8, 1, 2.5, 3, 'Bathroom'), q('hall', 'hall', -5.5, 1, 1.5, 3, 'Hall'),
+        q('hall2', 'hall', -4, 2.9, 19, 1.1, 'Hall'), q('ens', 'bath', -4, 1, 3, 1.9, 'En-suite'), q('dress', 'utility', -1, 1, 3.5, 1.9, 'Dressing room'), q('bath2', 'bath', 2.5, 1, 3, 1.9, 'Bathroom 2'),
+        q('laundry', 'utility', 5.5, 1, 3.5, 1.9, 'Laundry'), q('store', 'utility', 9, 1, 6, 1.9, 'Storage'));
       return rooms;
     }
     rooms.push(...flat(u(3), -15, 1, 15, 8, 's', 3, { livingLeft: true }));
@@ -109,7 +102,7 @@ export function tower() {
       const price = Math.round((base * (pent ? 1.9 : 1) + fi * 2400 + (north ? -6000 : 4000)) / 500) * 500;
       const roll = rnd();
       units[id] = {
-        id, floor: fi, beds, baths: beds >= 3 ? 2 : 1, area: Math.round(area),
+        id, floor: fi, beds, baths: rs.filter(q => q.type === 'bath').length, area: Math.round(area),
         name: (pent ? 'Penthouse ' : 'Apartment ') + id,
         price: money(price),
         status: fi > 20 && roll < 0.35 ? 'Reserved' : roll < (fi < 8 ? 0.55 : 0.28) ? 'Sold' : roll < 0.4 ? 'Reserved' : 'Available',
@@ -171,7 +164,7 @@ export function block() {
       const price = Math.round(((beds === 1 ? 199000 : 268000) + fi * 3500 + (canal ? 14000 : 0)) / 500) * 500;
       const roll = rnd();
       units[id] = {
-        id, floor: fi, beds, baths: 1, area: Math.round(sqm(fl.rooms, id)),
+        id, floor: fi, beds, baths: rs.filter(q => q.type === 'bath').length, area: Math.round(sqm(fl.rooms, id)),
         name: 'Apartment ' + id, price: money(price),
         status: roll < 0.3 ? 'Sold' : roll < 0.45 ? 'Reserved' : 'Available',
         aspect: canal ? 'Canal-facing, south' : 'Street-facing, north',

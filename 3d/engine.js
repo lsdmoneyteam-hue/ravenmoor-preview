@@ -288,6 +288,7 @@ function classify(s, data, fi) {
   const comm = COMMUNAL.has(A.type) ? A : COMMUNAL.has(B.type) ? B : null;
   if (comm) { const o = comm === A ? B : A; return o.type === 'hall' || COMMUNAL.has(o.type) ? 'entry' : 'solid'; }
   if (A.unit !== B.unit) return 'solid';
+  if (style !== 'house') { if (A.type === 'hall' && B.type === 'hall') return 'none'; return A.type === 'hall' || B.type === 'hall' ? 'door' : 'solid'; }      // flats: every door is off the hall
   if (LIVE.has(A.type) || LIVE.has(B.type)) return 'door';
   if ((A.type === 'bed' && B.type === 'bath') || (B.type === 'bed' && A.type === 'bath')) return 'door';
   return 'solid';
@@ -302,12 +303,14 @@ function planFloor(fl, data, fi) {
     const cand = mine.filter(s => s.kind === 'solid' && s.A.unit === s.B.unit && !COMMUNAL.has((s.A === q ? s.B : s.A).type) && s.b - s.a >= 1.3).sort((x, y) => (y.b - y.a) - (x.b - x.a))[0];
     if (cand) cand.kind = 'door';
   });
+  // one door per room onto the hall: keep the widest wall
+  if (data.style !== 'house') rooms.forEach(q => { if (q.type === 'hall' || !q.unit) return; const ds = segs.filter(s => s.kind === 'door' && (s.A === q || s.B === q)).sort((x, y) => (y.b - y.a) - (x.b - x.a)); ds.slice(1).forEach(s => { s.kind = 'solid'; }); });
   rooms.forEach(q => { q.ext = {}; });
   segs.forEach(s => {
     if (s.A && !s.B) s.A.ext[s.axis === 'x' ? 'e' : 's'] = true;
     if (s.B && !s.A) s.B.ext[s.axis === 'x' ? 'w' : 'n'] = true;
     if (s.kind === 'slider') { const q = OUTSIDE.has(s.A.type) ? s.B : s.A; q.ext[s.axis === 'x' ? (q === s.A ? 'e' : 'w') : (q === s.A ? 's' : 'n')] = true; }
-    if (s.kind === 'door' || s.kind === 'entry') { const t = (data.doorAt && data.doorAt[[s.A.id, s.B.id].sort().join('|')]) ?? .5; const dw = Math.min(.95, s.b - s.a - .3); s.dw = dw; s.dc = clamp(s.a + (s.b - s.a) * t, s.a + dw / 2 + .12, s.b - dw / 2 - .12); }
+    if (s.kind === 'door' || s.kind === 'entry') { const t = (data.doorAt && data.doorAt[[s.A.id, s.B.id].sort().join('|')]) ?? (data.style !== 'house' && (s.A.type === 'bed' || s.B.type === 'bed') ? .2 : .5); const dw = Math.min(.95, s.b - s.a - .3); s.dw = dw; s.dc = clamp(s.a + (s.b - s.a) * t, s.a + dw / 2 + .12, s.b - dw / 2 - .12); }
   });
   return segs;
 }
@@ -420,15 +423,60 @@ function innerFloor(B, fl, segs, data, fi) {
   segs.forEach(s => {
     if (s.kind !== 'door' || s.b - s.a < 1.3) return;
     const hinge = s.dc - s.dw / 2 + .02, w = s.dw - .06;
-    if (s.axis === 'x') B.box('doorInt', w, 2.05, .04, s.L + w / 2 + .06, 1.03, hinge); else B.box('doorInt', .04, 2.05, w, hinge, 1.03, s.L + w / 2 + .06);
+    const into = s.B.type === 'hall' && s.A.type !== 'hall' ? -1 : 1, at = s.L + into * (w / 2 + .06);       // the door swings into the room, not the hall
+    if (s.axis === 'x') B.box('doorInt', w, 2.05, .04, at, 1.03, hinge); else B.box('doorInt', .04, 2.05, w, hinge, 1.03, at);
   });
-  fl.rooms.forEach(q => furnish(q, B, fl.rooms, { Hc, house, glass: data.style === 'glass', fi }));
+  fl.rooms.forEach(q => furnishBest(q, B, segs, fl.rooms, { Hc, house, glass: data.style === 'glass', fi }));
+}
+// Records what furnish() would draw, so a layout can be checked before it is built.
+class Rec {
+  constructor() { this.calls = []; }
+  put(fn, args, x0, x1, z0, z1, y0, y1) { this.calls.push({ fn, args, x0, x1, z0, z1, y0, y1 }); }
+  box(m, w, h, d, x, y, z, ...r) { this.put('box', [m, w, h, d, x, y, z, ...r], x - w / 2, x + w / 2, z - d / 2, z + d / 2, y - h / 2, y + h / 2); }
+  rbox(m, w, h, d, x, y, z, r) { this.put('rbox', [m, w, h, d, x, y, z, r], x - w / 2, x + w / 2, z - d / 2, z + d / 2, y - h / 2, y + h / 2); }
+  cyl(m, r, h, x, y, z, rt) { this.put('cyl', [m, r, h, x, y, z, rt], x - r, x + r, z - r, z + r, y - h / 2, y + h / 2); }
+  ball(m, r, x, y, z, sy = 1) { this.put('ball', [m, r, x, y, z, sy], x - r, x + r, z - r, z + r, y - r * sy, y + r * sy); }
+}
+// the floor a door needs kept clear on this room's side of it: [x0, x1, z0, z1]
+function doorZones(q, segs) {
+  const out = [];
+  segs.forEach(s => {
+    if (s.A !== q && s.B !== q) return; let a, b, depth = 1.1;
+    if (s.kind === 'door' || s.kind === 'entry') { a = s.dc - s.dw / 2 - .15; b = s.dc + s.dw / 2 + .15; }
+    else if (s.kind === 'frontDoor' || s.kind === 'slider' || s.kind === 'bifold') { const m = (s.a + s.b) / 2, hw = Math.min(.7, (s.b - s.a) / 2); a = m - hw; b = m + hw; depth = .85; }
+    else return;
+    const d0 = s.A === q ? s.L - depth : s.L, d1 = s.A === q ? s.L : s.L + depth;
+    out.push(s.axis === 'x' ? [d0, d1, a, b] : [a, b, d0, d1]);
+  });
+  return out;
+}
+const overlap = (c, z) => Math.max(0, Math.min(c.x1, z[1]) - Math.max(c.x0, z[0])) * Math.max(0, Math.min(c.z1, z[3]) - Math.max(c.z0, z[2]));
+const SOLVE = new Set(['open', 'living', 'kitchen', 'dining', 'bed', 'bath', 'study', 'utility', 'hall']);
+// Try the room turned and mirrored, and build the first layout that leaves every door clear and stays inside the walls.
+function furnishBest(q, B, segs, rooms, o) {
+  const glassZ = []; segs.forEach(g => { if ((g.A === q) === (g.B === q) || (g.A && g.B && !OUTSIDE.has((g.A === q ? g.B : g.A).type))) return; if (g.A && g.B && g.kind !== 'slider') return; const d0 = g.A === q ? g.L - .55 : g.L, d1 = g.A === q ? g.L : g.L + .55; glassZ.push(g.axis === 'x' ? [d0, d1, g.a, g.b] : [g.a, g.b, d0, d1]); });
+  const SOFT = new Set(['curtain', 'plant', 'plant2', 'pot', 'flower']);
+  const fixed = !SOLVE.has(q.type) || (o.house && o.fi === 0 && q.type === 'hall'), zones = fixed ? [] : doorZones(q, o.house ? segs.filter(g => g.kind === 'door') : segs);
+  const tries = fixed ? [{}] : o.house ? [{}, { flip: 1 }] : [{}, { swap: 1 }, { flip: 1 }, { flip: 1, swap: 1 }, { face: 'n' }, { face: 'n', flip: 1 }, { face: 's' }, { face: 's', flip: 1 }, { face: 'e' }, { face: 'e', flip: 1 }, { face: 'w' }, { face: 'w', flip: 1 }];
+  const real = c => !((c.y1 - c.y0 < .05 && c.y0 < .1) || c.y0 > 2.0);          // not a rug, not something on the ceiling
+  let best = null;
+  for (const t of tries) {
+    const R = new Rec(); furnish(q, R, rooms, { ...o, ...t, zones }); let bad = 0;
+    R.calls.forEach(c => { if (!real(c)) return; zones.forEach(z => { bad += overlap(c, z); }); if (c.y1 > .7 && !SOFT.has(c.args[0])) glassZ.forEach(z => { bad += 1.5 * overlap(c, z); }); bad += 3 * (Math.max(0, q.x - c.x0 - .03) + Math.max(0, c.x1 - q.x - q.w - .03) + Math.max(0, q.z - c.z0 - .03) + Math.max(0, c.z1 - q.z - q.d - .03)); });
+    if (!best || bad < best.bad - 1e-6) best = { R, bad, t }; if (bad < .01) break;
+  }
+  q.fit = 0; best.R.calls.forEach(c => { if (real(c)) zones.forEach(z => { q.fit += overlap(c, z); }); }); q.solids = [];
+  best.R.calls.forEach(c => {
+    if (real(c) && (zones.some(z => overlap(c, z) > .02) || c.x0 < q.x - .06 || c.x1 > q.x + q.w + .06 || c.z0 < q.z - .06 || c.z1 > q.z + q.d + .06)) return;   // last resort: leave the piece out
+    B[c.fn](...c.args);
+    if (real(c) && c.y0 < 1.1 && c.y1 - c.y0 >= .12 && c.y1 > .3) q.solids.push([c.x0, c.x1, c.z0, c.z1]);
+  });
 }
 function furnish(q, B, rooms, o) {
   const { x, z, w, d, type } = q, { Hc, house, glass, fi } = o, y = .02, e = q.ext || {};
-  const win = e.s ? 's' : e.n ? 'n' : e.e ? 'e' : e.w ? 'w' : 'n', alongX = win === 'n' || win === 's';
+  const win = o.face || (e.s ? 's' : e.n ? 'n' : e.e ? 'e' : e.w ? 'w' : 'n'), alongX = win === 'n' || win === 's';
   const U = alongX ? w : d, V = alongX ? d : w;         // U runs along the window wall, V runs back into the room
-  const to = (u, v) => win === 'n' ? [x + u, z + v] : win === 's' ? [x + w - u, z + d - v] : win === 'w' ? [x + v, z + d - u] : [x + w - v, z + u];
+  const to = (u, v) => (o.flip && (u = U - u), 0) || win === 'n' ? [x + u, z + v] : win === 's' ? [x + w - u, z + d - v] : win === 'w' ? [x + v, z + d - u] : [x + w - v, z + u];
   const box = (mat, bu, bh, bv, u, yy, v) => { const [wx, wz] = to(u, v); if (alongX) B.box(mat, bu, bh, bv, wx, y + yy, wz); else B.box(mat, bv, bh, bu, wx, y + yy, wz); };
   const rbox = (mat, bu, bh, bv, u, yy, v, r) => { const [wx, wz] = to(u, v); if (alongX) B.rbox(mat, bu, bh, bv, wx, y + yy, wz, r); else B.rbox(mat, bv, bh, bu, wx, y + yy, wz, r); };
   const cyl = (mat, r, h, u, yy, v, rt) => { const [wx, wz] = to(u, v); B.cyl(mat, r, h, wx, y + yy, wz, rt); };
@@ -439,7 +487,7 @@ function furnish(q, B, rooms, o) {
   const an = n => 'art' + (Math.abs(Math.floor(n)) % 3);
   const art = (side, v, wdt = 1.1, h = .8, n = 0) => { const u = side ? U - .03 : .03; box('black', .03, h + .06, wdt + .06, u, 1.55, v); box(an(n), .035, h, wdt, side ? u - .004 : u + .004, 1.55, v); };
   const artBack = (u, wdt = 1.1, h = .8, n = 0) => { box('black', wdt + .06, h + .06, .03, u, 1.6, V - .03); box(an(n), wdt, h, .035, u, 1.6, V - .034); };
-  const curtains = () => { if (glass || !Object.keys(e).length) return; rbox('curtain', .34, Hc - .12, .1, .22, (Hc - .12) / 2, .1, .04); rbox('curtain', .34, Hc - .12, .1, U - .22, (Hc - .12) / 2, .1, .04); box('black', U - .1, .025, .025, U / 2, Hc - .07, .1); };
+  const curtains = () => { if (glass || !e[win]) return; rbox('curtain', .34, Hc - .12, .1, .22, (Hc - .12) / 2, .1, .04); rbox('curtain', .34, Hc - .12, .1, U - .22, (Hc - .12) / 2, .1, .04); box('black', U - .1, .025, .025, U / 2, Hc - .07, .1); };
   const beams = () => { if (!house || fi !== 0) return; for (let v = .7; v < V; v += 1.15) box('oak', U - .04, .16, .12, U / 2, Hc - .08, v); };
   // sofa against a side wall (side 0 = one end of the window wall, 1 = the other), running back into the room
   const sofa = (side, v, len) => {
@@ -460,21 +508,29 @@ function furnish(q, B, rooms, o) {
     box('cabinet', ll, .62, .34, lc, 1.9, V - .18); box('black', .6, .012, .5, lc + ll * .22, .925, V - .33); box('metal', .5, .012, .4, lc - ll * .22, .925, V - .33); box('metal', .02, .28, .02, lc - ll * .22, 1.06, V - .12);
   };
   const island = (u, v, len) => { box('cabinet', len, .88, .9, u, .44, v); rbox('worktop', len + .12, .05, 1.04, u, .905, v, .02); const n = Math.max(2, Math.floor(len / .65)); for (let i = 0; i < n; i++) { const su = u - len / 2 + len * (i + .5) / n; cyl('fabric', .17, .06, su, .68, v - .78); cyl('black', .02, .66, su, .33, v - .78); cyl('black', .15, .02, su, .01, v - .78); pendant(su, v, .8, .13); } };
+  // the longest stretch of wall, at depth v, that no door needs kept clear
+  const freeRun = (v, lo = .06, hi = U - .06) => { let best = [lo, lo], a = null; for (let u = lo; u <= hi + 1e-6; u += .05) { const [wx, wz] = to(u, v), hit = (o.zones || []).some(z => wx > z[0] && wx < z[1] && wz > z[2] && wz < z[3]); if (!hit && a === null) a = u; if ((hit || u + .05 > hi) && a !== null) { const b = hit ? u - .05 : u; if (b - a > best[1] - best[0]) best = [a, b]; a = null; } } return best; };
   switch (type) {
     case 'open': {
       // where the hall door comes in on the back wall, so the kitchen leaves it clear
       const hall = rooms.find(r => r.unit === q.unit && r.type === 'hall');
       let kA = .06, kB = U - .06;
-      if (hall && alongX) { const a = win === 'n' ? hall.x - x : x + w - hall.x - hall.w, b = a + hall.w; if (a > U - b) kB = a - .1; else kA = b + .1; }
-      if (kB - kA > 3.6) { if (kA < .1) kA = kB - 3.6; else kB = kA + 3.6; }
+      if (hall && alongX && !o.face && !o.flip && o.legacy) { const a = win === 'n' ? hall.x - x : x + w - hall.x - hall.w, b = a + hall.w; if (a > U - b) kB = a - .1; else kA = b + .1; }
+      { const f = freeRun(V - .5); kA = f[0] + (f[0] > .1 ? .08 : 0); kB = f[1] - (f[1] < U - .1 ? .08 : 0); }
+      const big = U > 8, kMax = big ? 4.6 : 3.6;
+      if (kB - kA > kMax) { if (kA < .1) kB = kA + kMax; else kA = kB - kMax; }
       kitchen(kA, kB);
-      const kc = (kA + kB) / 2, side = kc > U / 2 ? 1 : 0, sl = Math.min(2.3, V * .42), lv = Math.min(2.0, V * .36);
-      if (V > 5.6 && kB - kA > 2.4) island(kc, V - 2.05, Math.min(2, kB - kA - .6));
-      rbox('rug', Math.min(U - 1.2, 2.6), .012, 2.2, U / 2, .006, lv, .005);
-      sofa(side, lv, sl); cyl('oak', .42, .04, U / 2, .36, lv); cyl('black', .03, .34, U / 2, .18, lv);
-      rbox('darkWood', .4, .42, 1.7, side ? .22 : U - .22, .23, lv, .02); box('screen', .05, .7, 1.25, side ? .06 : U - .06, 1.25, lv);
-      art(side, lv, 1.3, .8, x + z + fi); floorLamp(side ? U - .4 : .4, lv + sl / 2 + .4); plant(side ? .45 : U - .45, .45);
-      if (V > 4.4) roundTable(side ? U * .32 : U * .68, Math.min(V - 2.2, lv + 2.4), .5, 4);
+      const kc = (kA + kB) / 2, sl = Math.min(2.3, V * .42), lv = Math.min(2.0, V * .36);
+      // a big room is three places: kitchen with an island at one end, a long table in the middle, the sofas at the far end behind a media wall
+      const side = (big ? (kc > U / 2 ? 0 : 1) : (kc > U / 2 ? 1 : 0)) ^ (o.swap && !big ? 1 : 0), Lw = big ? 4.4 : U, lc = side ? U - Lw / 2 : Lw / 2, tvU = big ? (side ? U - Lw : Lw) : (side ? .22 : U - .22), dir = side ? 1 : -1;
+      if ((V > 5.6 || (big && V > 4.7)) && kB - kA > 2.4) island(kc, V - 2.0, Math.min(big ? 2.6 : 2, kB - kA - .6));
+      rbox('rug', Math.min(Lw - 1.2, 2.8), .012, 2.4, lc, .006, lv, .005);
+      sofa(side, lv, sl); cyl('oak', .42, .04, lc, .36, lv); cyl('black', .03, .34, lc, .18, lv);
+      if (big) { box('wallInt', .14, Hc, 2.6, tvU, Hc / 2, lv); rbox('darkWood', .4, .42, 1.9, tvU + dir * .28, .23, lv, .02); box('screen', .05, .75, 1.4, tvU + dir * .1, 1.3, lv); rbox('sofa', 1.7, .4, .85, lc, .22, lv + 1.75, .09); rbox('sofa', 1.7, .5, .22, lc, .58, lv + 2.1, .09); }
+      else { rbox('darkWood', .4, .42, 1.7, tvU, .23, lv, .02); box('screen', .05, .7, 1.25, side ? .06 : U - .06, 1.25, lv); }
+      art(side, lv, 1.3, .8, x + z + fi); floorLamp(side ? U - .4 : .4, lv + sl / 2 + .4); plant(side ? U - .45 : .45, .45);
+      if (big) { longTable(side ? U - Lw - 1.7 : Lw + 1.7, 1.4, 2.4, 6); plant(side ? .5 : U - .5, .5, 1.3); }
+      else if (V > 4.4) roundTable(side ? U * .32 : U * .68, Math.min(V - 2.2, lv + 2.4), .5, 4);
       curtains();
       return;
     }
@@ -501,6 +557,12 @@ function furnish(q, B, rooms, o) {
       return;
     }
     case 'bath': {
+      if (U * V < 5.6) {          // a shower room: everything along the wall opposite the door
+        box('glass', .02, 2, .9, .96, 1, V - .47); box('white', .9, .05, .9, .5, .03, V - .47); box('metal', .22, .02, .22, .5, Hc - .12, V - .5);
+        if (U > 2.1) { rbox('oak', .6, .5, .42, U / 2 + .22, .5, V - .24, .02); rbox('white', .64, .06, .44, U / 2 + .22, .78, V - .24, .02); box('mirror', .56, .8, .02, U / 2 + .22, 1.45, V - .03); }
+        rbox('white', .38, .4, .56, U - .28, .2, V - .32, .08);
+        return;
+      }
       if (U >= 1.75 && V >= 1.9) { rbox('white', Math.min(1.7, U - .12), .56, .76, Math.min(1.7, U - .12) / 2 + .06, .29, V - .42, .12); box('metal', .03, .3, .03, .25, .72, V - .42); }
       else if (V > 1.6) { box('glass', .9, 2, .02, U / 2, 1, V - .95); box('metal', .25, .02, .25, U / 2, Hc - .1, V - .45); }
       rbox('oak', Math.min(.8, U - .3), .5, .44, U - .46, .5, .26, .02); rbox('white', Math.min(.84, U - .26), .06, .46, U - .46, .78, .26, .02); box('mirror', Math.min(.7, U - .4), .8, .02, U - .46, 1.45, .03);
@@ -846,7 +908,7 @@ export function run(data, root) {
   const controls = new OrbitControls(camera, canvas);
   controls.enableDamping = true; controls.dampingFactor = .08; controls.maxPolarAngle = Math.PI * .49; controls.minDistance = data.single ? 6 : 12; controls.maxDistance = data.single ? 80 : Math.max(240, topY * 3.2); controls.screenSpacePanning = false;
   let fly = null;
-  function flyTo(pos, target, dur = 1.1, fov) { if (reduce) dur = .01; fly = { p0: camera.position.clone(), t0: controls.target.clone(), p1: pos.clone(), t1: target.clone(), f0: camera.fov, f1: fov || camera.fov, s: performance.now(), d: dur * 1000 }; dirty = true; }
+  function flyTo(pos, target, dur = 1.1, fov, then) { if (reduce) dur = .01; fly = { then, p0: camera.position.clone(), t0: controls.target.clone(), p1: pos.clone(), t1: target.clone(), f0: camera.fov, f1: fov || camera.fov, s: performance.now(), d: dur * 1000 }; dirty = true; }
   const overviewPos = () => { const h = Math.max(topY, 8), dist = data.single ? 30 : Math.max(plate.w, h) * 1.75 + 20; return [new THREE.Vector3(plate.cx + dist * .62, h * (data.single ? .75 : .62) + dist * .26, plate.cz + dist * .82), new THREE.Vector3(plate.cx, h * .42, plate.cz)]; };
   const [p0, t0] = overviewPos(); camera.position.copy(p0).multiplyScalar(1.35); controls.target.copy(t0);
 
@@ -934,27 +996,61 @@ export function run(data, root) {
     const rs = data.floors[u.floor].rooms.filter(q => q.unit === u.id); paint(selGroup, selMat, u.floor, rs); showCard(unitCard(u));
     const x0 = Math.min(...rs.map(q => q.x)), x1 = Math.max(...rs.map(q => q.x + q.w)), z0 = Math.min(...rs.map(q => q.z)), z1 = Math.max(...rs.map(q => q.z + q.d));
     const c = new THREE.Vector3((x0 + x1) / 2, u.floor * data.floorH, (z0 + z1) / 2), out = c.z > plate.cz ? 1 : -1;
-    flyTo(new THREE.Vector3(c.x + 4, c.y + 15, c.z + out * 11), c, 1, 40); hint('Step inside to look around the flat.');
+    flyTo(new THREE.Vector3(c.x + 4, c.y + 15, c.z + out * 11), c, 1, 40); hint(touch ? 'Tap the flat again to step inside.' : 'Click the flat again to step inside.');
   }
   function selectRoom(q, fi) { if (openIdx !== fi) openFloor(fi, false); selRoom = { q, floor: fi }; selUnit = null; paint(selGroup, selMat, fi, [q]); showCard(roomCard(q, fi)); }
 
   // ---------- walking inside ----------
   let walk = null; const look = { yaw: 0, pitch: 0 }, keys = {};
-  const roomCentre = (q, fi) => new THREE.Vector3(q.x + q.w / 2, fi * data.floorH + 1.52, q.z + q.d / 2);
   const walkFov = () => camera.aspect >= 1.25 ? 80 : Math.min(102, 2 * Math.atan(Math.tan(.75) / Math.max(camera.aspect, .4)) * 180 / Math.PI);
   const faceWindow = q => { const e = q.ext || {}; return e.s ? 0 : e.n ? Math.PI : e.e ? Math.PI / 2 : e.w ? -Math.PI / 2 : 0; };
-  function enterWalk(fi, q) {
+  const EYE = 1.52, okRoom = r => (data.single || (walk && r.unit === walk.unit)) && r.type !== 'core' && !COMMUNAL.has(r.type);
+  const gaps = fi => plans[fi].filter(g => g.A && g.B && okRoom(g.A) && okRoom(g.B) && ['door', 'slider', 'bifold', 'none'].includes(g.kind)).map(g => g.kind === 'door' ? { g, a: g.dc - g.dw / 2 + .16, b: g.dc + g.dw / 2 - .16, c: g.dc } : { g, a: g.a + .3, b: g.b - .3, c: (g.a + g.b) / 2 }).filter(o => o.b > o.a);
+  const hitsSolid = (r, x, z, pad = .2) => (r.solids || []).some(b => x > b[0] - pad && x < b[1] + pad && z > b[2] - pad && z < b[3] + pad);
+  // the room you would be standing in at (x, z), or null if that is inside a wall or a piece of furniture
+  function standAt(x, z, fi, pad = .2) {
+    const m = .28;
+    for (const r of data.floors[fi].rooms) { if (!okRoom(r)) continue; if (x > r.x + m && x < r.x + r.w - m && z > r.z + m && z < r.z + r.d - m) return hitsSolid(r, x, z, pad) ? null : r; }
+    for (const o of gaps(fi)) { const al = o.g.axis === 'x' ? z : x, ac = o.g.axis === 'x' ? x : z; if (al > o.a && al < o.b && Math.abs(ac - o.g.L) <= m + .02) return ac < o.g.L ? o.g.A : o.g.B; }
+    return null;
+  }
+  // a good place to stand in a room: clear of furniture and walls, back from the window so you see the room
+  function standPoint(q, fi) {
+    if (q.stand) return q.stand; ensureInner(fi);
+    const yaw = faceWindow(q), fx = Math.sin(yaw), fz = Math.cos(yaw); let best = null, bs = -1e9;
+    for (let x = q.x + .35; x <= q.x + q.w - .35 + 1e-6; x += .2) for (let z = q.z + .35; z <= q.z + q.d - .35 + 1e-6; z += .2) {
+      if (hitsSolid(q, x, z, .25)) continue;
+      let clear = Math.min(x - q.x, q.x + q.w - x, z - q.z, q.z + q.d - z, 1.2);
+      (q.solids || []).forEach(b => { clear = Math.min(clear, Math.hypot(Math.max(b[0] - x, 0, x - b[1]), Math.max(b[2] - z, 0, z - b[3])) + .1); });
+      const back = -((x - q.x - q.w / 2) * fx + (z - q.z - q.d / 2) * fz) / Math.max(q.w, q.d);     // 0.5 = right at the back
+      const sc = Math.min(clear, .9) + back * .9; if (sc > bs) { bs = sc; best = [x, z]; }
+    }
+    best ||= [q.x + q.w / 2, q.z + q.d / 2];
+    return (q.stand = new THREE.Vector3(best[0], fi * data.floorH + EYE, best[1]));
+  }
+  // the doors to walk through to get from one room to another on the same floor
+  function route(fi, from, to) {
+    if (from === to) return []; const G = gaps(fi), prev = new Map([[from, null]]), todo = [from];
+    while (todo.length) { const r = todo.shift(); if (r === to) break; G.forEach(o => { const n = o.g.A === r ? o.g.B : o.g.B === r ? o.g.A : null; if (n && !prev.has(n)) { prev.set(n, [r, o]); todo.push(n); } }); }
+    if (!prev.has(to)) return null; const out = []; for (let r = to; prev.get(r); r = prev.get(r)[0]) out.unshift(prev.get(r));
+    const y = fi * data.floorH + EYE, pts = [];
+    out.forEach(([r, o]) => { const side = o.g.A === r ? -1 : 1, at = k => o.g.axis === 'x' ? new THREE.Vector3(o.g.L + side * k, y, o.c) : new THREE.Vector3(o.c, y, o.g.L + side * k); pts.push(at(.55), at(-.55)); });
+    return pts;
+  }
+  const angTo = (a, b) => { let d = (a - b) % (Math.PI * 2); if (d > Math.PI) d -= Math.PI * 2; if (d < -Math.PI) d += Math.PI * 2; return d; };
+  function enterWalk(fi, q, from) {
     if (!q) return;
-    walk = { floor: fi, unit: q.unit, room: q, pos: roomCentre(q, fi), to: null };
+    walk = { floor: fi, unit: q.unit, room: q, pos: null, to: null, path: null, turn: null };
     openIdx = fi; showInner(data.single ? data.floors.map((f, i) => i) : [fi]); cut = cutTo = cutEnd = BIG; clip.constant = BIG; clipUp.constant = -BIG; ghost.visible = false; scan.visible = false;
+    if (OUTSIDE.has(q.type)) { const r = data.floors[fi].rooms.find(r => r.unit === q.unit && (r.type === 'open' || r.type === 'living')); if (r) { q = r; walk.room = r; } }
+    walk.pos = standPoint(q, fi).clone();
     focusY = fi * data.floorH; shadowBox(Math.max(plate.w, plate.d) * .75 + 4);
     showAvail(false); if (ui.avail) ui.avail.checked = false; selGroup.clear(); hoverGroup.clear();
     controls.enabled = false; root.classList.add('walking'); reframe();
-    look.yaw = faceWindow(q); look.pitch = -.06;
-    walk.pos.add(new THREE.Vector3(-Math.sin(look.yaw), 0, -Math.cos(look.yaw)).multiplyScalar((Math.abs(Math.sin(look.yaw)) > .5 ? q.w : q.d) * .36));
-    fly = null; flyTo(walk.pos, walk.pos.clone().add(new THREE.Vector3(Math.sin(look.yaw), 0, Math.cos(look.yaw))), 1.3, walkFov());
+    look.yaw = faceWindow(q); look.pitch = -.05;
+    fly = null; flyTo(walk.pos, walk.pos.clone().add(new THREE.Vector3(Math.sin(look.yaw), 0, Math.cos(look.yaw))), from ? 1.9 : 1.3, walkFov());
     setRoomLights(fi, q.unit); drawPlan(); ui.walk.querySelector('[data-where]').textContent = q.name;
-    hint(touch ? 'Drag to look around. Tap a room on the plan to move.' : 'Drag to look around. Tap the floor or the plan to move, or use W A S D.');
+    hint(touch ? 'Drag to look around. Tap a room on the plan, or the floor, to walk there.' : 'Drag to look around. Click the floor or the plan to walk there, or use W A S D.');
     ui.card.classList.remove('show');
   }
   function exitWalk(back = true) {
@@ -966,10 +1062,16 @@ export function run(data, root) {
     const rs = data.floors[fi].rooms.filter(q => (data.single || q.unit === unit) && !OUTSIDE.has(q.type) && q.type !== 'core' && q.w * q.d > 2.5).slice(0, roomLights.length);
     roomLights.forEach((l, i) => { const q = rs[i]; l.visible = !!q; if (!q) return; l.position.set(q.x + q.w / 2, fi * data.floorH + data.floorH - .75, q.z + q.d / 2); l.userData.base = Math.min(6, q.w * q.d * .35); l.distance = Math.max(q.w, q.d) * 1.4; l.intensity = l.userData.base * (.35 + 2.2 * night); });
   }
-  function moveTo(q, fi) {
-    if (!walk) return;
-    if (fi !== walk.floor) { walk.floor = fi; setRoomLights(fi, walk.unit); focusY = fi * data.floorH; setTime(hour); }
-    walk.room = q; walk.to = roomCentre(q, fi); walk.from = camera.position.clone(); walk.t = performance.now();
+  function moveTo(q, fi, point) {
+    if (!walk) return; if (fly) { camera.position.copy(fly.p1); fly = null; }
+    const here = camera.position.clone(), cur = standAt(here.x, here.z, walk.floor, -1) || walk.room; let pts = [];
+    if (fi !== walk.floor) {          // up or down the stairs: through the hall on each floor
+      const h0 = data.floors[walk.floor].rooms.find(r => r.type === 'hall') || cur, h1 = data.floors[fi].rooms.find(r => r.type === 'hall') || q;
+      pts = [...(route(walk.floor, cur, h0) || []), standPoint(h0, walk.floor).clone()]; walk.floor = fi; setRoomLights(fi, walk.unit); focusY = fi * data.floorH; setTime(hour);
+      pts.push(standPoint(h1, fi).clone(), ...(route(fi, h1, q) || []));
+    } else pts = route(fi, cur, q) || [];
+    const y = fi * data.floorH + EYE, end = point && standAt(point.x, point.z, fi) === q ? new THREE.Vector3(point.x, y, point.z) : standPoint(q, fi).clone();
+    pts.push(end); walk.room = q; walk.path = pts; walk.to = end; walk.turn = null;
     ui.walk.querySelector('[data-where]').textContent = q.name; drawPlan(); dirty = true;
   }
   function drawPlan() {
@@ -989,13 +1091,13 @@ export function run(data, root) {
     const q = m.rs.find(q => x > q.x && x < q.x + q.w && z > q.z && z < q.z + q.d); if (q && q.w * q.d > 1.5) moveTo(q, walk.floor); poke();
   });
   ui.walk.querySelector('[data-exit]').addEventListener('click', () => { exitWalk(true); poke(); });
-  ui.walk.querySelectorAll('[data-wfloor]').forEach(b => b.addEventListener('click', () => { const fi = +b.dataset.wfloor; moveTo(data.floors[fi].rooms.find(r => r.type === 'hall') || data.floors[fi].rooms[0], fi); poke(); }));
+  ui.walk.querySelectorAll('[data-wfloor]').forEach(b => b.addEventListener('click', () => { const fi = +b.dataset.wfloor; if (fi !== walk.floor) moveTo(data.floors[fi].rooms.find(r => r.type === 'hall') || data.floors[fi].rooms[0], fi); poke(); }));
   ui.walk.querySelector('[data-book]')?.addEventListener('click', openModal);
 
   // ---------- pointer ----------
   const ray = new THREE.Raycaster(), ndc = new THREE.Vector2(); let down = null, lastMove = 0;
   function pick(ev, list) { const r = canvas.getBoundingClientRect(); ndc.set(((ev.clientX - r.left) / r.width) * 2 - 1, -((ev.clientY - r.top) / r.height) * 2 + 1); ray.setFromCamera(ndc, camera); return ray.intersectObjects(list, false)[0]; }
-  canvas.addEventListener('pointerdown', ev => { down = { x: ev.clientX, y: ev.clientY, t: performance.now(), yaw: look.yaw, pitch: look.pitch }; if (walk) canvas.setPointerCapture(ev.pointerId); closePops(); poke(); });
+  canvas.addEventListener('pointerdown', ev => { if (walk) walk.turn = null; down = { x: ev.clientX, y: ev.clientY, t: performance.now(), yaw: look.yaw, pitch: look.pitch }; if (walk) canvas.setPointerCapture(ev.pointerId); closePops(); poke(); });
   canvas.addEventListener('pointermove', ev => {
     if (walk && down) { look.yaw = down.yaw - (ev.clientX - down.x) * .005; look.pitch = clamp(down.pitch - (ev.clientY - down.y) * .004, -1.1, 1.1); dirty = true; drawPlan(); return; }
     if (touch || walk) return; const now = performance.now(); if (now - lastMove < 40) return; lastMove = now; hoverAt(ev);
@@ -1011,10 +1113,10 @@ export function run(data, root) {
     canvas.style.cursor = cur; dirty = true;
   }
   function clickAt(ev) {
-    if (walk) { const h = pick(ev, roomPick[walk.floor]); if (h) { const q = h.object.userData.room; if (data.single || q.unit === walk.unit) moveTo(q, walk.floor); } return; }
+    if (walk) { const h = pick(ev, roomPick[walk.floor]); if (h) { const q = h.object.userData.room; if (okRoom(q)) moveTo(q, walk.floor, h.point); } return; }
     if (openIdx < 0) { const h = pick(ev, floorPick); if (h) openFloor(data.single ? 0 : h.object.userData.floor); return; }
     const h = pick(ev, roomPick[openIdx]); if (!h) return; const q = h.object.userData.room;
-    if (data.single) selectRoom(q, openIdx); else if (q.unit) selectUnit(data.units[q.unit]);
+    if (data.single) { if (selRoom && selRoom.q === q) enterWalk(openIdx, q); else selectRoom(q, openIdx); } else if (q.unit) { if (selUnit && selUnit.id === q.unit) enterWalk(openIdx, q); else selectUnit(data.units[q.unit]); }
   }
   addEventListener('keydown', ev => {
     if (ev.target && ev.target.tagName === 'INPUT') return;
@@ -1134,11 +1236,31 @@ export function run(data, root) {
     } else paint(hoverGroup, storyMat, i, [{ x: plate.x0 - .5, z: plate.z0 - .5, w: plate.w + 1, d: plate.d + 1 }], true);
     return out;
   }
+  // the page hands the scene over: fly from wherever the scroll left the camera to the balcony, then walk in
+  let stHold = null;
+  function storyEnter(m) {
+    if (!st) return; stHold = st; st = null; hoverGroup.clear(); root.classList.remove('story'); root.classList.add('taken'); controls.enabled = true;
+    cut = cutTo = cutEnd = BIG; clip.constant = BIG; clipUp.constant = -BIG; ghost.visible = false; scan.visible = false; reframe();
+    const u = m.unit && data.units[m.unit];
+    if (u) {
+      const fi = u.floor, rs = data.floors[fi].rooms.filter(q => q.unit === u.id), liv = rs.find(q => q.type === 'open' || q.type === 'living') || rs[0];
+      const south = liv.z + liv.d / 2 > plate.cz, edge = south ? plate.z1 : plate.z0, out = south ? 1 : -1, lx = liv.x + liv.w / 2, y = fi * data.floorH + EYE;
+      showInner([fi]); selUnit = null; controls.enabled = false;
+      flyTo(new THREE.Vector3(lx + out * 2.5, y + 1.2, edge + out * 11), new THREE.Vector3(lx, y - .2, edge - out * 2), 2.1, 46, () => setTimeout(() => { if (stHold && !walk) enterWalk(fi, liv, true); }, reduce ? 0 : 420));
+    } else openFloor(data.single ? 0 : m.floor);
+  }
+  function storyLeave() {
+    if (!stHold) return; const h = stHold; stHold = null; if (walk) exitWalk(false); closeFloors(false); closePops(); ui.card.classList.remove('show');
+    root.classList.remove('taken'); root.classList.add('story'); controls.enabled = false; camera.clearViewOffset();
+    flyTo(h.pos.getPoint(h.p), h.tgt.getPoint(h.p), 1.5, camera.aspect < 1 ? 58 : 40, () => { st = h; h.hr = -1; reframe(); storyAt(h.p); });
+  }
   const storyMat = new THREE.MeshBasicMaterial({ color: '#f1c56b', transparent: true, opacity: .42, depthWrite: false });
   addEventListener('message', e => {
     if (e.origin !== location.origin || !e.data) return; const m = e.data;
     if (m.rv === 'story') { if (!st) storyOn(); st.to = clamp(+m.p || 0, 0, 1); if (m.jump || reduce) st.p = st.to - 1e-4; }
     if (m.rv === 'point' && st) parent.postMessage({ rv: 'pointed', n: m.n, click: !!m.click, hit: storyPoint(m.x, m.y) }, location.origin);
+    if (m.rv === 'enter') storyEnter(m);
+    if (m.rv === 'leave') storyLeave();
     if (m.rv === 'floor' && st) { hoverGroup.clear(); if (m.i >= 0 && m.i * data.floorH < cut) paint(hoverGroup, storyMat, m.i, [{ x: plate.x0 - .5, z: plate.z0 - .5, w: plate.w + 1, d: plate.d + 1 }], true); dirty = true; }
   });
   function reframe(r = root.getBoundingClientRect()) { if (r.width < 760 && !walk && !st) camera.setViewOffset(r.width, r.height * 1.3, 0, r.height * .3, r.width, r.height); else camera.clearViewOffset(); camera.updateProjectionMatrix(); dirty = true; }
@@ -1162,13 +1284,22 @@ export function run(data, root) {
       const t = clamp((now - fly.s) / fly.d, 0, 1), k = ease(t);
       camera.position.lerpVectors(fly.p0, fly.p1, k); controls.target.lerpVectors(fly.t0, fly.t1, k);
       if (fly.f1 !== fly.f0) { camera.fov = fly.f0 + (fly.f1 - fly.f0) * k; camera.updateProjectionMatrix(); }
-      camera.lookAt(controls.target); if (t >= 1) fly = null; dirty = true;
+      camera.lookAt(controls.target); if (t >= 1) { const then = fly.then; fly = null; if (then) then(); } dirty = true;
     } else if (walk) {
-      if (walk.to) { const t = clamp((now - walk.t) / (reduce ? 1 : 900), 0, 1); camera.position.lerpVectors(walk.from, walk.to, ease(t)); if (t >= 1) walk.to = null; dirty = true; drawPlan(); }
-      const sp = 2.4 * dt; fwd.set(Math.sin(look.yaw), 0, Math.cos(look.yaw)); let mv = 0;
-      if (keys.w || keys.arrowup) { camera.position.addScaledVector(fwd, sp); mv = 1; } if (keys.s || keys.arrowdown) { camera.position.addScaledVector(fwd, -sp); mv = 1; }
-      if (keys.a || keys.arrowleft) { camera.position.x += fwd.z * sp; camera.position.z -= fwd.x * sp; mv = 1; } if (keys.d || keys.arrowright) { camera.position.x -= fwd.z * sp; camera.position.z += fwd.x * sp; mv = 1; }
-      if (mv) { const p = camera.position; p.x = clamp(p.x, plate.x0 - 2, plate.x1 + 2); p.z = clamp(p.z, plate.z0 - 2.2, plate.z1 + 2.2); const q = data.floors[walk.floor].rooms.find(r => p.x > r.x && p.x < r.x + r.w && p.z > r.z && p.z < r.z + r.d); if (q && q !== walk.room && (data.single || q.unit === walk.unit)) { walk.room = q; ui.walk.querySelector('[data-where]').textContent = q.name; } drawPlan(); dirty = true; }
+      const p = camera.position;
+      if (walk.path) {
+        let rem = (reduce ? 60 : 2.5) * dt;
+        while (rem > 0 && walk.path.length) { const t = walk.path[0], dx = t.x - p.x, dy = t.y - p.y, dz = t.z - p.z, d = Math.hypot(dx, dy, dz); if (d <= rem) { p.copy(t); rem -= d; walk.path.shift(); } else { p.x += dx / d * rem; p.y += dy / d * rem; p.z += dz / d * rem; rem = 0; if (!down && Math.hypot(dx, dz) > .3) { look.yaw += angTo(Math.atan2(dx, dz), look.yaw) * Math.min(1, dt * 5); look.pitch += (-.05 - look.pitch) * Math.min(1, dt * 3); } } }
+        if (!walk.path.length) { walk.path = null; walk.to = null; if ((walk.room.ext || {}) && Object.keys(walk.room.ext || {}).length) walk.turn = faceWindow(walk.room); }
+        dirty = true; drawPlan();
+      } else if (walk.turn !== null && !down) { const d = angTo(walk.turn, look.yaw); if (Math.abs(d) < .01) walk.turn = null; else { look.yaw += d * Math.min(1, dt * 2.6); dirty = true; drawPlan(); } }
+      const sp = 2.2 * dt; fwd.set(Math.sin(look.yaw), 0, Math.cos(look.yaw)); let mx = 0, mz = 0;
+      if (keys.w || keys.arrowup) { mx += fwd.x * sp; mz += fwd.z * sp; } if (keys.s || keys.arrowdown) { mx -= fwd.x * sp; mz -= fwd.z * sp; }
+      if (keys.a || keys.arrowleft) { mx += fwd.z * sp; mz -= fwd.x * sp; } if (keys.d || keys.arrowright) { mx -= fwd.z * sp; mz += fwd.x * sp; }
+      if ((mx || mz) && !walk.path) {
+        walk.turn = null; const tryGo = (ax, az) => { const r = standAt(p.x + ax, p.z + az, walk.floor); if (!r) return false; p.x += ax; p.z += az; if (r !== walk.room) { walk.room = r; ui.walk.querySelector('[data-where]').textContent = r.name; } return true; };
+        if (tryGo(mx, mz) || tryGo(mx, 0) || tryGo(0, mz)) { drawPlan(); dirty = true; }
+      }
       camera.lookAt(camera.position.x + Math.sin(look.yaw) * Math.cos(look.pitch), camera.position.y + Math.sin(look.pitch), camera.position.z + Math.cos(look.yaw) * Math.cos(look.pitch));
     } else {
       controls.autoRotate = !reduce && openIdx < 0 && now - idleAt > 7000; controls.autoRotateSpeed = .35;
@@ -1180,5 +1311,5 @@ export function run(data, root) {
   showCard(data.single ? houseCard() : buildingCard()); allBtn.classList.add('on'); setStyle('oak');
   requestAnimationFrame(t => { last = t; ui.loader && ui.loader.classList.add('done'); if (new URLSearchParams(location.search).has('story')) { storyOn(); parent !== window && parent.postMessage({ rv: 'ready' }, location.origin); } else flyTo(p0, t0, 2.2); hint(data.single ? 'Tap the house to see inside.' : 'Tap a floor to see inside it.'); tick(t); });
 
-  window.__rv = { openFloor, closeFloors, ask, setStyle, view, rooms: (fi, unit) => data.floors[fi].rooms.filter(q => !unit || q.unit === unit).map(q => [q.id, q.type]), turn: (a, pitch = -.04) => { look.yaw = faceWindow(walk.room) + a; look.pitch = pitch; dirty = true; }, fov: f => { camera.fov = f; camera.updateProjectionMatrix(); dirty = true; }, eye: (p, t, f = 68) => { fly = null; if (walk) walk.to = null; camera.position.set(...p); const d = new THREE.Vector3(t[0] - p[0], t[1] - p[1], t[2] - p[2]).normalize(); look.yaw = Math.atan2(d.x, d.z); look.pitch = Math.asin(d.y); camera.fov = f; camera.updateProjectionMatrix(); dirty = true; }, selectUnit: id => selectUnit(data.units[id]), enterWalk: (fi, id) => enterWalk(fi, data.floors[fi].rooms.find(q => q.id === id)), setTime: h => { ui.slider.value = h; setTime(h); }, look: (yaw, pitch = 0) => { look.yaw = yaw; look.pitch = pitch; dirty = true; }, cam: (p, t) => { fly = null; camera.position.set(...p); controls.target.set(...t); camera.lookAt(controls.target); dirty = true; }, info: () => ({ calls: renderer.info.render.calls, tris: renderer.info.render.triangles, geos: renderer.info.memory.geometries }), story: p => { if (!st) storyOn(); st.to = st.p = p; storyAt(p); }, settled: () => !fly && !(walk && walk.to) && (cut > BIG / 2 || Math.abs(cutTo - cut) < .03) };
+  window.__rv = { openFloor, closeFloors, ask, setStyle, view, rooms: (fi, unit) => data.floors[fi].rooms.filter(q => !unit || q.unit === unit).map(q => [q.id, q.type]), turn: (a, pitch = -.04) => { look.yaw = faceWindow(walk.room) + a; look.pitch = pitch; dirty = true; }, fov: f => { camera.fov = f; camera.updateProjectionMatrix(); dirty = true; }, eye: (p, t, f = 68) => { fly = null; if (walk) walk.to = null; camera.position.set(...p); const d = new THREE.Vector3(t[0] - p[0], t[1] - p[1], t[2] - p[2]).normalize(); look.yaw = Math.atan2(d.x, d.z); look.pitch = Math.asin(d.y); camera.fov = f; camera.updateProjectionMatrix(); dirty = true; }, selectUnit: id => selectUnit(data.units[id]), enterWalk: (fi, id) => enterWalk(fi, data.floors[fi].rooms.find(q => q.id === id)), setTime: h => { ui.slider.value = h; setTime(h); }, look: (yaw, pitch = 0) => { look.yaw = yaw; look.pitch = pitch; dirty = true; }, cam: (p, t) => { fly = null; camera.position.set(...p); controls.target.set(...t); camera.lookAt(controls.target); dirty = true; }, info: () => ({ calls: renderer.info.render.calls, tris: renderer.info.render.triangles, geos: renderer.info.memory.geometries }), story: p => { if (!st) storyOn(); st.to = st.p = p; storyAt(p); }, storyEnter, storyLeave, go: id => moveTo(data.floors[walk.floor].rooms.find(q => q.id === id), walk.floor), walkInfo: () => walk && { room: walk.room.id, pos: camera.position.toArray().map(v => +v.toFixed(2)), moving: !!walk.path }, key: (k, on) => { keys[k] = on; }, audit: () => data.floors.flatMap((f, i) => { ensureInner(i); return f.rooms.filter(q => q.fit > .01).map(q => [i, q.id, q.type, +q.fit.toFixed(2)]); }), settled: () => !fly && !(walk && walk.to) && (cut > BIG / 2 || Math.abs(cutTo - cut) < .03) };
 }
