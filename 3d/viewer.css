@@ -164,3 +164,7 @@ details{margin:6px 0 12px} summary{cursor:pointer;color:var(--mute);font-size:13
   .walking .tools{top:104px}
   .walking .pop{top:152px}
 }
+
+/* story mode: only the picture, the page drives it */
+.story>*:not(canvas){display:none!important}
+.story canvas{touch-action:auto;pointer-events:none}

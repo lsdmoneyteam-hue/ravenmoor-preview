@@ -940,7 +940,8 @@ export function run(data, root) {
 
   // ---------- walking inside ----------
   let walk = null; const look = { yaw: 0, pitch: 0 }, keys = {};
-  const roomCentre = (q, fi) => new THREE.Vector3(q.x + q.w / 2, fi * data.floorH + 1.62, q.z + q.d / 2);
+  const roomCentre = (q, fi) => new THREE.Vector3(q.x + q.w / 2, fi * data.floorH + 1.52, q.z + q.d / 2);
+  const walkFov = () => camera.aspect >= 1.25 ? 80 : Math.min(102, 2 * Math.atan(Math.tan(.75) / Math.max(camera.aspect, .4)) * 180 / Math.PI);
   const faceWindow = q => { const e = q.ext || {}; return e.s ? 0 : e.n ? Math.PI : e.e ? Math.PI / 2 : e.w ? -Math.PI / 2 : 0; };
   function enterWalk(fi, q) {
     if (!q) return;
@@ -950,8 +951,8 @@ export function run(data, root) {
     showAvail(false); if (ui.avail) ui.avail.checked = false; selGroup.clear(); hoverGroup.clear();
     controls.enabled = false; root.classList.add('walking'); reframe();
     look.yaw = faceWindow(q); look.pitch = -.06;
-    walk.pos.add(new THREE.Vector3(-Math.sin(look.yaw), 0, -Math.cos(look.yaw)).multiplyScalar((Math.abs(Math.sin(look.yaw)) > .5 ? q.w : q.d) * .22));
-    fly = null; flyTo(walk.pos, walk.pos.clone().add(new THREE.Vector3(Math.sin(look.yaw), 0, Math.cos(look.yaw))), 1.3, 74);
+    walk.pos.add(new THREE.Vector3(-Math.sin(look.yaw), 0, -Math.cos(look.yaw)).multiplyScalar((Math.abs(Math.sin(look.yaw)) > .5 ? q.w : q.d) * .36));
+    fly = null; flyTo(walk.pos, walk.pos.clone().add(new THREE.Vector3(Math.sin(look.yaw), 0, Math.cos(look.yaw))), 1.3, walkFov());
     setRoomLights(fi, q.unit); drawPlan(); ui.walk.querySelector('[data-where]').textContent = q.name;
     hint(touch ? 'Drag to look around. Tap a room on the plan to move.' : 'Drag to look around. Tap the floor or the plan to move, or use W A S D.');
     ui.card.classList.remove('show');
@@ -1100,8 +1101,28 @@ export function run(data, root) {
   // ---------- loop ----------
   controls.addEventListener('change', () => { dirty = true; }); controls.addEventListener('start', poke);
   // on phones the details sheet covers the lower part of the screen, so the view is shifted up
-  function reframe(r = root.getBoundingClientRect()) { if (r.width < 760 && !walk) camera.setViewOffset(r.width, r.height * 1.3, 0, r.height * .3, r.width, r.height); else camera.clearViewOffset(); camera.updateProjectionMatrix(); dirty = true; }
-  function resize() { const r = root.getBoundingClientRect(); renderer.setSize(r.width, r.height, false); camera.aspect = r.width / r.height; reframe(r); if (walk) drawPlan(); }
+  // ---------- story mode: the page scrolls, the building assembles ----------
+  let st = null;
+  const sstep = (a, b, x) => { x = clamp((x - a) / (b - a), 0, 1); return x * x * (3 - 2 * x); };
+  function storyOn() {
+    const h = Math.max(topY + roofH, 9), s = Math.max(h, Math.max(plate.w, plate.d) * 1.15), cx = plate.cx, cz = plate.cz, v = (x, y, z) => new THREE.Vector3(x, y, z);
+    st = { p: 0, to: 0, h, hr: -1,
+      pos: new THREE.CatmullRomCurve3([v(cx + s * .2, h + s * 3.6, cz + s * .9), v(cx + s * 1.2, h * .6 + s * 1.9, cz + s * 2.2), v(cx + s * 1.9, h * .45 + s * .7, cz + s * 1.5), v(cx + s * .9, h * .75 + s * .25, cz + s * 2), v(cx - s * .7, h * .5 + s * .12, cz + s * 1.9), v(cx - s * .62, Math.max(1.7, h * .05), cz + s * 1.45)], false, 'centripetal'),
+      tgt: new THREE.CatmullRomCurve3([v(cx, 0, cz), v(cx, h * .1, cz), v(cx, h * .3, cz), v(cx, h * .45, cz), v(cx, h * .5, cz), v(cx, h * .54, cz)], false, 'centripetal') };
+    fly = null; controls.enabled = false; root.classList.add('story'); camera.fov = 40; reframe(); storyAt(0);
+  }
+  function storyAt(p) {
+    camera.position.copy(st.pos.getPoint(p)); controls.target.copy(st.tgt.getPoint(p)); camera.lookAt(controls.target);
+    const f = camera.aspect < 1 ? 58 : 40, fov = f + 14 * (1 - sstep(0, .5, p)); if (Math.abs(fov - camera.fov) > .05) { camera.fov = fov; camera.updateProjectionMatrix(); }
+    const b = sstep(.2, .7, p);
+    if (b >= 1) { cut = cutTo = cutEnd = BIG; clip.constant = BIG; clipUp.constant = -BIG; ghost.visible = false; scan.visible = false; }
+    else { cut = cutTo = cutEnd = .15 + (st.h + .6) * b; clip.constant = cut; clipUp.constant = -cut; ghost.visible = p > .1; scan.visible = b > 0; scan.position.y = cut; scan.material.opacity = .9; }
+    const hr = Math.round((data.startHour + (18.7 - data.startHour) * sstep(.62, .97, p)) * 8) / 8; if (hr !== st.hr) { st.hr = hr; if (ui.slider) ui.slider.value = hr; setTime(hr); }
+    dirty = true;
+  }
+  addEventListener('message', e => { if (e.origin !== location.origin || !e.data || e.data.rv !== 'story') return; if (!st) storyOn(); st.to = clamp(+e.data.p || 0, 0, 1); if (e.data.jump || reduce) st.p = st.to - 1e-4; });
+  function reframe(r = root.getBoundingClientRect()) { if (r.width < 760 && !walk && !st) camera.setViewOffset(r.width, r.height * 1.3, 0, r.height * .3, r.width, r.height); else camera.clearViewOffset(); camera.updateProjectionMatrix(); dirty = true; }
+  function resize() { const r = root.getBoundingClientRect(); renderer.setSize(r.width, r.height, false); camera.aspect = r.width / r.height; if (walk && !fly) camera.fov = walkFov(); reframe(r); if (walk) drawPlan(); }
   new ResizeObserver(resize).observe(root); resize();
   shadowBox(Rfull);
   const fwd = new THREE.Vector3(), cdir = new THREE.Vector3();
@@ -1116,7 +1137,8 @@ export function run(data, root) {
       clip.constant = cut; clipUp.constant = -cut;
       const moving = cut < BIG / 2 && Math.abs(cutTo - cut) > .05; scanA += ((moving ? 1 : 0) - scanA) * Math.min(1, dt * 5); scan.visible = cut < BIG / 2 && scanA > .02; scan.position.y = Math.min(cut, topY + roofH); scan.material.opacity = scanA * .9; if (scan.visible) dirty = true;
     }
-    if (fly) {
+    if (st) { const d = st.to - st.p; if (Math.abs(d) > 2e-5) { st.p = Math.abs(d) < 4e-4 ? st.to : st.p + d * Math.min(1, dt * 5.5); storyAt(st.p); } }
+    else if (fly) {
       const t = clamp((now - fly.s) / fly.d, 0, 1), k = ease(t);
       camera.position.lerpVectors(fly.p0, fly.p1, k); controls.target.lerpVectors(fly.t0, fly.t1, k);
       if (fly.f1 !== fly.f0) { camera.fov = fly.f0 + (fly.f1 - fly.f0) * k; camera.updateProjectionMatrix(); }
@@ -1136,7 +1158,7 @@ export function run(data, root) {
     requestAnimationFrame(tick);
   }
   showCard(data.single ? houseCard() : buildingCard()); allBtn.classList.add('on'); setStyle('oak');
-  requestAnimationFrame(t => { last = t; ui.loader && ui.loader.classList.add('done'); flyTo(p0, t0, 2.2); hint(data.single ? 'Tap the house to see inside.' : 'Tap a floor to see inside it.'); tick(t); });
+  requestAnimationFrame(t => { last = t; ui.loader && ui.loader.classList.add('done'); if (new URLSearchParams(location.search).has('story')) { storyOn(); parent !== window && parent.postMessage({ rv: 'ready' }, location.origin); } else flyTo(p0, t0, 2.2); hint(data.single ? 'Tap the house to see inside.' : 'Tap a floor to see inside it.'); tick(t); });
 
-  window.__rv = { openFloor, closeFloors, ask, setStyle, view, rooms: (fi, unit) => data.floors[fi].rooms.filter(q => !unit || q.unit === unit).map(q => [q.id, q.type]), turn: (a, pitch = -.04) => { look.yaw = faceWindow(walk.room) + a; look.pitch = pitch; dirty = true; }, fov: f => { camera.fov = f; camera.updateProjectionMatrix(); dirty = true; }, eye: (p, t, f = 68) => { fly = null; if (walk) walk.to = null; camera.position.set(...p); const d = new THREE.Vector3(t[0] - p[0], t[1] - p[1], t[2] - p[2]).normalize(); look.yaw = Math.atan2(d.x, d.z); look.pitch = Math.asin(d.y); camera.fov = f; camera.updateProjectionMatrix(); dirty = true; }, selectUnit: id => selectUnit(data.units[id]), enterWalk: (fi, id) => enterWalk(fi, data.floors[fi].rooms.find(q => q.id === id)), setTime: h => { ui.slider.value = h; setTime(h); }, look: (yaw, pitch = 0) => { look.yaw = yaw; look.pitch = pitch; dirty = true; }, cam: (p, t) => { fly = null; camera.position.set(...p); controls.target.set(...t); camera.lookAt(controls.target); dirty = true; }, info: () => ({ calls: renderer.info.render.calls, tris: renderer.info.render.triangles, geos: renderer.info.memory.geometries }), settled: () => !fly && !(walk && walk.to) && (cut > BIG / 2 || Math.abs(cutTo - cut) < .03) };
+  window.__rv = { openFloor, closeFloors, ask, setStyle, view, rooms: (fi, unit) => data.floors[fi].rooms.filter(q => !unit || q.unit === unit).map(q => [q.id, q.type]), turn: (a, pitch = -.04) => { look.yaw = faceWindow(walk.room) + a; look.pitch = pitch; dirty = true; }, fov: f => { camera.fov = f; camera.updateProjectionMatrix(); dirty = true; }, eye: (p, t, f = 68) => { fly = null; if (walk) walk.to = null; camera.position.set(...p); const d = new THREE.Vector3(t[0] - p[0], t[1] - p[1], t[2] - p[2]).normalize(); look.yaw = Math.atan2(d.x, d.z); look.pitch = Math.asin(d.y); camera.fov = f; camera.updateProjectionMatrix(); dirty = true; }, selectUnit: id => selectUnit(data.units[id]), enterWalk: (fi, id) => enterWalk(fi, data.floors[fi].rooms.find(q => q.id === id)), setTime: h => { ui.slider.value = h; setTime(h); }, look: (yaw, pitch = 0) => { look.yaw = yaw; look.pitch = pitch; dirty = true; }, cam: (p, t) => { fly = null; camera.position.set(...p); controls.target.set(...t); camera.lookAt(controls.target); dirty = true; }, info: () => ({ calls: renderer.info.render.calls, tris: renderer.info.render.triangles, geos: renderer.info.memory.geometries }), story: p => { if (!st) storyOn(); st.to = st.p = p; storyAt(p); }, settled: () => !fly && !(walk && walk.to) && (cut > BIG / 2 || Math.abs(cutTo - cut) < .03) };
 }

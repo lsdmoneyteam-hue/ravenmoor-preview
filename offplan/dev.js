@@ -23,10 +23,19 @@ export function mount(key) {
   </div>
   <header class="bar"><a class="bar-name" href="#top">${esc(D.name)}</a><nav><a href="#homes">${D.single ? 'The house' : 'Residences'}</a><a href="#inside">Inside</a><a href="#model">3D</a><a class="bar-cta" href="#talk">Enquire</a></nav></header>
 
-  <section class="hero" id="top">
-    <picture><source media="(max-width: 700px)" srcset="${img('hero-tall')}"><img src="${img('hero')}" alt="${esc(D.name)} at dusk" fetchpriority="high"></picture>
-    <div class="hero-text"><p class="kicker">${esc(D.place)}</p><h1>${esc(D.name)}</h1><p class="lede">${esc(C.tagline)}</p>
-      <div class="row"><a class="btn" href="#homes">${D.single ? 'Explore the house' : 'Explore residences'}</a><button class="btn ghost" type="button" data-open3d>Open the 3D model</button></div></div>
+  <section class="story" id="top" data-story>
+    <div class="story-pin">
+      <picture class="story-poster"><source media="(max-width: 700px)" srcset="${img('hero-tall')}"><img src="${img('hero')}" alt="${esc(D.name)} at dusk" fetchpriority="high"></picture>
+      <iframe class="story-frame" title="${esc(D.name)} being built as you scroll" tabindex="-1" aria-hidden="true"></iframe>
+      <div class="story-shade"></div>
+      <div class="story-mist" data-mist></div>
+      <div class="cap cap-title" data-cap="-1,.15"><p class="kicker">${esc(D.place)}</p><h1>${esc(D.name)}</h1><p class="cue">Scroll to build it</p></div>
+      <div class="cap cap-line" data-cap=".2,.42"><p>${esc(C.tagline)}</p></div>
+      <div class="cap cap-rise" data-cap=".44,.7"><p class="rise" data-rise></p><dl class="numbers">${C.numbers.slice(0, 3).map(([n, l]) => `<div><dt>${esc(l)}</dt><dd>${esc(n)}</dd></div>`).join('')}</dl></div>
+      <div class="cap cap-end" data-cap=".8,2"><p class="kicker">${esc(D.place)}</p><h2>${esc(D.name)}</h2><p class="lede">${esc(C.tagline)}</p>
+        <div class="row"><a class="btn" href="#homes">${D.single ? 'Explore the house' : 'Explore residences'}</a><button class="btn ghost" type="button" data-open3d>Open the 3D model</button></div></div>
+      <div class="story-bar"><i data-bar></i></div>
+    </div>
   </section>
 
   <section class="intro"><p>${esc(C.intro)}</p>
@@ -81,10 +90,27 @@ export function mount(key) {
 
   // ---------- the 3D viewer ----------
   const viewer = $('[data-viewer]'), frame = viewer.querySelector('iframe');
-  const open3d = (q = '') => { frame.src = three(q); viewer.hidden = false; document.body.classList.add('locked'); viewer.querySelector('button').focus(); };
-  const close3d = () => { viewer.hidden = true; frame.src = 'about:blank'; document.body.classList.remove('locked'); };
+  const open3d = (q = '') => { const sf = root.querySelector('.story-frame'); if (sf && sf.src && !sf.src.endsWith('about:blank')) { sf.dataset.src = sf.src; sf.src = 'about:blank'; root.querySelector('[data-story]').classList.remove('live'); } frame.src = three(q); viewer.hidden = false; document.body.classList.add('locked'); viewer.querySelector('button').focus(); };
+  const close3d = () => { const sf = root.querySelector('.story-frame'); if (sf && sf.dataset.src) { sf.src = sf.dataset.src; delete sf.dataset.src; } viewer.hidden = true; frame.src = 'about:blank'; document.body.classList.remove('locked'); };
   $$('[data-open3d]').forEach(b => b.addEventListener('click', () => open3d()));
   $('[data-close3d]').addEventListener('click', close3d);
+
+  // ---------- the opening: scrolling flies the camera in and builds the development ----------
+  const story = $('[data-story]'), sframe = story.querySelector('iframe'), caps = [...story.querySelectorAll('[data-cap]')].map(el => [el, ...el.dataset.cap.split(',').map(Number)]);
+  const calm = matchMedia('(prefers-reduced-motion: reduce)').matches, sbar = story.querySelector('[data-bar]'), rise = story.querySelector('[data-rise]'), mist = story.querySelector('[data-mist]');
+  const levels = D.single ? ['Foundations', 'Ground floor', 'First floor', 'Roof'] : null, nF = D.floors.length;
+  let sp = -1, live = false;
+  const post = (p, jump) => { if (live) sframe.contentWindow.postMessage({ rv: 'story', p, jump }, location.origin); };
+  const paint = () => {
+    const r = story.getBoundingClientRect(), p = calm ? 1 : Math.min(1, Math.max(0, -r.top / Math.max(1, r.height - innerHeight)));
+    if (p === sp) return; sp = p; post(p); sbar.style.transform = `scaleX(${p})`; mist.style.opacity = Math.max(0, 1 - p / .2);
+    caps.forEach(([el, a, b]) => { const o = Math.min(1, Math.max(0, Math.min((p - a) / .05, (b - p) / .05))); el.style.opacity = o; el.style.transform = `translateY(${(1 - o) * (p < a + .05 ? 26 : -26)}px)`; el.classList.toggle('on', o > .5); });
+    let k = Math.min(1, Math.max(0, (p - .2) / .5)); k = k * k * (3 - 2 * k);
+    rise.textContent = levels ? levels[Math.min(3, Math.floor(k * 4))] : k >= 1 ? 'Topped out' : `Level ${Math.min(nF - 1, Math.floor(k * nF))} of ${nF - 1}`;
+  };
+  if (calm) story.classList.add('calm'); else { sframe.src = `/3d/${C.model}/?story=1&embed=1`; addEventListener('scroll', () => requestAnimationFrame(paint), { passive: true }); addEventListener('resize', paint); }
+  addEventListener('message', e => { if (e.origin === location.origin && e.source === sframe.contentWindow && e.data && e.data.rv === 'ready') { live = true; story.classList.add('live'); post(Math.max(0, sp), true); } });
+  paint();
 
   // ---------- floor plans drawn from the same data as the 3D model ----------
   const bounds = rooms => { const x0 = Math.min(...rooms.map(r => r.x)), x1 = Math.max(...rooms.map(r => r.x + r.w)), z0 = Math.min(...rooms.map(r => r.z)), z1 = Math.max(...rooms.map(r => r.z + r.d)); return { x0, z0, w: x1 - x0, d: z1 - z0 }; };
@@ -187,6 +213,6 @@ export function mount(key) {
   $('[data-form]').addEventListener('submit', e => { e.preventDefault(); const f = e.target, note = $('[data-form-note]'); if (!f.name.value.trim() || !/.+@.+\..+/.test(f.email.value)) { note.textContent = 'Add your name and an email address so we can reply.'; return; } note.textContent = `Thanks, ${f.name.value.trim().split(' ')[0]}. This is a demo, so nothing was sent. On a live site the sales team gets this at once, with the home you looked at.`; f.reset(); });
 
   // header appears once you leave the hero
-  const bar = $('.bar'); new IntersectionObserver(([en]) => bar.classList.toggle('show', !en.isIntersecting), { rootMargin: '-80px 0px 0px 0px' }).observe($('.hero'));
+  const bar = $('.bar'); new IntersectionObserver(([en]) => bar.classList.toggle('show', !en.isIntersecting), { rootMargin: '-80px 0px 0px 0px' }).observe($('.story'));
   window.__dev = { showLevel, showUnit, open3d, enter };
 }
