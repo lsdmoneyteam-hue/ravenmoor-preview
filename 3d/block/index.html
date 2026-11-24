@@ -5,12 +5,12 @@
 <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
 <meta name="robots" content="noindex">
 <title>Wharf Row: explore in 3D · Ravenmoor Digital</title>
-<meta name="description" content="Explore Wharf Row in 3D: lift the roof, pick a flat, walk inside.">
+<meta name="description" content="Explore Wharf Row in 3D: X-ray any floor, pick a flat, walk inside.">
 <meta name="theme-color" content="#0E0F11">
 <link rel="icon" href="/favicon.svg" type="image/svg+xml">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Cormorant+Garamond:wght@400;500;600&amp;family=Schibsted+Grotesk:wght@400;500;600&amp;display=swap">
-<link rel="stylesheet" href="/3d/viewer.css?v=1">
+<link rel="stylesheet" href="/3d/viewer.css?v=2">
 <script type="importmap">{"imports":{"three":"/3d/lib/three.module.js"}}</script>
 </head>
 <body>
@@ -26,10 +26,29 @@
   </header>
   <nav class="tabs panel" data-tabs aria-label="Views"><button type="button" class="on" data-view="homes">Homes</button><button type="button" data-view="roof">Roof garden</button><button type="button" data-view="street">Canal</button></nav>
   <nav class="floors panel" data-floors aria-label="Floors"></nav>
-  <aside class="card panel" data-card aria-live="polite"></aside>
+  <aside class="card panel" data-card aria-live="polite"><button class="cardtoggle" type="button" aria-label="Show or hide details"></button></aside>
   <div class="timebar panel">
     <label><span class="sunico" aria-hidden="true"></span><span class="sr">Time of day</span><input type="range" min="5" max="23" step="0.25" data-slider aria-label="Time of day"><span data-time></span></label>
     <label class="avail"><input type="checkbox" data-avail> Availability</label><span class="legend"><span><i style="background:#c8913a"></i>Available</span><span><i style="background:#a7a29a"></i>Reserved</span><span><i style="background:#8a3a32"></i>Sold</span></span>
+  </div>
+  <div class="tools panel">
+    <button type="button" data-tool="ask">Ask</button><button type="button" data-tool="style">Style</button>
+    <span class="compass" data-compass title="North"><i></i>N</span>
+  </div>
+  <div class="pop panel" data-pop="ask" hidden>
+    <h3>Ask about Wharf Row</h3>
+    <form data-askform><input type="text" placeholder="Show me it at sunset" aria-label="Your question" autocomplete="off"><button type="submit">Ask</button></form>
+    <div class="chips" data-chips></div>
+    <p class="answer" data-answer role="status"></p>
+  </div>
+  <div class="pop panel" data-pop="style" hidden>
+    <h3>Interior style</h3>
+    <div class="swatches">
+      <button type="button" data-style="oak"><span><b style="background:#b9946c"></b><b style="background:#6a715a"></b><b style="background:#34453f"></b></span>Warm oak</button>
+      <button type="button" data-style="coast"><span><b style="background:#e3d6bd"></b><b style="background:#8fa3b0"></b><b style="background:#f2f0ea"></b></span>Coastal</button>
+      <button type="button" data-style="luxe"><span><b style="background:#6f4e37"></b><b style="background:#33363b"></b><b style="background:#b08a4a"></b></span>Dark luxe</button>
+    </div>
+    <label class="chk"><input type="checkbox" data-furnished checked> Furnished</label>
   </div>
   <div class="hint panel" data-hint role="status"></div>
   <div class="walkbar panel" data-walkbar>
@@ -53,12 +72,20 @@
   <div class="nogl" data-nogl><p>This demo needs WebGL, which this browser has switched off.</p></div>
 </main>
 <script type="module">
-import { run } from '/3d/engine.js?v=1';
-import { block } from '/3d/buildings.js?v=1';
-const root = document.getElementById('rv');
-const toggle = document.createElement('button'); toggle.className = 'cardtoggle'; toggle.type = 'button'; toggle.setAttribute('aria-label', 'Show or hide details');
-root.querySelector('[data-card]').prepend(toggle);
-try { run(block(), root); } catch (e) { console.error(e); root.querySelector('[data-loader]').classList.add('done'); root.querySelector('[data-nogl]').style.display = 'grid'; }
+import { run } from '/3d/engine.js?v=2';
+import { block } from '/3d/buildings.js?v=2';
+const root = document.getElementById('rv'), q = new URLSearchParams(location.search);
+if (q.has('embed')) root.classList.add('embed');
+try {
+  run(block(), root);
+  // deep links from the development site: ?unit=12.03 opens that home, ?floor=12 opens a floor, &walk=1 steps inside
+  const want = q.get('unit') || q.get('floor') || q.get('time') || q.get('walk');
+  const walkIn = (n = 0) => { const r = window.__rv, b = root.querySelector('[data-act="walk"]'); if (b && b.offsetParent && r.settled()) b.click(); else if (n < 160) setTimeout(() => walkIn(n + 1), 250); };
+  const go = (n = 0) => { const r = window.__rv; if (!r) { if (n < 60) setTimeout(() => go(n + 1), 250); return; }
+    if (q.get('unit')) r.selectUnit(q.get('unit')); else if (q.get('floor')) r.openFloor(+q.get('floor'));
+    if (q.get('time')) r.setTime(+q.get('time')); if (q.get('walk')) setTimeout(walkIn, 600); };
+  if (want) setTimeout(go, 600);
+} catch (e) { console.error(e); root.querySelector('[data-loader]').classList.add('done'); root.querySelector('[data-nogl]').style.display = 'grid'; }
 </script>
 </body>
 </html>

@@ -1,0 +1,67 @@
+<!doctype html>
+<html lang="en-GB">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<meta name="robots" content="noindex">
+<title>Off-plan: sell it before it’s built · Ravenmoor Digital</title>
+<meta name="description" content="A full sales website for a development that isn’t built yet: every level, every plan, and a 3D model buyers can walk round.">
+<meta name="theme-color" content="#0E0F11">
+<link rel="icon" href="/favicon.svg" type="image/svg+xml">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Cormorant+Garamond:wght@400;500;600&amp;family=Schibsted+Grotesk:wght@400;500;600&amp;display=swap">
+<style>
+:root{--ink:#0E0F11;--bone:#EDE8DF;--amber:#C8913A;--mute:rgba(237,232,223,.7);--rule:rgba(237,232,223,.16)}
+*{box-sizing:border-box}
+body{margin:0;background:var(--ink);color:var(--bone);font:17px/1.6 'Schibsted Grotesk',system-ui,sans-serif;-webkit-font-smoothing:antialiased}
+a{color:inherit}
+:focus-visible{outline:2px solid var(--amber);outline-offset:3px}
+.top{display:flex;justify-content:space-between;align-items:center;padding:22px clamp(20px,5vw,56px);border-bottom:1px solid var(--rule);font-size:15px}
+.brand{font:500 24px/1 'Cormorant Garamond',Georgia,serif;text-decoration:none}
+.top a:not(.brand){display:inline-flex;min-height:44px;align-items:center;text-decoration:none}
+main{max-width:1240px;margin:0 auto;padding:clamp(40px,7vw,90px) clamp(20px,5vw,40px) 90px}
+h1{font:500 clamp(46px,8.5vw,96px)/.96 'Cormorant Garamond',Georgia,serif;letter-spacing:-.015em;margin:0 0 20px;max-width:13ch}
+.lede{font-size:20px;line-height:1.45;max-width:38rem;margin:0}
+.devs{display:grid;gap:clamp(40px,7vw,90px);margin:clamp(50px,8vw,100px) 0}
+.dev{display:grid;grid-template-columns:1.5fr 1fr;gap:clamp(20px,4vw,56px);align-items:end;text-decoration:none}
+.dev:nth-child(even){grid-template-columns:1fr 1.5fr}.dev:nth-child(even) img{order:2}
+.dev img{display:block;width:100%;aspect-ratio:16/10;object-fit:cover;border-radius:3px}
+.dev h2{font:500 clamp(40px,6vw,72px)/.95 'Cormorant Garamond',Georgia,serif;margin:6px 0 12px}
+.dev p{margin:0;color:var(--mute)}.dev .kind{font-size:14px}
+.dev .go{display:inline-block;margin-top:16px;color:var(--amber);font-weight:500}
+.dev:hover .go{text-decoration:underline;text-underline-offset:5px}
+.what{border-top:1px solid var(--rule);padding-top:40px;display:grid;grid-template-columns:1fr 1.4fr;gap:clamp(24px,5vw,70px)}
+.what h2{font:500 clamp(32px,4.5vw,50px)/1.02 'Cormorant Garamond',Georgia,serif;margin:0}
+.what ul{list-style:none;margin:0;padding:0}
+.what li{padding:14px 0;border-top:1px solid var(--rule);display:grid;grid-template-columns:170px 1fr;gap:16px}
+.what li strong{font-weight:500}.what li span{color:var(--mute)}
+.cta{margin-top:60px;display:flex;flex-wrap:wrap;gap:14px;align-items:center}
+.btn{display:inline-flex;align-items:center;min-height:48px;padding:0 22px;background:var(--amber);color:var(--ink);border-radius:2px;font-weight:600;text-decoration:none}
+.note{color:var(--mute);font-size:14px}
+@media (max-width:820px){.dev,.dev:nth-child(even),.what{grid-template-columns:1fr}.dev:nth-child(even) img{order:0}.what li{grid-template-columns:1fr;gap:2px}}
+</style>
+</head>
+<body>
+<header class="top"><a class="brand" href="/">Ravenmoor Digital</a><a href="/">Back to the site</a></header>
+<main>
+  <h1>Sell it before it’s built.</h1>
+  <p class="lede">A full sales website for a development that only exists on paper. Buyers choose a level, open a plan and walk round their home in 3D, from their phone.</p>
+  <section class="devs" aria-label="Demonstration developments">
+    <a class="dev" href="/offplan/halden-tower/"><img src="/offplan/img/tower-hero.webp" alt="Halden Tower at dusk" width="1600" height="1000"><div><p class="kind">Tower · 123 homes</p><h2>Halden Tower</h2><p>Twenty-six floors wrapped in rippling balconies above Campbell Park.</p><span class="go">Open the development</span></div></a>
+    <a class="dev" href="/offplan/wharf-row/"><img src="/offplan/img/block-hero.webp" alt="Wharf Row on the canal at dusk" width="1600" height="1000" loading="lazy"><div><p class="kind">Apartments · 34 homes</p><h2>Wharf Row</h2><p>A row of gabled brick wharf houses on the Grand Union Canal.</p><span class="go">Open the development</span></div></a>
+    <a class="dev" href="/offplan/ashcombe-house/"><img src="/offplan/img/house-hero.webp" alt="Ashcombe House from the garden at dusk" width="1600" height="1000" loading="lazy"><div><p class="kind">New home · 4 bedrooms</p><h2>Ashcombe House</h2><p>A modern barn with a wall of glass to the garden.</p><span class="go">Open the development</span></div></a>
+  </section>
+  <section class="what">
+    <h2>What every development gets</h2>
+    <ul>
+      <li><strong>Its own site</strong><span>Name, colours and words for that development, opening on a single door.</span></li>
+      <li><strong>Every level</strong><span>Tap a floor on the building to see its plan and what is still available.</span></li>
+      <li><strong>Every home</strong><span>Plan, sizes, price and aspect, with one tap to view it in 3D.</span></li>
+      <li><strong>A 3D model</strong><span>See inside any floor, step into the rooms, change the time of day and the interior style.</span></li>
+      <li><strong>Enquiries</strong><span>Each enquiry arrives with the exact home the buyer was looking at.</span></li>
+    </ul>
+  </section>
+  <div class="cta"><a class="btn" href="/#sample">Get this for your development</a><span class="note">These three are demonstrations. The developments, prices and availability are made up. <a href="/3d/" style="color:inherit">Open the 3D models on their own</a>.</span></div>
+</main>
+</body>
+</html>

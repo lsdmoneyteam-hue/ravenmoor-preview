@@ -57,9 +57,9 @@ export function tower() {
     const u = n => `${f}.${String(n).padStart(2, '0')}`;
     rooms.push(...flat(u(1), -15, -9, 12.5, 8, 'n', 2, { livingLeft: true }));
     rooms.push(...flat(u(2), 2.5, -9, 12.5, 8, 'n', 2));
-    rooms.push(...flat(u(3), -15, 1, 10, 8, 's', 2, { livingLeft: true, balcony: true }));
-    rooms.push(...flat(u(4), -5, 1, 10, 8, 's', 1, { balcony: true }));
-    rooms.push(...flat(u(5), 5, 1, 10, 8, 's', 2, { balcony: true }));
+    rooms.push(...flat(u(3), -15, 1, 10, 8, 's', 2, { livingLeft: true }));
+    rooms.push(...flat(u(4), -5, 1, 10, 8, 's', 1));
+    rooms.push(...flat(u(5), 5, 1, 10, 8, 's', 2));
     return rooms;
   };
   const penthouse = (f) => {
@@ -70,8 +70,8 @@ export function tower() {
     const u = n => `${f}.${String(n).padStart(2, '0')}`;
     rooms.push(...flat(u(1), -15, -9, 12.5, 8, 'n', 2, { livingLeft: true }));
     rooms.push(...flat(u(2), 2.5, -9, 12.5, 8, 'n', 2));
-    rooms.push(...flat(u(3), -15, 1, 15, 8, 's', 3, { livingLeft: true, balcony: true }));
-    rooms.push(...flat(u(4), 0, 1, 15, 8, 's', 3, { balcony: true }));
+    rooms.push(...flat(u(3), -15, 1, 15, 8, 's', 3, { livingLeft: true }));
+    rooms.push(...flat(u(4), 0, 1, 15, 8, 's', 3));
     return rooms;
   };
   const floors = [];
@@ -105,19 +105,27 @@ export function tower() {
         name: (pent ? 'Penthouse ' : 'Apartment ') + id,
         price: money(price),
         status: fi > 20 && roll < 0.35 ? 'Reserved' : roll < (fi < 8 ? 0.55 : 0.28) ? 'Sold' : roll < 0.4 ? 'Reserved' : 'Available',
-        aspect: north ? 'North-facing, city views' : 'South-facing, balcony over the park',
+        aspect: north ? 'North-facing, city views from a curved balcony' : 'South-facing, curved balcony over the park',
         features: pent
-          ? ['Floor-to-ceiling glass on three sides', 'Wraparound terrace', 'Two parking spaces', 'Concierge and residents’ gym']
-          : ['Floor-to-ceiling glazing', beds >= 2 ? 'En-suite to main bedroom' : 'Walk-in wardrobe', north ? 'Views to the station and Campbell Park' : 'Private balcony', 'Concierge and residents’ gym'],
+          ? ['Floor-to-ceiling glass on three sides', 'Wraparound sculpted terrace', 'Two parking spaces', 'Concierge and residents’ gym']
+          : ['Floor-to-ceiling glazing', beds >= 2 ? 'En-suite to main bedroom' : 'Walk-in wardrobe', 'Sculpted balcony, a different shape on every floor', 'Concierge and residents’ gym'],
       };
     });
   });
   return {
     key: 'tower', name: 'Halden Tower', place: 'Central Milton Keynes',
-    blurb: '26 storeys of glass above the park. 115 apartments and eight penthouses.',
+    blurb: '26 storeys wrapped in rippling white balconies, no two floors the same. 115 apartments and eight penthouses.',
     style: 'glass', floorH: H, size: [W, D], floors, units,
     site: { kind: 'city', water: false, park: 's' },
     roof: 'crown', startHour: 18.5,
+    spec: {
+      materials: 'A concrete frame with floor-to-ceiling glass and bronze fins. Every floor has a white balcony that curves in and out, so the tower ripples like water and no two homes have the same outline.',
+      finishes: 'Engineered oak floors, stone worktops, fitted wardrobes and porcelain-tiled bathrooms. Try the Style button to see other finishes.',
+      nearby: 'Milton Keynes Central station is 6 minutes on foot (Euston in 32 minutes). Campbell Park is across the road and centre:mk is 4 minutes away.',
+      energy: 'Predicted EPC B. Heating and hot water from a shared air-source heat network; triple glazing throughout.',
+      parking: 'Basement parking for the two- and three-bedroom homes, with EV charging. Secure bike store for everyone.',
+    },
+    asks: ['Show me it at sunset', 'Cheapest 2 bed', 'What is it made of?', 'What is nearby?'],
   };
 }
 
@@ -164,10 +172,18 @@ export function block() {
   });
   return {
     key: 'block', name: 'Wharf Row', place: 'Grand Union Canal, Milton Keynes',
-    blurb: 'Five storeys of brick on the canal. 34 apartments and a roof garden.',
+    blurb: 'A row of gabled brick wharf houses on the canal. 34 apartments and a roof garden.',
     style: 'brick', floorH: H, size: [36, 18], floors, units,
     site: { kind: 'canal', water: true },
-    roof: 'garden', startHour: 16.5,
+    roof: 'gables', startHour: 16.5,
+    spec: {
+      materials: 'Three tones of handmade brick, laid as a row of gabled wharf houses. Black steel windows and balconies, and standing-seam zinc roofs.',
+      finishes: 'Oak floors, shaker kitchens with stone worktops, and tiled bathrooms. Try the Style button to see other finishes.',
+      nearby: 'The towpath runs to Campbell Park in 10 minutes. Milton Keynes Central is 9 minutes by bike, and there is a cafe and a shop on the next wharf.',
+      energy: 'Predicted EPC B. Air-source heat pumps and solar panels on the south roof slopes.',
+      parking: 'One space for each two-bedroom home in the courtyard, plus a secure bike store.',
+    },
+    asks: ['Show me it at night', 'Cheapest 1 bed', 'Take me to the roof garden', 'What is it made of?'],
   };
 }
 
@@ -226,8 +242,18 @@ export function house() {
   };
   return {
     key: 'house', name: 'Ashcombe House', place: 'Newport Pagnell, Milton Keynes',
-    blurb: 'A four-bedroom detached family home. Walk through every room.',
+    blurb: 'A modern barn-style family home with a glazed gable over the garden. Walk through every room.',
     style: 'house', floorH: H, size: [12, 9], floors, units, notes,
-    site: { kind: 'suburb' }, roof: 'gable', startHour: 15.5, single: true,
+    site: { kind: 'suburb' }, roof: 'barn', startHour: 15.5, single: true,
+    doorAt: { 'hall|study': 0.2 }, wallKind: { 'hall|wc': 'solid' },
+    spec: {
+      materials: 'White lime render with black charred-timber cladding on the gables, a natural slate roof and an oak-framed porch. The back gable is glazed to the ridge.',
+      finishes: 'Oak floors, a quartz island kitchen, a wood burner in the living room and stone-tiled bathrooms. Try the Style button to see other finishes.',
+      nearby: 'Ousedale School is a 12-minute walk and Newport Pagnell high street is 8. The M1 is 5 minutes by car and Milton Keynes Central 15.',
+      energy: 'EPC B. Air-source heat pump, underfloor heating downstairs and solar panels on the south roof.',
+      parking: 'A block-paved drive for two cars with an EV charger.',
+      garden: 'The garden faces south and is 28 metres long, with a stone terrace, a pergola and a lawn.',
+    },
+    asks: ['Take me to the kitchen', 'Show me it at sunset', 'What is it made of?', 'How big is the garden?'],
   };
 }
