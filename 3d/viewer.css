@@ -168,3 +168,9 @@ details{margin:6px 0 12px} summary{cursor:pointer;color:var(--mute);font-size:13
 /* story mode: only the picture, the page drives it */
 .story>*:not(canvas){display:none!important}
 .story canvas{touch-action:auto;pointer-events:none}
+
+/* thumb pad: walk freely on a phone */
+.joy{position:absolute;right:16px;bottom:calc(31vw + 150px);width:112px;height:112px;border-radius:50%;border:1px solid rgba(237,232,223,.5);background:rgba(14,15,17,.45);backdrop-filter:blur(6px);display:none;touch-action:none;z-index:4}
+.joy i{position:absolute;left:50%;top:50%;width:46px;height:46px;margin:-23px 0 0 -23px;border-radius:50%;background:rgba(237,232,223,.85)}
+@media (pointer:coarse){.walking .joy{display:block}}
+.story .joy{display:none!important}
