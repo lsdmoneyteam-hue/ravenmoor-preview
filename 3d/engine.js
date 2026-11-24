@@ -236,7 +236,7 @@ function makeMaterials() {
     car1: S('#2e3a46', { roughness: .3, metalness: .6 }), car2: S('#c9c6c0', { roughness: .3, metalness: .6 }), car3: S('#7a1f22', { roughness: .3, metalness: .6 }),
     boat: S('#21443a', { roughness: .5 }), boatTop: S('#8b2f2a', { roughness: .5 }), lampHead: E('#222222', '#ffcf8a'),
   };
-  { const wv = weaveTex(3), wv2 = weaveTex(5); ['sofa', 'fabric', 'linen', 'throw_', 'curtain', 'rug', 'rug2', 'carpet'].forEach((k, i) => { M[k].map = i % 2 ? wv : wv2; M[k].userData.uv = k === 'carpet' || k.startsWith('rug') ? .5 : .28; }); M.downlight = E('#f6efe0', '#ffe2b0'); M.downlight.userData.noShadow = true; M.skirt = S('#f6f3ee', { roughness: .5 }); }
+  { const wv = weaveTex(3), wv2 = weaveTex(5); ['sofa', 'fabric', 'linen', 'throw_', 'curtain', 'rug', 'rug2', 'carpet'].forEach((k, i) => { M[k].map = i % 2 ? wv : wv2; M[k].userData.uv = .28; if (k === 'carpet' || k.startsWith('rug')) { M[k].map = weaveTex(7 + i); M[k].map.repeat.set(9, 9); } }); M.downlight = E('#f6efe0', '#ffe2b0'); M.downlight.userData.noShadow = true; M.skirt = S('#f6f3ee', { roughness: .5 }); }
   M.lampHead.userData.noShadow = true; M.lampShade.userData.noShadow = true;
   const glass = (o = {}) => { const m = new THREE.MeshPhysicalMaterial({ color: '#5f7a8c', roughness: .04, metalness: .3, transparent: true, opacity: .42, envMapIntensity: 2.2, depthWrite: false, side: THREE.DoubleSide, ...o }); m.userData.noShadow = true; return m; };
   M.glass = glass(); M.glassLit = glass({ emissive: new THREE.Color('#ffb15e'), emissiveIntensity: 0 }); M.glassRail = glass({ color: '#a9bcc6', opacity: .2, metalness: .1 });
@@ -516,7 +516,11 @@ function furnish(q, B, rooms, o) {
     const tall = len > 2.6 ? .65 : 0, la = uA + tall, ll = uB - la, lc = (la + uB) / 2;
     if (tall) box('cabinet', tall, 2.15, .62, uA + tall / 2, 1.08, V - .32);
     box('cabinet', ll, .88, .6, lc, .44, V - .31); box('worktop', ll + .02, .04, .64, lc, .9, V - .33); box('worktop', ll, .5, .02, lc, 1.17, V - .02);
-    box('cabinet', ll, .62, .34, lc, 1.9, V - .18); box('black', .6, .012, .5, lc + ll * .22, .925, V - .33); box('metal', .5, .012, .4, lc - ll * .22, .925, V - .33); box('metal', .02, .28, .02, lc - ll * .22, 1.06, V - .12);
+    box('cabinet', ll, .62, .34, lc, 1.9, V - .18); box('black', .6, .012, .5, lc + ll * .22, .925, V - .33); box('metal', .5, .012, .4, lc - ll * .22, .925, V - .33);
+    [[-.14, -.11], [.14, -.11], [-.14, .11], [.14, .11]].forEach(([a, b]) => cyl('metal', .075, .006, lc + ll * .22 + a, .934, V - .33 + b));          // hob rings
+    cyl('metal', .018, .3, lc - ll * .22, 1.07, V - .1); box('metal', .02, .02, .2, lc - ll * .22, 1.21, V - .2);                                    // tap
+    box('metal', .7, .06, .46, lc + ll * .22, 1.56, V - .25);                                                                                            // extractor
+    for (let u = la + .3; u < uB - .2; u += .6) { box('brass', .16, .014, .014, u, .78, V - .625); box('brass', .16, .014, .014, u, 1.64, V - .36); box('black', .006, .86, .004, u - .3, .44, V - .612); }
   };
   const island = (u, v, len) => { box('cabinet', len, .88, .9, u, .44, v); rbox('worktop', len + .12, .05, 1.04, u, .905, v, .02); const n = Math.max(2, Math.floor(len / .65)); for (let i = 0; i < n; i++) { const su = u - len / 2 + len * (i + .5) / n; cyl('fabric', .17, .06, su, .68, v - .78); cyl('black', .02, .66, su, .33, v - .78); cyl('black', .15, .02, su, .01, v - .78); pendant(su, v, .8, .13); } };
   // the longest stretch of wall, at depth v, that no door needs kept clear
@@ -536,7 +540,7 @@ function furnish(q, B, rooms, o) {
       const side = (big ? (kc > U / 2 ? 0 : 1) : (kc > U / 2 ? 1 : 0)) ^ (o.swap && !big ? 1 : 0), Lw = big ? 4.4 : U, lc = side ? U - Lw / 2 : Lw / 2, tvU = big ? (side ? U - Lw : Lw) : (side ? .22 : U - .22), dir = side ? 1 : -1;
       if ((V > 5.6 || (big && V > 4.7)) && kB - kA > 2.4) island(kc, V - 2.0, Math.min(big ? 2.6 : 2, kB - kA - .6));
       rbox('rug', Math.min(Lw - 1.2, 2.8), .012, 2.4, lc, .006, lv, .005);
-      sofa(side, lv, sl); cyl('oak', .42, .04, lc, .36, lv); cyl('black', .03, .34, lc, .18, lv);
+      sofa(side, lv, sl); cyl('oak', .42, .04, lc, .36, lv); cyl('black', .03, .34, lc, .18, lv); box('books', .26, .05, .19, lc - .1, .405, lv + .08); cyl('pot', .05, .16, lc + .16, .46, lv - .1, .035); ball('plant2', .09, lc + .16, .6, lv - .1, 1.2);
       if (big) { box('wallInt', .14, Hc, 2.6, tvU, Hc / 2, lv); rbox('darkWood', .4, .42, 1.9, tvU + dir * .28, .23, lv, .02); box('screen', .05, .75, 1.4, tvU + dir * .1, 1.3, lv); rbox('sofa', 1.7, .4, .85, lc, .22, lv + 1.75, .09); rbox('sofa', 1.7, .5, .22, lc, .58, lv + 2.1, .09); }
       else { rbox('darkWood', .4, .42, 1.7, tvU, .23, lv, .02); box('screen', .05, .7, 1.25, side ? .06 : U - .06, 1.25, lv); }
       art(side, lv, 1.3, .8, x + z + fi); floorLamp(side ? U - .4 : .4, lv + sl / 2 + .4); plant(side ? U - .45 : .45, .45);
@@ -563,6 +567,7 @@ function furnish(q, B, rooms, o) {
       rbox('fabric', bw + .2, 1.05, .12, bu, .6, V - .07, .05); rbox('white', .6, .16, .36, bu - bw / 4, .6, V - .42, .07); rbox('white', .6, .16, .36, bu + bw / 4, .6, V - .42, .07);
       [-1, 1].forEach(g => { if (U > bw + 1.3) { const su = bu + g * (bw / 2 + .36); rbox('oak', .46, .5, .4, su, .25, V - .27, .02); cyl('brass', .07, .02, su, .51, V - .27); box('brass', .015, .26, .015, su, .64, V - .27); cyl('lampShade', .12, .16, su, .82, V - .27, .08); } });
       rbox('rug2', bw + 1, .012, 1.5, bu, .006, bv - bl / 2 + .1, .005); artBack(bu, 1.2, .6, x * 3 + fi);
+      if (V > 4.2 && U > 2.9) { const wl = Math.min(2, V - 2.9); box('white', .58, 2.25, wl, .31, 1.125, .5 + wl / 2); for (let k = 1; k < wl / .5 - .5; k++) box('black', .004, 2.2, .006, .602, 1.125, .5 + k * .5); box('brass', .014, .3, .014, .615, 1.1, .5 + wl / 2 - .06); box('brass', .014, .3, .014, .615, 1.1, .5 + wl / 2 + .06); }
       if (V > 4.4) rbox('fabric', bw * .8, .42, .4, bu, .22, bv - bl / 2 - .32, .06);
       curtains();
       return;
@@ -576,7 +581,7 @@ function furnish(q, B, rooms, o) {
       }
       if (U >= 1.75 && V >= 1.9) { rbox('white', Math.min(1.7, U - .12), .56, .76, Math.min(1.7, U - .12) / 2 + .06, .29, V - .42, .12); box('metal', .03, .3, .03, .25, .72, V - .42); }
       else if (V > 1.6) { box('glass', .9, 2, .02, U / 2, 1, V - .95); box('metal', .25, .02, .25, U / 2, Hc - .1, V - .45); }
-      rbox('oak', Math.min(.8, U - .3), .5, .44, U - .46, .5, .26, .02); rbox('white', Math.min(.84, U - .26), .06, .46, U - .46, .78, .26, .02); box('mirror', Math.min(.7, U - .4), .8, .02, U - .46, 1.45, .03);
+      rbox('oak', Math.min(.8, U - .3), .5, .44, U - .46, .5, .26, .02); rbox('white', Math.min(.84, U - .26), .06, .46, U - .46, .78, .26, .02); box('mirror', Math.min(.7, U - .4), .8, .02, U - .46, 1.45, .03); cyl('metal', .014, .16, U - .46, .9, .12); box('metal', .016, .016, .12, U - .46, .97, .18); box('metal', .5, .02, .02, Math.max(.4, U * .28), 1.2, .05); rbox('linen', .44, .5, .03, Math.max(.4, U * .28), .96, .07, .01);
       if (U > 1.5) rbox('white', .38, .4, .58, Math.max(.3, U * .28), .2, .36, .08);
       return;
     }
@@ -773,6 +778,20 @@ function site(scene, data, M, plate) {
 }
 
 // ---------- sky ----------
+// A ring of far-off city (or wooded hills) on the horizon, so the view from a window ends in something.
+function skylineTex(city, lights) {
+  const t = canvasTex(4096, 256, (g, w, h) => {
+    let sd = city ? 77 : 191; const rn = () => (sd = (sd * 16807) % 2147483647) / 2147483647;
+    g.clearRect(0, 0, w, h);
+    if (lights) { if (!city) return; for (let x = 0; x < w;) { const bw = 10 + rn() * 34, cl = .5 + .5 * Math.sin(x / w * Math.PI * 10 + 1), bh = 18 + rn() * 60 + cl * cl * rn() * 120; for (let yy = h - bh + 4; yy < h - 6; yy += 5) for (let xx = x + 2; xx < x + bw - 2; xx += 4) if (rn() < .22) { g.fillStyle = rn() < .8 ? 'rgba(255,214,150,.9)' : 'rgba(210,230,255,.8)'; g.fillRect(xx, yy, 2, 2); } x += bw + rn() * 6; } return; }
+    const hill = (base, amp, col) => { g.fillStyle = col; g.beginPath(); g.moveTo(0, h); for (let x = 0; x <= w; x += 8) g.lineTo(x, h - base - amp * (.5 + .5 * Math.sin(x / w * Math.PI * 6 + amp)) - amp * .4 * Math.sin(x / w * Math.PI * 22 + 2)); g.lineTo(w, h); g.fill(); };
+    hill(city ? 26 : 46, city ? 22 : 46, 'rgba(120,134,150,.55)'); hill(city ? 12 : 26, city ? 12 : 30, 'rgba(96,112,124,.75)');
+    if (city) { sd = 77; for (let x = 0; x < w;) { const bw = 10 + rn() * 34, cl = .5 + .5 * Math.sin(x / w * Math.PI * 10 + 1), bh = 18 + rn() * 60 + cl * cl * rn() * 120; g.fillStyle = `rgba(${78 + rn() * 26},${90 + rn() * 26},${106 + rn() * 26},.92)`; g.fillRect(x, h - bh, bw, bh); x += bw + rn() * 6; } }
+    else for (let x = 0; x < w; x += 5 + rn() * 9) { const r = 6 + rn() * 12; g.fillStyle = `rgba(${52 + rn() * 20},${74 + rn() * 24},${56 + rn() * 16},.95)`; g.beginPath(); g.arc(x, h - 6 - rn() * 16, r, 0, 7); g.fill(); }
+    g.fillStyle = city ? 'rgba(86,98,112,.95)' : 'rgba(58,80,60,.97)'; g.fillRect(0, h - 8, w, 8);
+  });
+  t.wrapT = THREE.ClampToEdgeWrapping; return t;
+}
 function makeSky() {
   const m = new THREE.ShaderMaterial({
     side: THREE.BackSide, depthWrite: false, fog: false,
@@ -853,6 +872,14 @@ export function run(data, root) {
   const Rfull = Math.max(plate.w, plate.d, topY) * (data.single ? 2.4 : 1.25) + 10; let R = Rfull;
   const sm = sun.shadow; sm.mapSize.set(touch ? 1024 : 2048, touch ? 1024 : 2048); sm.bias = -.0004; sm.normalBias = .03;
   scene.fog = new THREE.Fog('#c9d3dc', 240, 1300);
+  const cityish = data.style !== 'house', ringGeo = new THREE.CylinderGeometry(1250, 1250, 300, 96, 1, true);
+  const horizon = new THREE.Mesh(ringGeo, new THREE.MeshBasicMaterial({ map: skylineTex(cityish, false), transparent: true, side: THREE.BackSide, fog: false, depthWrite: false })); horizon.position.y = 84; horizon.scale.y = .58; scene.add(horizon);
+  const horizonLit = new THREE.Mesh(ringGeo, new THREE.MeshBasicMaterial({ map: skylineTex(cityish, true), transparent: true, side: THREE.BackSide, fog: false, depthWrite: false, blending: THREE.AdditiveBlending, opacity: 0 })); horizonLit.position.y = 84; horizonLit.scale.set(.999, .58, .999); scene.add(horizonLit);
+  if (cityish) {          // the rest of the city, out to the haze: one instanced mesh
+    const N = 420, im = new THREE.InstancedMesh(new THREE.BoxGeometry(1, 1, 1), Ms.nbStone, N), o = new THREE.Object3D(); let sd = 5; const rn = () => (sd = (sd * 16807) % 2147483647) / 2147483647; let n = 0;
+    for (let gx = -11; gx <= 11 && n < N; gx++) for (let gz = -11; gz <= 11 && n < N; gz++) { const x = gx * 78 + (rn() - .5) * 30, z = gz * 78 + (rn() - .5) * 30, r = Math.hypot(x, z); if (r < 215 || r > 900 || rn() < .28) continue; if (data.style === 'brick' && z > 20 && z < 46) continue; const w = 16 + rn() * 30, d = 16 + rn() * 30, hh = (8 + rn() * 26) * (rn() < .12 ? 2.4 : 1); o.position.set(x, hh / 2 - .3, z); o.scale.set(w, hh, d); o.rotation.y = rn() < .5 ? 0 : Math.PI / 2; o.updateMatrix(); im.setMatrixAt(n++, o.matrix); }
+    im.count = n; im.castShadow = false; im.receiveShadow = false; scene.add(im);
+  }
   const roomLights = []; for (let i = 0; i < 10; i++) { const l = new THREE.PointLight('#ffd8a8', 0, 9, 1.6); l.visible = false; l.userData.base = 0; scene.add(l); roomLights.push(l); }
 
   const ui = {}, $ = s => root.querySelector(s);
@@ -873,7 +900,7 @@ export function run(data, root) {
     const hor = new THREE.Color('#cddbe6').lerp(new THREE.Color('#f2a76b'), dusk).lerp(new THREE.Color('#121722'), night);
     const u = sky.material.uniforms; u.top.value.copy(top); u.hor.value.copy(hor); u.sun.value.copy(dir); u.sunCol.value.copy(sc).multiplyScalar(1 - night); u.night.value = night;
     u.cloud.value.set('#ffffff').lerp(new THREE.Color('#f6c9a4'), dusk).lerp(new THREE.Color('#1a1f2b'), night);
-    scene.fog.color.copy(hor); renderer.toneMappingExposure = 1 - .15 * night;
+    scene.fog.color.copy(hor); horizon.material.color.copy(hor).lerp(new THREE.Color(night > .5 ? '#0c1018' : '#ffffff'), night > .5 ? .5 : .12); horizon.material.opacity = .8; horizonLit.material.opacity = night; renderer.toneMappingExposure = 1 - .15 * night;
     [M, Ms].forEach(K => { K.glassLit.emissiveIntensity = night * 1.1; K.glass.opacity = .4 + .2 * night; K.lantern.emissiveIntensity = .15 + night * 1.6; K.lampHead.emissiveIntensity = night * 4; K.downlight.emissiveIntensity = .5 + night * 2.4; K.lampShade.emissiveIntensity = .25 + night * 1.6; K.fire.emissiveIntensity = .9 + night * .6; [K.nbGlass, K.nbBrick, K.nbStone].forEach(m => { m.emissiveIntensity = night * .75; }); });
     roomLights.forEach(l => { l.intensity = l.userData.base * (.35 + 2.2 * night); });
     if (ui.time) ui.time.textContent = `${String(Math.floor(h)).padStart(2, '0')}:${String(Math.round((h % 1) * 60)).padStart(2, '0')}`;
