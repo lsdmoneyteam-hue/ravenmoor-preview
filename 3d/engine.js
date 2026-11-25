@@ -1465,9 +1465,8 @@ export function run(data, root) {
       const O1 = [x0 + 13.4, yT + 1.6, zb + .85], O2 = [px0 - .4, yT + 1.65, pd.z + 5.4], S0 = [px0 - 2.9, yT + 1.7, pz - 1.1], S1 = [px0 + .9, yT + hT + 1.62, pz - 1.1], E = [pcx - 1.5, yT + hT + 1.7, pz - .45];
       add(.86, O1, bar);                                            // through the doors as they slide open, looking left at the bar
       add(.895, O2, [bar[0] + 1.5, bar[1], bar[2]]);                // hold on it
-      add(.93, S0, [px0 + 4, yT + 1.6, pz + 3.5]);                  // turn right to the pool and start up the steps
-      add(.965, S1, [pcx + 2, yT + .9, pz + 5.5]);                  // up on the pool deck
-      add(.985, E, [pcx + 1, yT - 5, plate.z1 + 60]);               // standing at the head of the pool, the city beyond
+      add(.94, [O2[0] - .5, O2[1], O2[2] + .2], [pcx, yT + 1.3, pz + 2.5]);          // stay by the bar and turn right: the pool and the city beyond it
+      add(.972, [px0 - 2.8, yT + hT + 2.9, pz - 2.0], [pcx + 1.6, yT + .2, plate.z1 + 2]);          // rise
       add(1, [px0 - 3.6, yT + hT + 4.6, pz - 2.6], [pcx + 2.5, yT - 1.5, plate.z1 + 5]);          // then up and back on a wide lens: half the pool hangs out past the edge of the tower
       outAt = .82;
     } else
