@@ -579,8 +579,11 @@ window.__ldReady=Promise.race([getHi(),new Promise(function(r){setTimeout(r,1200
 <li><a href="#sample" onClick="{{askReel}}" data-track="pricing:100-plus"><span class="m-name">100 or more</span><span class="m-desc">A hundred properties or more</span><span class="m-price">£225<small>a reel</small></span></a></li>
 <li><a href="#sample" onClick="{{askReel}}" data-track="pricing:presenter"><span class="m-name">AI presenter</span><span class="m-desc">Added to any reel. Tell us what they should say.</span><span class="m-price">Quote</span></a></li>
 <li><a href="#sample" onClick="{{askPlans}}" data-track="pricing:plans"><span class="m-name">Plans to life</span><span class="m-desc">Approved drawings to a finished film.</span><span class="m-price">Quote</span></a></li>
+<li><a href="#sample" onClick="{{askPlans}}" data-track="pricing:3d-model"><span class="m-name">3D modelling</span><span class="m-desc">Your house, flats or tower built in 3D from the plans.</span><span class="m-price">Quote</span></a></li>
+<li><a href="#sample" onClick="{{askPlans}}" data-track="pricing:walkthrough"><span class="m-name">Walk-throughs</span><span class="m-desc">Tap the floor to walk from room to room and see how it will really look.</span><span class="m-price">Quote</span></a></li>
+<li><a href="#sample" onClick="{{askPlans}}" data-track="pricing:website"><span class="m-name">Website design</span><span class="m-desc">Pages for your site, built like ours or to your own look.</span><span class="m-price">Quote</span></a></li>
 </ul>
-<p class="smallprint" style="color: var(--mute)">All prices exclude VAT. Each reel covers one house. Presenter reels are quoted after a call or a visit to your office. Plans to life is quoted per scheme.</p>
+<p class="smallprint" style="color: var(--mute)">All prices exclude VAT. Each reel covers one house. Presenter reels are quoted after a call or a visit to your office. Plans to life, 3D modelling, walk-throughs and website design are quoted per job: ask for a quote.</p>
 </div>
 </section>
 
@@ -1738,7 +1741,7 @@ class Component extends DCLogic {
     H.fr = q('.gl-live'); H.G = null; H.live = 0; H.liveT = 0;
     let fine = false; try { fine = window.matchMedia('(hover: hover) and (pointer: fine)').matches; } catch (e) {}
     U.uDim.value = fine ? 1 : .8;   // the lights are held back only where a mouse can bring them up
-    if (H.fr && !this._reduce && fine) {   // computers only: a phone keeps the still picture, so it is not running two 3D scenes and streaming map tiles while you scroll
+    if (H.fr && !this._reduce) {   // computers and phones; only computers can drag it (on a phone a swipe scrolls the page)
       const startLive = () => {
         if (H.fr.src) return;
         if (this.state.loader === 'on') { setTimeout(startLive, 500); return; }   // the opening film gets the processor and the connection to itself
