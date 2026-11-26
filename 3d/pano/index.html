@@ -29,7 +29,7 @@ html,body{margin:0;height:100%;background:var(--bg);color:var(--ink);font:15px/1
 <body>
 <canvas id="v" aria-label="360 degree view of the penthouse. Drag to look around; tap an arrow to move."></canvas>
 <div id="fade"></div>
-<div class="top"><h1>Halden Tower · the penthouse</h1><span>Demo, fictional development · drag to look, tap an arrow to move</span></div>
+<div class="top"><h1>Halden Tower · the penthouse</h1><span>Demo, fictional development · drag to look, tap a marker on the floor to move</span></div>
 <div class="bar" role="group" aria-label="Where to stand">
   <button type="button" data-spot="gr">Great room</button>
   <button type="button" data-spot="stair">Stair</button>
@@ -63,16 +63,25 @@ const load = url => cache[url] || (cache[url] = new Promise((ok, bad) => L.load(
 const D = (from, to) => { const d = new THREE.Vector3(to[0] - from[0], to[1] - from[1], to[2] - from[2]).normalize(); return { lon: Math.atan2(d.x, -d.z), lat: Math.asin(d.y) }; };
 const onSphere = ({ lon, lat }, rad = 9) => new THREE.Vector3(-Math.cos(lon) * Math.cos(lat) * rad, Math.sin(lat) * rad, -Math.sin(lon) * Math.cos(lat) * rad);
 const viewLon = lon => lon * 180 / Math.PI + 180;
-function label(text) {
-  const c = document.createElement('canvas'), x = c.getContext('2d'), s = 2; c.width = 360 * s; c.height = 120 * s; x.scale(s, s);
-  x.fillStyle = 'rgba(14,15,17,.72)'; x.beginPath(); x.roundRect(10, 64, 340, 44, 22); x.fill();
-  x.fillStyle = '#c9a15a'; x.beginPath(); x.arc(180, 30, 26, 0, Math.PI * 2); x.fill();
-  x.fillStyle = '#17191d'; x.beginPath(); x.moveTo(168, 38); x.lineTo(180, 20); x.lineTo(192, 38); x.closePath(); x.fill();
-  x.fillStyle = '#efe9de'; x.font = '600 20px system-ui, sans-serif'; x.textAlign = 'center'; x.textBaseline = 'middle'; x.fillText(text, 180, 87);
+// a marker on the floor in the direction of the next spot, like a walk-through: a brass ring with an arrow and a small label
+function marker(text, h, ang) {
+  const g = new THREE.Group();
+  const ring = new THREE.Mesh(new THREE.RingGeometry(.26, .36, 48), new THREE.MeshBasicMaterial({ color: 0xc9a15a, transparent: true, opacity: .95, depthTest: false }));
+  const disc = new THREE.Mesh(new THREE.CircleGeometry(.26, 48), new THREE.MeshBasicMaterial({ color: 0x0e0f11, transparent: true, opacity: .45, depthTest: false }));
+  const sh = new THREE.Shape(); sh.moveTo(0, .16); sh.lineTo(.12, -.06); sh.lineTo(.04, -.02); sh.lineTo(.04, -.14); sh.lineTo(-.04, -.14); sh.lineTo(-.04, -.02); sh.lineTo(-.12, -.06); sh.closePath();
+  const arrow = new THREE.Mesh(new THREE.ShapeGeometry(sh), new THREE.MeshBasicMaterial({ color: 0xefe9de, depthTest: false }));
+  const flat = new THREE.Group(); flat.add(disc, ring, arrow); flat.rotation.x = -Math.PI / 2; flat.rotation.z = ang; g.add(flat);
+  const c = document.createElement('canvas'), x = c.getContext('2d'), sc = 2; c.width = 300 * sc; c.height = 56 * sc; x.scale(sc, sc);
+  x.font = '600 22px system-ui, sans-serif'; const w = Math.min(290, x.measureText(text).width + 32);
+  x.fillStyle = 'rgba(14,15,17,.75)'; x.beginPath(); x.roundRect(150 - w / 2, 6, w, 44, 22); x.fill();
+  x.fillStyle = '#efe9de'; x.textAlign = 'center'; x.textBaseline = 'middle'; x.fillText(text, 150, 29);
   const t = new THREE.CanvasTexture(c); t.colorSpace = THREE.SRGBColorSpace;
-  const sp = new THREE.Sprite(new THREE.SpriteMaterial({ map: t, depthTest: false, transparent: true })); sp.scale.set(3.6, 1.2, 1); sp.renderOrder = 2; return sp;
+  const lab = new THREE.Sprite(new THREE.SpriteMaterial({ map: t, depthTest: false, transparent: true })); lab.scale.set(1.0, .19, 1); lab.position.y = .32; g.add(lab);
+  g.position.copy(h); g.renderOrder = 3; g.traverse(o => { o.renderOrder = 3; });
+  return g;
 }
-let cur = null, model = false, lon = 90, lat = 0, fov = innerWidth < innerHeight ? 100 : 75, dirty = true, hot = [];
+const EYE = 1.6;
+let cur = null, model = false, lon = 90, lat = 0, fov = innerWidth < innerHeight ? 108 : 75, dirty = true, hot = [];
 async function go(id, keepView) {
   const s = SPOTS[id]; if (!s) return;
   fade.classList.add('on'); msg.textContent = '';
@@ -82,7 +91,11 @@ async function go(id, keepView) {
   await new Promise(res => setTimeout(res, cur ? 250 : 0));
   mat.map = tex; mat.needsUpdate = true;
   hot.forEach(h => scene.remove(h)); hot = [];
-  for (const [to, text] of s.links) { const sp = label(text); sp.position.copy(onSphere(D(s.pos, SPOTS[to].pos))); sp.position.y = Math.min(Math.max(sp.position.y, -2.2), 1.5); sp.userData.to = to; scene.add(sp); hot.push(sp); }
+  for (const [to, text] of s.links) {
+    const t = SPOTS[to].pos, dx = t[0] - s.pos[0], dz = t[2] - s.pos[2], dist = Math.hypot(dx, dz), lon = Math.atan2(dx / dist, -dz / dist), d = Math.min(Math.max(dist * .6, 1.6), 2.8);
+    const h = new THREE.Vector3(-Math.cos(lon) * d, -EYE, -Math.sin(lon) * d), m = marker(text, h, Math.atan2(-h.x, -h.z));
+    m.userData.to = to; m.traverse(o => { o.userData.to = to; }); scene.add(m); hot.push(m);
+  }
   if (!keepView) { const f = D(s.pos, s.face); lon = viewLon(f.lon); lat = Math.max(-20, Math.min(20, f.lat * 180 / Math.PI)); }
   cur = id; dirty = true;
   document.querySelectorAll('[data-spot]').forEach(b => b.classList.toggle('on', b.dataset.spot === id));
@@ -107,7 +120,7 @@ cv.addEventListener('pointermove', e => {
 });
 cv.addEventListener('pointerup', e => {
   pts.delete(e.pointerId);
-  if (moved < 8 && hot.length) { ndc.set(e.clientX / innerWidth * 2 - 1, -e.clientY / innerHeight * 2 + 1); ray.setFromCamera(ndc, cam); const h = ray.intersectObjects(hot)[0]; if (h) go(h.object.userData.to); }
+  if (moved < 8 && hot.length) { ndc.set(e.clientX / innerWidth * 2 - 1, -e.clientY / innerHeight * 2 + 1); ray.setFromCamera(ndc, cam); const h = ray.intersectObjects(hot, true)[0]; if (h) go(h.object.userData.to); }
 });
 cv.addEventListener('pointercancel', e => pts.delete(e.pointerId));
 cv.addEventListener('wheel', e => { e.preventDefault(); fov = Math.min(115, Math.max(35, fov + e.deltaY * .04)); dirty = true; }, { passive: false });
