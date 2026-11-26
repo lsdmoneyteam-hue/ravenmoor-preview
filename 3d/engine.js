@@ -510,13 +510,13 @@ const SOLVE = new Set(['open', 'living', 'kitchen', 'dining', 'bed', 'bath', 'st
 function furnishBest(q, B, segs, rooms, o) {
   const glassZ = []; segs.forEach(g => { if ((g.A === q) === (g.B === q) || (g.A && g.B && !OUTSIDE.has((g.A === q ? g.B : g.A).type))) return; if (g.A && g.B && g.kind !== 'slider') return; const d0 = g.A === q ? g.L - .55 : g.L, d1 = g.A === q ? g.L : g.L + .55; glassZ.push(g.axis === 'x' ? [d0, d1, g.a, g.b] : [g.a, g.b, d0, d1]); });
   const SOFT = new Set(['curtain', 'plant', 'plant2', 'pot', 'flower']);
-  const fixed = !SOLVE.has(q.type) || q.tall || q.look === 'kd' || (o.house && o.fi === 0 && q.type === 'hall'), zones = fixed ? [] : doorZones(q, segs);
+  const fixed = !SOLVE.has(q.type) || q.tall || q.look === 'kd' || q.look === 'dress' || q.look === 'sky' || (o.house && o.fi === 0 && q.type === 'hall'), zones = fixed ? [] : doorZones(q, segs);
   const tries = fixed ? [{}] : [{}, { swap: 1 }, { flip: 1 }, { flip: 1, swap: 1 }, { face: 'n' }, { face: 'n', flip: 1 }, { face: 's' }, { face: 's', flip: 1 }, { face: 'e' }, { face: 'e', flip: 1 }, { face: 'w' }, { face: 'w', flip: 1 }];
   const real = c => !((c.y1 - c.y0 < .05 && c.y0 < .1) || c.y0 > 2.0);          // not a rug, not something on the ceiling
   let best = null;
   for (const t of tries) {
     const R = new Rec(); furnish(q, R, rooms, { ...o, ...t, zones }); let bad = 0;
-    R.calls.forEach(c => { if (!real(c)) return; zones.forEach(z => { bad += overlap(c, z); }); if (c.y1 > .7 && !SOFT.has(c.args[0])) glassZ.forEach(z => { bad += 1.5 * overlap(c, z); }); bad += 3 * (Math.max(0, q.x - c.x0 - .03) + Math.max(0, c.x1 - q.x - q.w - .03) + Math.max(0, q.z - c.z0 - .03) + Math.max(0, c.z1 - q.z - q.d - .03)); });
+    R.calls.forEach(c => { if (!real(c)) return; zones.forEach(z => { bad += overlap(c, z); }); if (c.y1 > .7 && !SOFT.has(c.args[0])) glassZ.forEach(z => { bad += 6 * overlap(c, z); }); bad += 3 * (Math.max(0, q.x - c.x0 - .03) + Math.max(0, c.x1 - q.x - q.w - .03) + Math.max(0, q.z - c.z0 - .03) + Math.max(0, c.z1 - q.z - q.d - .03)); });
     if (!best || bad < best.bad - 1e-6) best = { R, bad, t }; if (bad < .01) break;
   }
   q.fit = 0; best.R.calls.forEach(c => { if (real(c)) zones.forEach(z => { q.fit += overlap(c, z); }); }); q.solids = []; q.all = [];
@@ -622,6 +622,18 @@ function furnish(q, B, rooms, o) {
         for (let r = 0; r < 2; r++) for (let k = 0, nk = U < 8 ? 3 : 4; k < nk; k++) { const cu = U / 2 - (nk - 1) * .85 + k * 1.7, cv = V - 3.4 - r * 2.1, up = r * .3; rbox('sofa', 1.2, .45, 1.2, cu, .25 + up, cv, .12); rbox('sofa', 1.2, .7, .3, cu, .7 + up, cv - .55, .1); rbox('sofa', .2, .3, 1.1, cu - .62, .55 + up, cv, .06); rbox('sofa', .2, .3, 1.1, cu + .62, .55 + up, cv, .06); }
         return;
       }
+      if (q.look === 'sky') {          // the glass sky lounge on the roof: a long sofa facing the city, two lounge chairs, a telescope in the corner, books either side of the door
+        const u0 = U / 2 + .3;
+        rbox('rug', 6.2, .014, 3.0, u0, .007, 2.2, .005);
+        rbox('sofa', 3.6, .42, 1.0, u0, .23, 2.95, .1); rbox('sofa', 3.6, .5, .26, u0, .6, 3.42, .09); rbox('sofa', .26, .3, 1.0, u0 - 1.67, .52, 2.95, .08); rbox('sofa', .26, .3, 1.0, u0 + 1.67, .52, 2.95, .08);
+        [-1.1, 0, 1.1].forEach((k, i) => rbox(i === 1 ? 'throw_' : 'fabric', .46, .4, .14, u0 + k, .64, 3.2, .06));
+        cyl('stone', .55, .38, u0, .19, 1.75); box('books', .3, .06, .22, u0 - .15, .41, 1.7); cyl('pot', .08, .16, u0 + .2, .46, 1.8, .06);
+        [-1, 1].forEach(g => { const cu = u0 + g * 2.55; rbox('fabric', .85, .4, .85, cu, .22, 2.0, .14); rbox('fabric', .85, .5, .2, cu + g * .33, .58, 2.15, .08); });
+        box('black', .03, 1.3, .03, U - 1.0, .65, .7); box('black', .03, 1.3, .03, U - .7, .65, 1.0); box('black', .03, 1.3, .03, U - 1.3, .65, 1.0); cyl('brass', .07, .9, U - 1.0, 1.42, .85, .05);
+        box('books', .3, 2.0, .9, .17, 1.0, .75); box('books', .3, 2.0, .9, .17, 1.0, V - .75);
+        floorLamp(u0 + 2.2, 3.55); plant(.7, 2.0, 1.2); plant(U - .6, V - .6, 1.4);
+        return;
+      }
       if (q.look === 'bar') {          // sky lounge: a long bar, sofas facing the view, a telescope at the glass
         box('darkWood', 4.6, 1.08, .7, U / 2, .54, V - 1.3); rbox('worktop', 4.8, .06, .85, U / 2, 1.11, V - 1.3, .02); box('mirror', 4.4, 1.4, .03, U / 2, 1.7, V - .05); for (let k = 0; k < 3; k++) box('glass', 4.2, .02, .26, U / 2, 1.25 + k * .4, V - .2);
         for (let k = 0; k < 6; k++) { const su = U / 2 - 2 + k * .8; cyl('fabric', .18, .07, su, .76, V - 2.1); cyl('brass', .02, .74, su, .37, V - 2.1); cyl('brass', .16, .02, su, .01, V - 2.1); pendant(su, V - 1.3, .55, .1); }
@@ -654,16 +666,16 @@ function furnish(q, B, rooms, o) {
       rbox('fabric', bw + .2, 1.05, .12, bu, .6, V - .07, .05); rbox('white', .6, .16, .36, bu - bw / 4, .6, V - .42, .07); rbox('white', .6, .16, .36, bu + bw / 4, .6, V - .42, .07);
       [-1, 1].forEach(g => { if (U > bw + 1.3) { const su = bu + g * (bw / 2 + .36); rbox('oak', .46, .5, .4, su, .25, V - .27, .02); cyl('brass', .07, .02, su, .51, V - .27); box('brass', .015, .26, .015, su, .64, V - .27); cyl('lampShade', .12, .16, su, .82, V - .27, .08); } });
       rbox('rug2', bw + 1, .012, 1.5, bu, .006, bv - bl / 2 + .1, .005); artBack(bu, 1.2, .6, x * 3 + fi);
-      if (V > 4.2 && U > 2.9) { const wl = Math.min(2, V - 2.9); box('white', .58, 2.25, wl, .31, 1.125, .5 + wl / 2); for (let k = 1; k < wl / .5 - .5; k++) box('black', .004, 2.2, .006, .602, 1.125, .5 + k * .5); box('brass', .014, .3, .014, .615, 1.1, .5 + wl / 2 - .06); box('brass', .014, .3, .014, .615, 1.1, .5 + wl / 2 + .06); }
-      else if (V > 3.5 && U > 2.9) { const wl = Math.min(1.5, V - 2.75); box('white', .58, 2.25, wl, .31, 1.125, .45 + wl / 2); box('black', .004, 2.2, .006, .602, 1.125, .45 + wl / 2); box('brass', .014, .3, .014, .615, 1.1, .45 + wl / 2 - .06); box('brass', .014, .3, .014, .615, 1.1, .45 + wl / 2 + .06); }
+      if (V > 4.2 && U > 2.9 && !(U > 6 && V > 6)) { const wl = Math.min(2, V - 2.9); box('white', .58, 2.25, wl, .31, 1.125, .5 + wl / 2); for (let k = 1; k < wl / .5 - .5; k++) box('black', .004, 2.2, .006, .602, 1.125, .5 + k * .5); box('brass', .014, .3, .014, .615, 1.1, .5 + wl / 2 - .06); box('brass', .014, .3, .014, .615, 1.1, .5 + wl / 2 + .06); }
+      else if (V > 3.5 && U > 2.9 && !(U > 6 && V > 6)) { const wl = Math.min(1.5, V - 2.75); box('white', .58, 2.25, wl, .31, 1.125, .45 + wl / 2); box('black', .004, 2.2, .006, .602, 1.125, .45 + wl / 2); box('brass', .014, .3, .014, .615, 1.1, .45 + wl / 2 - .06); box('brass', .014, .3, .014, .615, 1.1, .45 + wl / 2 + .06); }
       // the other side wall: a low dresser with a mirror and flowers
-      if (U > 3.4 && V > 3.9) { const dl = Math.min(1.3, V - 2.9), dv = .55 + dl / 2; rbox('oak', .45, .78, dl, U - .26, .39, dv, .02); box('brass', .01, .02, dl - .2, U - .49, .55, dv); box('mirror', .02, .7, dl * .6, U - .04, 1.45, dv); cyl('pot', .07, .18, U - .26, .87, dv - dl * .25, .05); ball('flower', .1, U - .26, 1.04, dv - dl * .25, 1.1); box('books', .2, .05, .26, U - .26, .805, dv + dl * .25); }
+      if (U > 3.4 && V > 3.9 && !(U > 6 && V > 6)) { const dl = Math.min(1.3, V - 2.9), dv = .55 + dl / 2; rbox('oak', .45, .78, dl, U - .26, .39, dv, .02); box('brass', .01, .02, dl - .2, U - .49, .55, dv); box('mirror', .02, .7, dl * .6, U - .04, 1.45, dv); cyl('pot', .07, .18, U - .26, .87, dv - dl * .25, .05); ball('flower', .1, U - .26, 1.04, dv - dl * .25, 1.1); box('books', .2, .05, .26, U - .26, .805, dv + dl * .25); }
       // a reading chair by the window in a wider room
       if (U > 4.3 && !(U > 6 && V > 6)) { rbox('fabric', .75, .4, .75, U - 1.35, .22, 1.05, .12); rbox('fabric', .75, .5, .18, U - 1.35, .6, .72, .08); cyl('oak', .2, .5, U - 2.05, .25, .95); cyl('brass', .012, 1.45, U - .75, .725, .6); cyl('lampShade', .14, .2, U - .75, 1.5, .6, .09); }
       if (V > 4.4) rbox('fabric', bw * .8, .42, .4, bu, .22, bv - bl / 2 - .32, .06);
       if (U > 6 && V > 6) { rbox('darkWood', 4.8, 1.7, .06, bu, 1.0, V - .04, .01); box('led', 4.8, .02, .02, bu, 1.87, V - .06); rbox('rug', 4.8, .012, 3.6, bu, .004, bv - .9, .005); plant(bu - 3.0, V - .6, 1.5); plant(bu + 3.0, V - .6, 1.5);
         rbox('fabric', .9, .42, .9, 1.4, .23, 1.5, .14); rbox('fabric', .9, .5, .2, 1.4, .58, 1.1, .08); rbox('fabric', .9, .42, .9, 3.0, .23, 1.5, .14); rbox('fabric', .9, .5, .2, 3.0, .58, 1.1, .08); cyl('stone', .32, .5, 2.2, .25, 1.6); plant(U - .7, .7, 1.4); rbox('rug', 3.4, .012, 2.4, 2.2, .006, 1.55, .005); cyl('brass', .012, 1.5, .7, .75, .75); cyl('lampShade', .15, .22, .7, 1.55, .75, .1);
-        rbox('oak', .5, .76, 1.8, U - .3, .38, V / 2 - .4, .02); box('mirror', .02, .9, 1.1, U - .04, 1.5, V / 2 - .4); rbox('fabric', .45, .44, .45, U - .95, .22, V / 2 - .4, .1); cyl('pot', .08, .2, U - .3, .86, V / 2 - 1.05, .05); ball('flower', .12, U - .3, 1.05, V / 2 - 1.05, 1.1); }
+        }
       curtains();
       return;
     }
@@ -695,7 +707,15 @@ function furnish(q, B, rooms, o) {
       box('books', Math.min(2.4, U - .4), Math.min(2.0, Hc - .3), .32, U / 2, 1.0, V - .17); plant(.4, V - .7, .8);
       return;
     }
-    case 'utility': { if (U > 1.1 && V > 1) { const L = Math.min(U - .12, 1.9); box('white', L, .88, .6, L / 2 + .06, .44, V - .32); box('worktop', L + .02, .04, .62, L / 2 + .06, .9, V - .32); box('white', L, .6, .34, L / 2 + .06, 1.9, V - .19); } return; }
+    case 'utility': {
+      if (q.look === 'dress') {          // dressing room: full-height oak wardrobes on both long walls, clear of the door, a stone island and a long mirror on the end wall
+        const L = U - 1.3, lc = 1.2 + L / 2;
+        [V - .31, .31].forEach(v => { box('oak', L, 2.4, .6, lc, 1.2, v); for (let k = 1; k < L / .6; k++) box('black', .004, 2.3, .62, 1.2 + k * .6 - L / 2 + L / 2, 1.2, v); box('led', L, .02, .02, lc, 2.42, v); });
+        rbox('stone', 1.5, .9, .55, lc + .2, .45, V / 2, .02); box('brass', 1.4, .02, .02, lc + .2, .7, V / 2 - .28); rbox('rug2', 2.2, .012, 1.2, lc + .2, .006, V / 2, .005);
+        box('mirror', .03, 1.9, .8, U - .03, 1.1, V / 2); pendant(lc - .2, V / 2, .45, .14); pendant(lc + .6, V / 2, .45, .14);
+        return;
+      }
+      if (U > 1.1 && V > 1) { const L = Math.min(U - .12, 1.9); box('white', L, .88, .6, L / 2 + .06, .44, V - .32); box('worktop', L + .02, .04, .62, L / 2 + .06, .9, V - .32); box('white', L, .6, .34, L / 2 + .06, 1.9, V - .19); } return; }
     case 'hall': {
       if (house && fi === 0) {       // staircase up one wall, console table and mirror by the door
         const n = 11, run = .26, rise = (Hc + .3) / n, sx = U - .5;

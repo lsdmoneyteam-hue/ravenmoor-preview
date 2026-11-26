@@ -61,7 +61,7 @@ export function tower() {
     r('core', 'core', -2.5, -9, 5, 8, { name: 'Private lift and stairs' }),
     pq('hall', 'hall', -15, -1, 30, 2, 'Gallery'),
     pq('liv', 'open', -15, 1, 12, 8, 'Great room', { tall: true }), pq('dining', 'dining', -3, 1, 12, 8, 'Kitchen and dining', { look: 'kd' }), pq('cinema', 'living', 9, 1, 6, 8, 'Cinema', { look: 'cinema' }),
-    pq('b1', 'bed', -15, -9, 7.5, 8, 'Main bedroom'), pq('bath', 'bath', -7.5, -9, 5, 4.5, 'Main bathroom'), pq('dress', 'utility', -7.5, -4.5, 5, 3.5, 'Dressing room'),
+    pq('b1', 'bed', -15, -9, 7.5, 8, 'Main bedroom'), pq('bath', 'bath', -7.5, -9, 5, 4.5, 'Main bathroom'), pq('dress', 'utility', -7.5, -4.5, 5, 3.5, 'Dressing room', { look: 'dress' }),
     pq('b2', 'bed', 2.5, -9, 6, 8, 'Bedroom 2'), pq('bath2', 'bath', 8.5, -9, 2.5, 4, 'Bathroom 2'), pq('laundry', 'utility', 8.5, -5, 2.5, 4, 'Laundry'), pq('b3', 'bed', 11, -9, 4, 8, 'Bedroom 3'),
   ];
   const sky26 = () => [
@@ -71,7 +71,7 @@ export function tower() {
     pq('poolwalk', 'terrace', -3, 1, 5.5, 8, 'Pool terrace', { blocks: [[0.5, 2.5, 3.2, 5.4]] }),
     pq('pooldeck', 'terrace', 2.5, -4, 12.5, 13, 'Pool terrace and bar', { pool: [3.2, 14.6, 5.4, 9], blocks: [[2.5, 14.6, 3.2, 5.4], [4.6, 14.9, -4, -2.4]], bar: [4.9, 14.6] }),
     pq('bridge', 'terrace', -2.5, -1, 5, 2, 'Terrace'),
-    pq('landing', 'hall', 2.5, -9, 2, 5, 'Lift lobby'), pq('sky', 'living', 4.5, -9, 10.5, 5, 'Sky lounge'), pq('garden', 'terrace', -15, -9, 12.5, 10, 'Roof garden'),
+    pq('landing', 'hall', 2.5, -9, 2, 5, 'Lift lobby'), pq('sky', 'living', 4.5, -9, 10.5, 5, 'Sky lounge', { look: 'sky' }), pq('garden', 'terrace', -15, -9, 12.5, 10, 'Roof garden'),
   ];
   const penthouse = (f) => {
     const rooms = [
