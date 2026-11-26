@@ -213,9 +213,11 @@ function gable(B, o) {
   const v0 = ends[0] ? verge : 0, v1 = ends[1] ? verge : 0, L = len + v0 + v1, sh = (v1 - v0) / 2;
   if (axis === 'x') {
     B.box(roof, L, t, sl, cx + sh, cy, cz - run / 2, 0, -ang); B.box(roof, L, t, sl, cx + sh, cy, cz + run / 2, 0, ang);
+    if (B.planes) B.planes.push({ p: [cx + sh, cy, cz - run / 2], rx: -ang, rz: 0, lx: L, lz: sl, t, ridge: y + rise }, { p: [cx + sh, cy, cz + run / 2], rx: ang, rz: 0, lx: L, lz: sl, t, ridge: y + rise });
     B.box(cap, L + .02, .1, .28, cx + sh, y + rise + t + .02, cz);
   } else {
     B.box(roof, sl, t, L, cx - run / 2, cy, cz + sh, 0, 0, ang); B.box(roof, sl, t, L, cx + run / 2, cy, cz + sh, 0, 0, -ang);
+    if (B.planes) B.planes.push({ p: [cx - run / 2, cy, cz + sh], rx: 0, rz: ang, lx: sl, lz: L, t, ridge: y + rise }, { p: [cx + run / 2, cy, cz + sh], rx: 0, rz: -ang, lx: sl, lz: L, t, ridge: y + rise });
     B.box(cap, .28, .1, L + .02, cx, y + rise + t + .02, cz + sh);
   }
   const tri = new THREE.Shape([new THREE.Vector2(-half, 0), new THREE.Vector2(half, 0), new THREE.Vector2(0, rise)]);
@@ -1048,7 +1050,78 @@ export function run(data, root) {
   if (data.style === 'house') houseExtras(S, plate);
   S.build(building);
   const roofG = new THREE.Group(); building.add(roofG);
-  { const R = new Bucket(M); if (data.roof === 'crown') { towerRoof(R, data, plate, topY); roofH = 2; } else if (data.roof === 'gables') { blockRoof(R, data, plate, topY); roofH = 5; } else roofH = houseRoof(R, data, plate, topY) + 2.5; R.build(roofG); }
+  let roofPlanes = null;
+  { const R = new Bucket(M); if (data.roof === 'crown') { towerRoof(R, data, plate, topY); roofH = 2; } else if (data.roof === 'gables') { blockRoof(R, data, plate, topY); roofH = 5; } else { R.planes = []; roofH = houseRoof(R, data, plate, topY) + 2.5; roofPlanes = R.planes; } R.build(roofG); }
+
+  // ---------- the house builds itself in the opening film: a timber frame, then blockwork course by course, then the roof slates one by one ----------
+  // Every piece is one instance with a place to end up, somewhere to fly in from, and a moment to start. kitAt(k) sets them all for k = 0..1.
+  let kit = null;
+  if (data.style === 'house' && roofPlanes) {
+    let seed = 0x51F15E; const rnd = () => (seed = (Math.imul(seed, 1664525) + 1013904223) >>> 0) / 4294967296;
+    const V = (x, y, z) => new THREE.Vector3(x, y, z), E = new THREE.Euler(), one = V(1, 1, 1);
+    const sets = { frame: [], block: [], tile: [] };
+    const piece = (set, pos, quat, scale, from, t0, dur, spin = 1) => {
+      const q0 = quat.clone().multiply(new THREE.Quaternion().setFromEuler(E.set((rnd() - .5) * 2.4 * spin, (rnd() - .5) * 2.4 * spin, (rnd() - .5) * 2.4 * spin)));
+      sets[set].push({ pos, quat, scale, from, q0, t0, dur, tint: .86 + rnd() * .2 });
+    };
+    const Q0 = new THREE.Quaternion(), { x0, x1, z0, z1, cx, cz } = plate, wallTop = topY - .3;
+    // 1. the frame: posts round the outside, plates at each level, first-floor joists, then rafters and a ridge
+    const per = 2 * (plate.w + plate.d), ring = d => { d = ((d % per) + per) % per; if (d < plate.w) return [x0 + d, z0]; d -= plate.w; if (d < plate.d) return [x1, z0 + d]; d -= plate.d; if (d < plate.w) return [x1 - d, z1]; d -= plate.w; return [x0, z1 - d]; };
+    const nPost = Math.round(per / 1.5);
+    for (let i = 0; i < nPost; i++) { const [px, pz] = ring(i * per / nPost); piece('frame', V(px, wallTop / 2, pz), Q0.clone(), V(.11, wallTop, .11), V((rnd() - .5) * 3, 9 + rnd() * 5, (rnd() - .5) * 3), .0 + .11 * i / nPost, .1, .25); }
+    [0.06, data.floorH - .12, wallTop - .06].forEach((yy, k) => {
+      [[cx, z0, plate.w, 0], [cx, z1, plate.w, 0], [x0, cz, plate.d, 1], [x1, cz, plate.d, 1]].forEach(([bx, bz, len, turn], j) => piece('frame', V(bx, yy, bz), Q0.clone().setFromEuler(E.set(0, turn ? Math.PI / 2 : 0, 0)), V(len, .12, .12), V(turn ? (bx < cx ? -14 : 14) : 0, 2 + rnd() * 3, turn ? 0 : (bz < cz ? -14 : 14)), .07 + k * .035 + j * .008, .1, .15));
+    });
+    for (let x = x0 + .6; x < x1 - .3; x += .6) piece('frame', V(x, data.floorH - .25, cz), Q0.clone(), V(.06, .2, plate.d), V(0, 7 + rnd() * 4, (rnd() < .5 ? -1 : 1) * (6 + rnd() * 6)), .12 + .08 * (x - x0) / plate.w, .09, .2);
+    roofPlanes.slice(0, 2).forEach((pl, side) => {
+      const q = new THREE.Quaternion().setFromEuler(E.set(pl.rx, 0, pl.rz));
+      for (let u = -pl.lx / 2 + .3; u < pl.lx / 2; u += .6) { const loc = V(u, -pl.t / 2 - .09, 0).applyQuaternion(q); piece('frame', V(pl.p[0] + loc.x, pl.p[1] + loc.y, pl.p[2] + loc.z), q.clone(), V(.06, .16, pl.lz), V((rnd() - .5) * 4, 8 + rnd() * 5, (side ? 1 : -1) * (5 + rnd() * 6)), .17 + .08 * (u + pl.lx / 2) / pl.lx, .09, .3); }
+    });
+    piece('frame', V(cx, roofPlanes[0].ridge - .1, cz), Q0.clone(), V(plate.w, .2, .08), V(0, 14, 0), .16, .1, .1);
+    // 2. blockwork: every outside wall that is not glass, course by course from the ground, each block arriving from outside and above
+    const BL = .44, BH = .215, GLASS = new Set(['slider', 'bifold', 'glassWall', 'curtain']), nCourse = Math.ceil((wallTop + .3) / BH);
+    plans.forEach((segs, fi) => segs.forEach(sg => {
+      if ((sg.A && sg.B) || GLASS.has(sg.kind) || sg.kind === 'none' || sg.kind === 'rail') return;
+      const out = sg.A && !sg.B ? 1 : -1, len = sg.b - sg.a, n = Math.max(1, Math.round(len / BL)), bl = len / n, yA = fi * data.floorH - (fi ? .3 : .3), yB = (fi + 1) * data.floorH - .3;
+      for (let c = Math.round((yA + .3) / BH); (c + 1) * BH - .3 <= yB + .01; c++) for (let i = 0; i < n; i++) {
+        const at = sg.a + (i + .5 + (c % 2 ? .5 : 0)) * bl; if (at > sg.b - bl * .2) continue;
+        const y = c * BH - .3 + BH / 2, px = sg.axis === 'x' ? sg.L + out * .17 : at, pz = sg.axis === 'x' ? at : sg.L + out * .17;
+        const nx = sg.axis === 'x' ? out : 0, nz = sg.axis === 'x' ? 0 : out, side = (rnd() - .5) * 9;
+        piece('block', V(px, y, pz), Q0.clone().setFromEuler(E.set(0, sg.axis === 'x' ? Math.PI / 2 : 0, 0)), V(bl - .012, BH - .012, .1), V(nx * (5 + rnd() * 7) + nz * side, 2 + rnd() * 6, nz * (5 + rnd() * 7) + nx * side), .2 + .38 * c / nCourse + rnd() * .035, .085);
+      }
+    }));
+    { const pl = roofPlanes[0], half = plate.d / 2, rise = pl.ridge - topY;          // the two gable ends of the main roof
+      [x0, x1].forEach(gx => { const out = gx < cx ? -1 : 1; for (let c = 0; c * BH < rise - .1; c++) { const y = topY - .3 + c * BH + BH / 2, w = half * (1 - (c + .5) * BH / rise), n = Math.max(1, Math.round(2 * w / BL)); for (let i = 0; i < n; i++) piece('block', V(gx + out * .02, y + .3, cz - w + (i + .5) * 2 * w / n), Q0.clone().setFromEuler(E.set(0, Math.PI / 2, 0)), V(2 * w / n - .012, BH - .012, .1), V(out * (5 + rnd() * 7), 3 + rnd() * 6, (rnd() - .5) * 9), .56 + .08 * c * BH / rise + rnd() * .02, .08); } }); }
+    // 3. slates: row by row from the eaves to the ridge, each one from its own direction
+    const TW = .3, TE = .36;
+    roofPlanes.forEach((pl, k) => {
+      const q = new THREE.Quaternion().setFromEuler(E.set(pl.rx, 0, pl.rz)), alongX = pl.rz === 0, nu = Math.round((alongX ? pl.lx : pl.lz) / TW), nv = Math.round((alongX ? pl.lz : pl.lx) / TE);
+      const du = (alongX ? pl.lx : pl.lz) / nu, dv = (alongX ? pl.lz : pl.lx) / nv, lo = V(0, 0, 0), hi = V(0, 0, 0);
+      for (let r = 0; r < nv; r++) for (let c = 0; c < nu; c++) {
+        const u = -nu * du / 2 + (c + .5 + (r % 2 ? .5 : 0)) * du, v = -nv * dv / 2 + (r + .5) * dv; if (Math.abs(u) > nu * du / 2) continue;
+        const loc = (alongX ? V(u, pl.t / 2 + .012, v) : V(v, pl.t / 2 + .012, u)).applyQuaternion(q), pos = V(pl.p[0] + loc.x, pl.p[1] + loc.y, pl.p[2] + loc.z);
+        const up = clamp((pos.y - (topY - .6)) / (pl.ridge - topY + .6), 0, 1), a = rnd() * Math.PI * 2, far = 6 + rnd() * 9;
+        piece('tile', pos, q.clone(), alongX ? V(du - .014, .016, dv + .05) : V(dv + .05, .016, du - .014), V(Math.cos(a) * far, 5 + rnd() * 9, Math.sin(a) * far), .55 + .27 * up + rnd() * .03, .08, 1.6);
+      }
+    });
+    const group = new THREE.Group(); group.visible = false; scene.add(group);
+    const mats = { frame: new THREE.MeshStandardMaterial({ color: '#c8a26d', roughness: .8, transparent: true }), block: new THREE.MeshStandardMaterial({ color: '#b8b5ad', roughness: .95, transparent: true }), tile: new THREE.MeshStandardMaterial({ color: '#3b4046', roughness: .6, metalness: .1, transparent: true }) };
+    const unit = new THREE.BoxGeometry(1, 1, 1), meshes = {}, col = new THREE.Color();
+    for (const k of Object.keys(sets)) { const m = new THREE.InstancedMesh(unit, mats[k], sets[k].length); m.castShadow = true; m.receiveShadow = true; m.frustumCulled = false; sets[k].forEach((pc, i) => m.setColorAt(i, col.setScalar(pc.tint))); meshes[k] = m; group.add(m); }
+    const mtx = new THREE.Matrix4(), pos = V(0, 0, 0), quat = new THREE.Quaternion(), scl = V(0, 0, 0), zero = new THREE.Matrix4().makeScale(0, 0, 0);
+    kit = { group, last: -1, counts: Object.fromEntries(Object.keys(sets).map(k => [k, sets[k].length])),
+      at(k) {
+        if (Math.abs(k - this.last) < 1e-4) return; this.last = k;
+        const fade = 1 - clamp((k - .9) / .08, 0, 1);
+        for (const name of Object.keys(sets)) { const m = meshes[name], list = sets[name];
+          for (let i = 0; i < list.length; i++) { const pc = list[i], u = (k - pc.t0) / pc.dur;
+            if (u <= 0) { m.setMatrixAt(i, zero); continue; }
+            const e = u >= 1 ? 1 : 1 - Math.pow(1 - u, 3), g = 1 - e;
+            pos.set(pc.pos.x + pc.from.x * g, pc.pos.y + pc.from.y * g * g, pc.pos.z + pc.from.z * g); quat.copy(pc.q0).slerp(pc.quat, e); scl.copy(pc.scale).multiplyScalar(Math.min(1, u * 5));
+            m.setMatrixAt(i, mtx.compose(pos, quat, scl)); }
+          m.instanceMatrix.needsUpdate = true; mats[name].opacity = name === 'frame' ? Math.min(1, fade * 3) : fade; mats[name].depthWrite = fade > .5; }
+      } };
+  }
   const autoDoors = [];
   plans.forEach((segs, fi) => segs.forEach(sg => { if (!sg.auto) return; const len = sg.b - sg.a, Hd = data.floorH - .42, mk = () => { const m = new THREE.Mesh(new THREE.BoxGeometry(sg.axis === 'x' ? .04 : len / 2, Hd, sg.axis === 'x' ? len / 2 : .04), M.glass); building.add(m); return m; }; autoDoors.push({ sg, fi, len, Hd, a: mk(), b: mk(), open: -1 }); }));
   function doorsTick(dt) { autoDoors.forEach(d => { const sg = d.sg, y = d.fi * data.floorH, mid = (sg.a + sg.b) / 2, cx = sg.axis === 'x' ? sg.L : mid, cz = sg.axis === 'x' ? mid : sg.L, p = camera.position;
@@ -1552,6 +1625,10 @@ export function run(data, root) {
     const fov = storyFov(p); if (Math.abs(fov - camera.fov) > .05) { camera.fov = fov; camera.updateProjectionMatrix(); }
     const p0 = p; p = Math.min(1, p / st.sc);
     const b = sstep(.1, .42, p);
+    if (kit) {          // the house is put together piece by piece instead of rising out of the ground
+      const kb = clamp((p - .05) / .37, 0, 1); kit.group.visible = kb < .985; if (kit.group.visible) kit.at(kb);
+      cut = cutTo = cutEnd = kb < .9 ? .15 : BIG; clip.constant = cut; clipUp.constant = -cut; ghost.visible = false; scan.visible = false;
+    } else
     if (b >= 1) { cut = cutTo = cutEnd = BIG; clip.constant = BIG; clipUp.constant = -BIG; ghost.visible = false; scan.visible = false; }
     else { cut = cutTo = cutEnd = .15 + (st.h + .6) * b; clip.constant = cut; clipUp.constant = -cut; ghost.visible = p > .04; scan.visible = b > 0; scan.position.y = cut; scan.material.opacity = .9; }
     if (p > .44 && !st.inside) { st.inside = true; showInner(data.single ? data.floors.map((x, i) => i) : [st.fi]); const sv = walk; walk = { unit: st.q.unit }; setRoomLights(st.fi, st.q.unit); walk = sv; }
@@ -1577,7 +1654,7 @@ export function run(data, root) {
   // the page hands the scene over: fly from wherever the scroll left the camera to the balcony, then walk in
   let stHold = null;
   function storyEnter(m) {
-    if (!st) return; stHold = st; st = null; hoverGroup.clear(); root.classList.remove('story'); root.classList.add('taken'); controls.enabled = true;
+    if (!st) return; stHold = st; st = null; if (kit) kit.group.visible = false; hoverGroup.clear(); root.classList.remove('story'); root.classList.add('taken'); controls.enabled = true;
     cut = cutTo = cutEnd = BIG; clip.constant = BIG; clipUp.constant = -BIG; ghost.visible = false; scan.visible = false; reframe();
     const u = m.unit && data.units[m.unit];
     if (u) { const fi = u.floor, rs = data.floors[fi].rooms.filter(q => q.unit === u.id), liv = rs.find(q => q.type === 'open' || q.type === 'living') || rs[0]; selUnit = null; enterWalk(fi, liv, true); }
