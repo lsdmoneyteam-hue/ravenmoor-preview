@@ -31,8 +31,8 @@ html,body{margin:0;height:100%;background:var(--bg);color:var(--ink);font:15px/1
   <button type="button" id="b-model">3D model</button>
 </div>
 <div id="msg">Loading…</div>
-<script src="https://cdnjs.cloudflare.com/ajax/libs/three.js/r128/three.min.js"></script>
-<script>
+<script type="module">
+import * as THREE from '/3d/lib/three.module.js';
 {
 const cv = document.getElementById('v'), msg = document.getElementById('msg');
 const r = new THREE.WebGLRenderer({ canvas: cv, antialias: true });
@@ -42,9 +42,8 @@ const geo = new THREE.SphereGeometry(10, 96, 64); geo.scale(-1, 1, 1);
 const mat = new THREE.MeshBasicMaterial({ color: 0xffffff }); scene.add(new THREE.Mesh(geo, mat));
 const tex = {}, L = new THREE.TextureLoader(); L.setCrossOrigin('anonymous');
 function load(name, file) {
-  return new Promise((ok, bad) => L.load(file, t => { t.encoding = THREE.sRGBEncoding; t.anisotropy = r.capabilities.getMaxAnisotropy(); tex[name] = t; ok(t); }, undefined, bad));
+  return new Promise((ok, bad) => L.load(file, t => { t.colorSpace = THREE.SRGBColorSpace; t.anisotropy = r.capabilities.getMaxAnisotropy(); tex[name] = t; ok(t); }, undefined, bad));
 }
-r.outputEncoding = THREE.sRGBEncoding;
 let lon = 90, lat = 0, fov = 75, dirty = true;
 function show(name) {
   if (!tex[name]) return;
@@ -77,7 +76,7 @@ window.__look = (a, b, f) => { lon = a; lat = b; if (f) fov = f; dirty = true; }
   cam.lookAt(10 * Math.sin(ph) * Math.cos(th), 10 * Math.cos(ph), 10 * Math.sin(ph) * Math.sin(th));
   r.render(scene, cam);
 })();
-Promise.allSettled([load('photo', 'https://d2ol7oe51mr4n9.cloudfront.net/user_3KYm4CUx2KmRR6KYMbDFJRWRKcU/8015f71c-343d-4edb-b515-3903525d66df.jpg'), load('model', 'https://d2ol7oe51mr4n9.cloudfront.net/user_3KYm4CUx2KmRR6KYMbDFJRWRKcU/ada740c6-854b-4043-bdc7-dfbcdaa22c66.jpg')]).then(() => {
+Promise.allSettled([load('photo', 'https://d2ol7oe51mr4n9.cloudfront.net/user_3KYm4CUx2KmRR6KYMbDFJRWRKcU/8015f71c-343d-4edb-b515-3903525d66df.jpg'), load('model', '/3d/pano/greatroom_model.jpg')]).then(() => {
   if (tex.photo) show('photo'); else if (tex.model) show('model');
   msg.textContent = tex.photo || tex.model ? '' : 'The panorama did not load.';
 });
