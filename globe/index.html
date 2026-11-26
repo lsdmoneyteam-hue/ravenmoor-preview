@@ -210,7 +210,7 @@ let life = !reduceMotion, showClouds = true, debug = +(params.get('debug') || 0)
 let quality = 1, moveQuality = 1, restQuality = 1, restPace = 33, lockQuality = false, frozenTime = null;
 const clamp = (x, a, b) => Math.min(b, Math.max(a, x));
 const wrap = x => ((x + 180) % 360 + 360) % 360 - 180;
-const fullDpr = () => Math.min(window.devicePixelRatio || 1, HERO ? (coarse ? 1.75 : 2) : 3);
+const fullDpr = () => Math.min(window.devicePixelRatio || 1, HERO ? (coarse ? 1.1 : 2) : 3);
 
 function tiltFor(d) {
   const x = clamp((Math.log(d) - Math.log(0.3)) / (Math.log(1.3) - Math.log(0.3)), 0, 1);

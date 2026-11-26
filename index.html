@@ -1861,7 +1861,8 @@ class Component extends DCLogic {
       flights(tm); U.uPx.value = cov.y / Math.max(1, el.clientHeight);
       if (H.G) {
         try {
-          H.G.frame(now);
+          /* phones: the Earth is redrawn every other frame, and not at all while the phone is flying in, so the tap animation gets the whole processor */
+          if (!coarse || (!H.ease0 && (H.gf = !H.gf)) || H.live === 0) H.G.frame(now);
           if (H.live === 0 && H.G.ready()) { H.live = 0.001; H.fr.classList.add('on'); }
           if (H.live === 0 && (H.G.failed() || now - H.liveT > 25000)) { H.G = null; }
           if (H.live > 0 && H.live < 1) { H.live = Math.min(1, H.live + dt / 0.9); if (H.live >= 1) H.G.hold(false); }
