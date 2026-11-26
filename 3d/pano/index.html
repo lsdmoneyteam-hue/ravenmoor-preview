@@ -34,6 +34,8 @@ html,body{margin:0;height:100%;background:var(--bg);color:var(--ink);font:15px/1
   <button type="button" data-spot="gr">Great room</button>
   <button type="button" data-spot="stair">Stair</button>
   <button type="button" data-spot="landing">Landing</button>
+  <button type="button" data-spot="terrace">Terrace</button>
+  <button type="button" data-spot="bar">Bar</button>
   <button type="button" data-spot="pool">Pool</button>
   <span class="sep" aria-hidden="true"></span>
   <button type="button" id="b-look">3D model</button>
@@ -45,10 +47,12 @@ import * as THREE from '/3d/lib/three.module.js';
 const CF = 'https://d2ol7oe51mr4n9.cloudfront.net/user_3KYm4CUx2KmRR6KYMbDFJRWRKcU/';
 // where each panorama was taken in the 3D model (metres), the photo, and what it links to
 const SPOTS = {
-  gr:      { name: 'Great room', pos: [-10.4, 80.35, 5.2],  photo: CF + '3bdf8d97-5cb7-4023-a91d-cf01d389e4a1.jpg', face: [-4, 80.35, 1.5],   links: [['stair', 'Stair'], ['landing', 'Up to the landing']] },
+  gr:      { name: 'Great room', pos: [-10.4, 80.35, 5.2],  photo: CF + '81d24921-49e0-42b7-a359-ecb4357f199d.jpg', face: [-4, 80.35, 1.5],   links: [['stair', 'Stair'], ['landing', 'Up to the landing']] },
   stair:   { name: 'Stair',      pos: [-12.3, 80.35, 3.7],  photo: CF + 'b3bae532-8fbe-4985-9a75-c7931d0488d0.jpg', face: [-7.6, 83.5, 1.75], links: [['landing', 'Up the stair'], ['gr', 'Great room']] },
-  landing: { name: 'Landing',    pos: [-5.6, 83.5, 1.75],   photo: CF + '63cf148b-1ffa-4af1-9607-535da1513806.jpg', face: [5, 83.5, 3],       links: [['pool', 'Out to the pool'], ['stair', 'Down the stair']] },
-  pool:    { name: 'Pool',       pos: [7.4, 84.85, 4.95],   photo: CF + '21d9add8-68ca-47d5-aca5-7d0968ba19f2.jpg', face: [14, 84.85, 7],     links: [['landing', 'Back inside']] },
+  landing: { name: 'Landing',    pos: [-5.6, 83.5, 1.75],   photo: CF + '63cf148b-1ffa-4af1-9607-535da1513806.jpg', face: [5, 83.5, 3],       links: [['terrace', 'Out to the terrace'], ['stair', 'Down the stair']] },
+  terrace: { name: 'Terrace',    pos: [-1.5, 83.5, 2.0],    photo: CF + '4248b03a-4f47-4fd6-803d-e268b6188b8e.jpg', face: [8, 84, 5],         links: [['bar', 'The bar'], ['pool', 'Up to the pool'], ['landing', 'Back inside']] },
+  bar:     { name: 'Bar',        pos: [6.5, 83.5, -1.0],    photo: CF + '985c48cb-13fe-46dc-855d-df84631a0154.jpg', face: [8, 83.5, -3.5],    links: [['pool', 'Up to the pool'], ['terrace', 'Terrace']] },
+  pool:    { name: 'Pool',       pos: [7.4, 84.85, 4.95],   photo: CF + '651dd615-0938-4a2b-a031-b3d847ed0803.jpg', face: [14, 84.85, 7],     links: [['bar', 'Down to the bar'], ['terrace', 'Terrace']] },
 };
 const cv = document.getElementById('v'), msg = document.getElementById('msg'), fade = document.getElementById('fade');
 const r = new THREE.WebGLRenderer({ canvas: cv, antialias: true });
