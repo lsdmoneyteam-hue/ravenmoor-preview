@@ -510,7 +510,7 @@ const SOLVE = new Set(['open', 'living', 'kitchen', 'dining', 'bed', 'bath', 'st
 function furnishBest(q, B, segs, rooms, o) {
   const glassZ = []; segs.forEach(g => { if ((g.A === q) === (g.B === q) || (g.A && g.B && !OUTSIDE.has((g.A === q ? g.B : g.A).type))) return; if (g.A && g.B && g.kind !== 'slider') return; const d0 = g.A === q ? g.L - .55 : g.L, d1 = g.A === q ? g.L : g.L + .55; glassZ.push(g.axis === 'x' ? [d0, d1, g.a, g.b] : [g.a, g.b, d0, d1]); });
   const SOFT = new Set(['curtain', 'plant', 'plant2', 'pot', 'flower']);
-  const fixed = !SOLVE.has(q.type) || q.tall || q.look === 'kd' || q.look === 'dress' || q.look === 'sky' || (o.house && o.fi === 0 && q.type === 'hall'), zones = fixed ? [] : doorZones(q, segs);
+  const fixed = !SOLVE.has(q.type) || q.tall || q.look === 'kd' || q.look === 'dress' || q.look === 'spa' || (o.house && o.fi === 0 && q.type === 'hall'), zones = fixed ? [] : doorZones(q, segs);
   const tries = fixed ? [{}] : [{}, { swap: 1 }, { flip: 1 }, { flip: 1, swap: 1 }, { face: 'n' }, { face: 'n', flip: 1 }, { face: 's' }, { face: 's', flip: 1 }, { face: 'e' }, { face: 'e', flip: 1 }, { face: 'w' }, { face: 'w', flip: 1 }];
   const real = c => !((c.y1 - c.y0 < .05 && c.y0 < .1) || c.y0 > 2.0);          // not a rug, not something on the ceiling
   let best = null;
@@ -622,16 +622,27 @@ function furnish(q, B, rooms, o) {
         for (let r = 0; r < 2; r++) for (let k = 0, nk = U < 8 ? 3 : 4; k < nk; k++) { const cu = U / 2 - (nk - 1) * .85 + k * 1.7, cv = V - 3.4 - r * 2.1, up = r * .3; rbox('sofa', 1.2, .45, 1.2, cu, .25 + up, cv, .12); rbox('sofa', 1.2, .7, .3, cu, .7 + up, cv - .55, .1); rbox('sofa', .2, .3, 1.1, cu - .62, .55 + up, cv, .06); rbox('sofa', .2, .3, 1.1, cu + .62, .55 + up, cv, .06); }
         return;
       }
-      if (q.look === 'sky') {          // the glass sky lounge on the roof: a long sofa facing the city, two lounge chairs, a telescope in the corner, books either side of the door
-        const u0 = U / 2 + .3;
-        rbox('rug', 6.2, .014, 3.0, u0, .007, 2.2, .005);
-        rbox('sofa', 3.6, .42, 1.0, u0, .23, 2.95, .1); rbox('sofa', 3.6, .5, .26, u0, .6, 3.42, .09); rbox('sofa', .26, .3, 1.0, u0 - 1.67, .52, 2.95, .08); rbox('sofa', .26, .3, 1.0, u0 + 1.67, .52, 2.95, .08);
-        [-1.1, 0, 1.1].forEach((k, i) => rbox(i === 1 ? 'throw_' : 'fabric', .46, .4, .14, u0 + k, .64, 3.2, .06));
-        cyl('stone', .55, .38, u0, .19, 1.75); box('books', .3, .06, .22, u0 - .15, .41, 1.7); cyl('pot', .08, .16, u0 + .2, .46, 1.8, .06);
-        [-1, 1].forEach(g => { const cu = u0 + g * 2.55; rbox('fabric', .85, .4, .85, cu, .22, 2.0, .14); rbox('fabric', .85, .5, .2, cu + g * .33, .58, 2.15, .08); });
-        box('black', .03, 1.3, .03, U - 1.0, .65, .7); box('black', .03, 1.3, .03, U - .7, .65, 1.0); box('black', .03, 1.3, .03, U - 1.3, .65, 1.0); cyl('brass', .07, .9, U - 1.0, 1.42, .85, .05);
-        box('books', .3, 2.0, .9, .17, 1.0, .75); box('books', .3, 2.0, .9, .17, 1.0, V - .75);
-        floorLamp(u0 + 2.2, 3.55); plant(.7, 2.0, 1.2); plant(U - .6, V - .6, 1.4);
+      if (q.look === 'spa') {          // roof spa: changing lockers by the door, two rain showers and a glass-fronted sauna along the pool side, a cold plunge, loungers and a screened massage table at the city glass
+        // laid out from the lift door (far end) with the loungers and massage table on the city glass: mirror both axes
+        const fb = (n, w, h, d, u, y, v) => box(n, w, h, d, U - u, y, V - v), frb = (n, w, h, d, u, y, v, r) => rbox(n, w, h, d, U - u, y, V - v, r), fc = (n, r, h, u, y, v, e) => cyl(n, r, h, U - u, y, V - v, e), fp = (u, v, k) => plant(U - u, V - v, k);
+        [.75, V - .75].forEach(v => { fb('oak', .5, 2.2, 1.2, .25, 1.1, v); fb('black', .004, 2.1, .02, .51, 1.1, v); });
+        frb('oak', .45, .45, 1.2, 1.0, .23, .85, .02); frb('fabric', .45, .06, 1.2, 1.0, .48, .85, .02);
+        // two walk-in rain showers: stone back and sides, clear glass front, a bench of towels between them and the sauna
+        fb('stone', 2.4, 2.3, .12, 3.3, 1.15, V - .06); fb('stone', .12, 2.3, 1.4, 2.1, 1.15, V - .7); fb('stone', .1, 2.3, 1.4, 3.3, 1.15, V - .7); fb('stone', .12, 2.3, 1.4, 4.5, 1.15, V - .7);
+        fb('glass', 2.2, 2.0, .02, 3.3, 1.0, V - 1.4); fb('stone', 2.36, .04, 1.3, 3.3, .02, V - .7);
+        [2.7, 3.9].forEach(u => { fb('brass', .03, .5, .03, u, 2.05, V - .3); fc('brass', .14, .02, u, 2.18, V - .55); });
+        // sauna cabin: cedar walls, glass front facing the room, two tiers of benches inside
+        const su = 6.1; fb('oak', 2.4, 2.2, .1, su, 1.1, V - .05); fb('oak', .1, 2.2, 1.6, su - 1.2, 1.1, V - .8); fb('oak', .1, 2.2, 1.6, su + 1.2, 1.1, V - .8); fb('oak', 2.4, .1, 1.6, su, 2.2, V - .8);
+        fb('glass', 2.3, 2.1, .02, su, 1.05, V - 1.6); fb('darkWood', 2.2, .06, .55, su, .45, V - .35); fb('darkWood', 2.2, .06, .5, su, .9, V - .6); fb('black', .5, .4, .4, su + .8, .2, V - 1.2);
+        // cold plunge in stone, steps of clear floor all round
+        frb('stone', 1.7, .75, 1.0, 8.85, .375, V - 1.45, .06); fb('pool', 1.5, .02, .8, 8.85, .7, V - 1.45);
+        // two loungers at the glass, a massage table behind a slatted oak screen at the far end
+        [2.9, 4.4].forEach(u => { frb('fabric', .75, .3, 1.9, u, .2, 1.25, .06); frb('fabric', .75, .4, .5, u, .45, .5, .06); });
+        fc('stone', .25, .45, 3.65, .23, 1.4);
+        for (let k = 0; k < 9; k++) fb('oak', .05, 2.0, .05, 7.1, 1.0, .35 + k * .19);
+        frb('oak', 1.9, .7, .7, 8.7, .35, 1.4, .03); frb('fabric', 1.9, .08, .7, 8.7, .74, 1.4, .03); frb('fabric', .45, .1, .3, 9.45, .82, 1.4, .04);
+        fc('oak', .2, .5, 8.5, .25, 2.2); fp(U - .5, V - .5, 1.4); fp(U - .5, .5, 1.3);
+        frb('rug2', 2.2, .012, 1.4, 8.7, .006, 1.4, .005);
         return;
       }
       if (q.look === 'bar') {          // sky lounge: a long bar, sofas facing the view, a telescope at the glass

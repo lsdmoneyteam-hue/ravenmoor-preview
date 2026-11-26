@@ -55,7 +55,7 @@ export function tower() {
     return rooms;
   };
   // The Penthouse: the whole 25th floor and the roof above it. A double-height great room, three bedroom suites,
-  // a dining room and a cinema bar; upstairs a glass sky lounge, a roof garden, and a pool that hangs out over the edge.
+  // a dining room and a cinema bar; upstairs a roof spa, a roof garden, and a pool that hangs out over the edge.
   const UP = '25.03', pq = (id, type, x, z, w, d, name, extra = {}) => r(UP + '-' + id, type, x, z, w, d, { unit: UP, name, ...extra });
   const sky25 = () => [
     r('core', 'core', -2.5, -9, 5, 8, { name: 'Private lift and stairs' }),
@@ -71,7 +71,7 @@ export function tower() {
     pq('poolwalk', 'terrace', -3, 1, 5.5, 8, 'Pool terrace', { blocks: [[0.5, 2.5, 3.2, 5.4]] }),
     pq('pooldeck', 'terrace', 2.5, -4, 12.5, 13, 'Pool terrace and bar', { pool: [3.2, 14.6, 5.4, 9], blocks: [[2.5, 14.6, 3.2, 5.4], [4.6, 14.9, -4, -2.4]], bar: [4.9, 14.6] }),
     pq('bridge', 'terrace', -2.5, -1, 5, 2, 'Terrace'),
-    pq('landing', 'hall', 2.5, -9, 2, 5, 'Lift lobby'), pq('sky', 'living', 4.5, -9, 10.5, 5, 'Sky lounge', { look: 'sky' }), pq('garden', 'terrace', -15, -9, 12.5, 10, 'Roof garden'),
+    pq('landing', 'hall', 2.5, -9, 2, 5, 'Lift lobby'), pq('sky', 'living', 4.5, -9, 10.5, 5, 'Roof spa', { look: 'spa' }), pq('garden', 'terrace', -15, -9, 12.5, 10, 'Roof garden'),
   ];
   const penthouse = (f) => {
     const rooms = [
@@ -125,7 +125,7 @@ export function tower() {
       };
     });
   });
-  Object.assign(units['25.03'], { name: 'The Penthouse', price: money(19500000), status: 'Available', area: 560, aspect: 'The whole top floor and the roof, with the park below', features: ['Six-metre great room, glass on two sides', 'Glass-bottomed pool hanging over the edge of the tower', 'Sky lounge, roof garden and fire terrace', 'Private lift, cinema, three bedroom suites'] });
+  Object.assign(units['25.03'], { name: 'The Penthouse', price: money(19500000), status: 'Available', area: 560, aspect: 'The whole top floor and the roof, with the park below', features: ['Six-metre great room, glass on two sides', 'Glass-bottomed pool hanging over the edge of the tower', 'Roof spa with sauna, cold plunge and massage room, roof garden and fire terrace', 'Private lift, cinema, three bedroom suites'] });
   return {
     key: 'tower', name: 'Halden Tower', place: 'Central Milton Keynes',
     blurb: '26 storeys wrapped in rippling white balconies, no two floors the same. 115 apartments, four penthouses and one home across the top two levels.',

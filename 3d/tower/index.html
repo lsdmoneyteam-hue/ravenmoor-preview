@@ -10,7 +10,7 @@
 <link rel="icon" href="/favicon.svg" type="image/svg+xml">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Cormorant+Garamond:wght@400;500;600&amp;family=Schibsted+Grotesk:wght@400;500;600&amp;display=swap">
-<link rel="stylesheet" href="/3d/viewer.css?v=23">
+<link rel="stylesheet" href="/3d/viewer.css?v=24">
 <script type="importmap">{"imports":{"three":"/3d/lib/three.module.js"}}</script>
 </head>
 <body>
@@ -72,12 +72,12 @@
   <div class="nogl" data-nogl><p>This demo needs WebGL, which this browser has switched off.</p></div>
 </main>
 <script type="module">
-import { run, loadProps } from '/3d/engine.js?v=23';
-import { tower } from '/3d/buildings.js?v=23';
+import { run, loadProps } from '/3d/engine.js?v=24';
+import { tower } from '/3d/buildings.js?v=24';
 const root = document.getElementById('rv'), q = new URLSearchParams(location.search);
 if (q.has('embed')) root.classList.add('embed');
 try {
-  const data = tower(); if (data.props) await loadProps(data.props + '?v=23');
+  const data = tower(); if (data.props) await loadProps(data.props + '?v=24');
   run(data, root);
   // deep links from the development site: ?unit=12.03 opens that home, ?floor=12 opens a floor, &walk=1 steps inside
   const want = q.get('unit') || q.get('floor') || q.get('time') || q.get('walk');
