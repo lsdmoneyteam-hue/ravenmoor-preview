@@ -243,7 +243,7 @@ function makeMaterials() {
     frame: S('#1d1f22', { roughness: .45, metalness: .6 }), door: S('#2b4a41', { roughness: .5 }), doorInt: S('#a9865c', { roughness: .5 }), rail: S('#1f2123', { roughness: .4, metalness: .7 }),
     wood: S('#fff', { map: T.oak, uv: 2.2, roughness: .55 }), tile: S('#e6dfd3', { map: T.tile, uv: 2.4, roughness: .3 }), carpet: S('#c9bfae', { roughness: 1 }), corridor: S('#77726a', { roughness: .85 }),
     lobbyFloor: S('#fff', { map: T.lobby, uv: 2.4, roughness: .2 }), deck: S('#fff', { map: T.deck, uv: 1.4, roughness: .8 }),
-    sofa: S('#6a715a', { roughness: 1 }), fabric: S('#d6c9b3', { roughness: 1 }), linen: S('#f1ede5', { roughness: 1 }), throw_: S('#b57f63', { roughness: 1 }), curtain: S('#e4ddd0', { roughness: 1 }),
+    sofa: S('#6a715a', { roughness: 1 }), rope: S('#8b8d8a', { roughness: 1 }), fabric: S('#d6c9b3', { roughness: 1 }), linen: S('#f1ede5', { roughness: 1 }), throw_: S('#b57f63', { roughness: 1 }), curtain: S('#e4ddd0', { roughness: 1 }),
     darkWood: S('#4d3b2d', { roughness: .55 }), oak: S('#b99468', { roughness: .55 }), white: S('#f4f2ed', { roughness: .35 }), black: S('#1c1d1f', { roughness: .4 }),
     worktop: S('#ece8e1', { roughness: .2 }), cabinet: S('#34453f', { roughness: .5 }), rug: S('#b29c84', { roughness: 1 }), rug2: S('#7f8c90', { roughness: 1 }),
     plant: S('#4c6a38', { roughness: 1 }), plant2: S('#6c8a45', { roughness: 1 }), flower: S('#c9788a', { roughness: 1 }), pot: S('#cdbfaa', { roughness: .8 }), soil: S('#3d3229'),
@@ -531,6 +531,12 @@ function furnishBest(q, B, segs, rooms, o) {
     if (real(c) && c.y0 < 1.1 && c.y1 - c.y0 >= .12 && c.y1 > .3) { q.all.push([c.x0, c.x1, c.z0, c.z1]); if (c.y1 > .5 && (c.x1 - c.x0) * (c.z1 - c.z0) >= .5) q.solids.push([c.x0, c.x1, c.z0, c.z1]); }      // you can brush past chairs and lamps, not through tables, beds and units
   });
 }
+// A bar stool that reads as a real one from any side: woven seat with a low back, four slim legs and a foot rail. (bx, bz) points to its back.
+function stool(R, x, y, z, bx, bz, sh = .78) {
+  R.cyl('rope', .2, .07, x, y + sh, z); R.box('rope', bz ? .36 : .05, .2, bz ? .05 : .36, x + bx * .19, y + sh + .15, z + bz * .19);
+  [[-1, -1], [1, -1], [-1, 1], [1, 1]].forEach(([a, b]) => R.cyl('brass', .012, sh, x + a * .15, y + sh / 2, z + b * .15));
+  R.box('brass', .32, .012, .012, x, y + .28, z - .15); R.box('brass', .32, .012, .012, x, y + .28, z + .15); R.box('brass', .012, .012, .32, x - .15, y + .28, z); R.box('brass', .012, .012, .32, x + .15, y + .28, z);
+}
 function furnish(q, B, rooms, o) {
   const data_floorH = (q.tall ? (o.Hc + .3) / 2 : o.Hc + .3);
   const { x, z, w, d, type } = q, { Hc, house, glass, fi } = o, y = .02, e = q.ext || {};
@@ -582,9 +588,12 @@ function furnish(q, B, rooms, o) {
         box('stone', .7, H2, 3.4, U - .45, H2 / 2, 3.4); box('black', .06, .5, 2.4, U - .83, .75, 3.4); box('fire', .02, .2, 2.1, U - .86, .7, 3.4); box('glass', .01, .42, 2.3, U - .87, .75, 3.4); box('screen', .05, 1.0, 1.8, U - .83, 2.1, 3.4);
         // a deep U of sofas round a pair of stone tables
         rbox('rug', 5.6, .014, 4.6, U - 4.3, .007, 3.4, .005);
-        rbox('sofa', 1.05, .42, 3.6, U - 6.3, .23, 3.4, .1); rbox('sofa', .28, .5, 3.6, U - 6.7, .6, 3.4, .09);
-        rbox('sofa', 3.0, .42, 1.05, U - 4.3, .23, 1.45, .1); rbox('sofa', 3.0, .5, .28, U - 4.3, .6, 1.06, .09); rbox('fabric', .95, .42, .95, U - 3.4, .23, 5.3, .12); rbox('fabric', .95, .42, .95, U - 4.9, .23, 5.3, .12);
-        [[-5.9, 2.4], [-5.9, 4.4], [-5.0, 1.5], [-3.6, 1.5]].forEach(([a, b], i) => rbox(i % 2 ? 'throw_' : 'linen', .42, .36, .42, U + a, .62, b, .08));
+        // one crescent sofa wrapped round the tables and open to the fire; every cushion leans on the back, none on the seat edge
+        { const cu = U - 4.3, cv = 3.1, seg = 26, a0 = Math.PI * .5, a1 = Math.PI * 1.5;
+          const arc = (mat, rad, depth, h, yy, tang, t) => { const a = a0 + (a1 - a0) * t, [wx, wz] = to(cu + Math.cos(a) * rad, cv + Math.sin(a) * rad), [ox, oz] = to(cu + Math.cos(a) * (rad + 1), cv + Math.sin(a) * (rad + 1)); B.box(mat, tang, h, depth, wx, y + yy, wz, Math.atan2(ox - wx, oz - wz)); };
+          for (let k = 0; k < seg; k++) { const t = (k + .5) / seg; arc('sofa', 2.0, 1.0, .42, .23, 2.5 * Math.PI / seg + .02, t); arc('sofa', 2.42, .24, .78, .41, 2.55 * Math.PI / seg + .02, t); }
+          [.08, .24, .42, .58, .76, .92].forEach((t, i) => arc(i % 3 === 1 ? 'throw_' : 'linen', 2.22, .16, .4, .64, .5, t)); }
+        rbox('fabric', .8, .42, .8, U - 2.3, .23, 2.2, .12); rbox('throw_', .8, .42, .8, U - 2.3, .23, 4.0, .12);
         cyl('stone', .65, .3, U - 4.6, .17, 3.1); cyl('stone', .45, .24, U - 3.6, .14, 3.9); box('books', .3, .06, .22, U - 4.6, .35, 3.1); cyl('pot', .06, .2, U - 3.6, .36, 3.9, .04); ball('flower', .12, U - 3.6, .52, 3.9, 1.1);
         // a chandelier dropping through the height of the room
         for (let k = 0; k < 14; k++) { const a = k * 2.4, rr = .25 + (k % 5) * .22, dr = 1.2 + (k * .37 % 2.6); box('black', .01, dr, .01, U - 4.3 + Math.cos(a) * rr, H2 - dr / 2, 3.4 + Math.sin(a) * rr); ball('lampShade', .11, U - 4.3 + Math.cos(a) * rr, H2 - dr - .08, 3.4 + Math.sin(a) * rr, 1); }
@@ -669,7 +678,7 @@ function furnish(q, B, rooms, o) {
     case 'dining': {
       if (q.look === 'kd') {          // kitchen along the back wall with a long island; the table by the glass, well clear of both
         kitchen(.9, 7.9); box('cabinet', 4.6, .9, 1.15, 4.4, .45, V - 2.5); rbox('worktop', 4.8, .06, 1.3, 4.4, .93, V - 2.5, .02);
-        for (let k = 0; k < 5; k++) { const su = 2.6 + k * .9; cyl('fabric', .18, .07, su, .7, V - 3.5); cyl('brass', .02, .68, su, .34, V - 3.5); cyl('brass', .16, .02, su, .01, V - 3.5); }
+        for (let k = 0; k < 5; k++) { const su = 2.6 + k * .9, [wx, wz] = to(su, V - 3.5), [qx, qz] = to(su, V - 4.5); stool(B, wx, y, wz, Math.round(qx - wx), Math.round(qz - wz), .7); }
         for (let k = 0; k < 3; k++) pendant(3.1 + k * 1.3, V - 2.5, .55, .16);
         rbox('rug', 6.2, .014, 3.2, U / 2 - .6, .007, 2.1, .005); longTable(U / 2 - .6, 2.1, 4.4, 12); [-1.4, 0, 1.4].forEach(k => pendant(U / 2 - .6 + k, 2.1, .55, .2)); plant(.7, .7, 1.4); plant(U - .8, .8, 1.3);
         return;
@@ -839,7 +848,7 @@ function towerRoof(R, data, plate, y) {
     if (!R.prop('BarBack', bc, yT, bz + .2)) { R.box('darkWood', bw, 2.5, .34, bc, yT + 1.25, bz + .2); for (let k = 0; k < 4; k++) { R.box('downlight', bw - .3, .02, .3, bc, yT + .95 + k * .42, bz + .22); for (let x = b0 + .35; x < b1 - .2; x += .28) R.cyl(k % 2 ? 'glass' : 'brass', .045, .26, x, yT + 1.1 + k * .42, bz + .3, .03, 10); } }
     R.prop('BarCounter', bc, yT + 1.135, bz + 1.15);
     R.box('stone', bw, 1.06, .7, bc, yT + .53, bz + 1.15); R.rbox('worktop', bw + .3, .07, .9, bc, yT + 1.1, bz + 1.15, .02); R.box('downlight', bw, .03, .03, bc, yT + .12, bz + 1.52); R.box('brass', bw, .04, .06, bc, yT + .3, bz + 1.56);
-    for (let x = b0 + .6; x < b1 - .3; x += .95) { R.cyl('fabric', .19, .08, x, yT + .8, bz + 1.95); R.cyl('brass', .022, .76, x, yT + .38, bz + 1.95); R.cyl('brass', .17, .02, x, yT + .01, bz + 1.95); }
+    for (let x = b0 + .6; x < b1 - .3; x += .95) stool(R, x, yT, bz + 1.95, 0, 1, .8);
     R.box('wave', bw + 1.2, .14, 2.9, bc, yT + 2.75, bz + 1.2); for (let x = b0 + .8; x < b1 - .4; x += 1.3) { R.box('black', .012, .7, .012, x, yT + 2.33, bz + 1.15); R.cyl('lampShade', .13, .2, x, yT + 1.9, bz + 1.15, .07); }
     [b0 - .25, b1 + .25].forEach(x => { R.box('bronze', .12, 2.7, .12, x, yT + 1.35, bz + 2.5); });
   }
