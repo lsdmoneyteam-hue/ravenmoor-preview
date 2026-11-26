@@ -1,0 +1,87 @@
+<!DOCTYPE html>
+<html lang="en-GB">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<meta name="robots" content="noindex">
+<title>Halden great room 360</title>
+<style>
+/* VOICE quiet test page; IDEA a viewing room; PICTURE the panorama fills the screen; COLOUR near-black with brass; TYPE Inter-like system; LAYOUT full bleed, small controls at the foot */
+:root{color-scheme:dark;--ink:#efe9de;--brass:#c9a15a;--bg:#0e0f11}
+*{box-sizing:border-box;min-width:0}
+html,body{margin:0;height:100%;background:var(--bg);color:var(--ink);font:15px/1.4 system-ui,-apple-system,Segoe UI,sans-serif;overflow:hidden}
+#v{position:fixed;inset:0;touch-action:none;cursor:grab}
+#v:active{cursor:grabbing}
+.top{position:fixed;left:16px;top:14px;right:16px;display:flex;gap:10px;align-items:center;pointer-events:none}
+.top h1{font-size:16px;font-weight:600;margin:0;text-shadow:0 1px 6px #000}
+.top span{font-size:13px;opacity:.8;text-shadow:0 1px 6px #000}
+.bar{position:fixed;left:50%;bottom:18px;transform:translateX(-50%);display:flex;gap:6px;background:rgba(14,15,17,.72);backdrop-filter:blur(8px);padding:6px;border-radius:999px;border:1px solid rgba(255,255,255,.14)}
+.bar button{font:inherit;color:var(--ink);background:none;border:0;border-radius:999px;padding:10px 16px;min-height:44px;cursor:pointer}
+.bar button.on{background:var(--brass);color:#17191d;font-weight:600}
+.bar button:focus-visible{outline:2px solid var(--brass);outline-offset:2px}
+@media(max-width:600px){.top{flex-direction:column;align-items:flex-start;gap:2px}.top span{font-size:12px}}
+#msg{position:fixed;inset:0;display:grid;place-items:center;pointer-events:none;font-size:14px;opacity:.8}
+</style>
+</head>
+<body>
+<canvas id="v" aria-label="360 degree view of the penthouse great room. Drag to look around."></canvas>
+<div class="top"><h1>Halden Tower · great room</h1><span>Demo, fictional development · drag to look, pinch or scroll to zoom</span></div>
+<div class="bar" role="group" aria-label="Which view">
+  <button type="button" id="b-photo" class="on">Photo-real</button>
+  <button type="button" id="b-model">3D model</button>
+</div>
+<div id="msg">Loading…</div>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/three.js/r128/three.min.js"></script>
+<script>
+{
+const cv = document.getElementById('v'), msg = document.getElementById('msg');
+const r = new THREE.WebGLRenderer({ canvas: cv, antialias: true });
+r.setPixelRatio(Math.min(devicePixelRatio, 2));
+const scene = new THREE.Scene(), cam = new THREE.PerspectiveCamera(75, 1, .1, 100);
+const geo = new THREE.SphereGeometry(10, 96, 64); geo.scale(-1, 1, 1);
+const mat = new THREE.MeshBasicMaterial({ color: 0xffffff }); scene.add(new THREE.Mesh(geo, mat));
+const tex = {}, L = new THREE.TextureLoader(); L.setCrossOrigin('anonymous');
+function load(name, file) {
+  return new Promise((ok, bad) => L.load(file, t => { t.encoding = THREE.sRGBEncoding; t.anisotropy = r.capabilities.getMaxAnisotropy(); tex[name] = t; ok(t); }, undefined, bad));
+}
+r.outputEncoding = THREE.sRGBEncoding;
+let lon = 90, lat = 0, fov = 75, dirty = true;
+function show(name) {
+  if (!tex[name]) return;
+  mat.map = tex[name]; mat.needsUpdate = true; dirty = true;
+  document.getElementById('b-photo').classList.toggle('on', name === 'photo');
+  document.getElementById('b-model').classList.toggle('on', name === 'model');
+}
+document.getElementById('b-photo').onclick = () => show('photo');
+document.getElementById('b-model').onclick = () => show('model');
+function size() { const w = innerWidth, h = innerHeight; r.setSize(w, h, false); cam.aspect = w / h; cam.updateProjectionMatrix(); dirty = true; }
+addEventListener('resize', size); size();
+const pts = new Map(); let pinch0 = 0, fov0 = fov;
+cv.addEventListener('pointerdown', e => { cv.setPointerCapture(e.pointerId); pts.set(e.pointerId, { x: e.clientX, y: e.clientY }); if (pts.size === 2) { const [a, b] = [...pts.values()]; pinch0 = Math.hypot(a.x - b.x, a.y - b.y); fov0 = fov; } });
+cv.addEventListener('pointermove', e => {
+  const p = pts.get(e.pointerId); if (!p) return;
+  if (pts.size === 1) { const k = fov / innerHeight; lon -= (e.clientX - p.x) * k; lat += (e.clientY - p.y) * k; }
+  p.x = e.clientX; p.y = e.clientY;
+  if (pts.size === 2) { const [a, b] = [...pts.values()]; const d = Math.hypot(a.x - b.x, a.y - b.y); fov = Math.min(100, Math.max(35, fov0 * pinch0 / d)); }
+  dirty = true;
+});
+const up = e => { pts.delete(e.pointerId); };
+cv.addEventListener('pointerup', up); cv.addEventListener('pointercancel', up);
+cv.addEventListener('wheel', e => { e.preventDefault(); fov = Math.min(100, Math.max(35, fov + e.deltaY * .04)); dirty = true; }, { passive: false });
+addEventListener('keydown', e => { const s = 4; if (e.key === 'ArrowLeft') lon -= s; else if (e.key === 'ArrowRight') lon += s; else if (e.key === 'ArrowUp') lat += s; else if (e.key === 'ArrowDown') lat -= s; else return; dirty = true; });
+window.__look = (a, b, f) => { lon = a; lat = b; if (f) fov = f; dirty = true; };
+(function tick() {
+  requestAnimationFrame(tick); if (!dirty) return; dirty = false;
+  lat = Math.max(-85, Math.min(85, lat)); cam.fov = fov; cam.updateProjectionMatrix();
+  const ph = THREE.MathUtils.degToRad(90 - lat), th = THREE.MathUtils.degToRad(lon);
+  cam.lookAt(10 * Math.sin(ph) * Math.cos(th), 10 * Math.cos(ph), 10 * Math.sin(ph) * Math.sin(th));
+  r.render(scene, cam);
+})();
+Promise.allSettled([load('photo', 'https://d2ol7oe51mr4n9.cloudfront.net/user_3KYm4CUx2KmRR6KYMbDFJRWRKcU/8015f71c-343d-4edb-b515-3903525d66df.jpg'), load('model', 'https://d2ol7oe51mr4n9.cloudfront.net/user_3KYm4CUx2KmRR6KYMbDFJRWRKcU/ada740c6-854b-4043-bdc7-dfbcdaa22c66.jpg')]).then(() => {
+  if (tex.photo) show('photo'); else if (tex.model) show('model');
+  msg.textContent = tex.photo || tex.model ? '' : 'The panorama did not load.';
+});
+}
+</script>
+</body>
+</html>
