@@ -13,7 +13,8 @@ function flat(unit, x0, z0, w, d, face, beds, opts = {}) {
   const rooms = [], back = Math.min(3, d * 0.38), front = d - back, strip = 1.1, svc = back - strip, eW = 1.5;
   const fz = face === 's' ? z0 + back : z0;                                            // window-side rooms
   const zb = (t, depth) => face === 's' ? z0 + t : z0 + d - t - depth;                 // t = distance from the corridor wall
-  const liv = beds === 0 ? w : Math.max(beds === 1 ? 4.5 : 4, Math.round(w * (beds >= 3 ? 0.36 : beds === 2 ? 0.4 : 0.46) * 4) / 4);
+  // the living room takes as much of the frontage as the bedrooms can spare (each bedroom keeps at least 3 m), so it never feels squeezed
+  const liv = beds === 0 ? w : Math.max(beds === 1 ? 4.5 : 4, Math.round(Math.min(w * (beds >= 3 ? 0.4 : beds === 2 ? 0.5 : 0.58), w - beds * 3) * 4) / 4);
   const L = opts.livingLeft, livX = L ? x0 : x0 + w - liv, add = (id, type, x, z, ww, dd, name) => rooms.push(r(unit + '-' + id, type, x, z, ww, dd, { unit, name }));
   add('liv', 'open', livX, fz, liv, front, 'Living, kitchen and dining');
   const bw = (w - liv) / Math.max(beds, 1), bedX = i => L ? x0 + liv + i * bw : x0 + w - liv - (i + 1) * bw;       // main bedroom is next to the living room
