@@ -18,7 +18,7 @@ html,body{margin:0;height:100%;background:var(--bg);color:var(--ink);font:15px/1
 .top h1{font-size:16px;font-weight:600;margin:0}
 .top span{font-size:13px;opacity:.85}
 .bar{position:fixed;left:50%;bottom:14px;transform:translateX(-50%);display:flex;flex-wrap:nowrap;overflow-x:auto;scrollbar-width:none;gap:4px;max-width:calc(100% - 20px);background:rgba(14,15,17,.72);backdrop-filter:blur(8px);padding:5px;border-radius:22px;border:1px solid rgba(255,255,255,.14)}
-.bar button{font:inherit;color:var(--ink);background:none;border:0;border-radius:18px;padding:10px 14px;min-height:44px;cursor:pointer;white-space:nowrap}
+.bar button{font:inherit;color:var(--ink);background:none;border:0;border-radius:18px;padding:10px 14px;min-height:44px;cursor:pointer;white-space:nowrap;flex:none}
 .bar button.on{background:var(--brass);color:#17191d;font-weight:600}
 .bar .sep{width:1px;background:rgba(255,255,255,.2);margin:6px 2px}
 .bar button:focus-visible{outline:2px solid var(--brass);outline-offset:2px}
@@ -69,8 +69,8 @@ const SPOTS = {
   b2:      { name: 'Bedroom 2',  pos: [5.5, 80.35, -5],     photo: CF + 'b22b2e5f-e98c-451a-8fa8-bfcd052d28f8.jpg', face: [7, 80.35, -8],     links: [['bath2', 'Shower room'], ['b3', 'Bedroom 3'], ['dining', 'Kitchen']] },
   b3:      { name: 'Bedroom 3',  pos: [13.6, 80.35, -2.2],  photo: CF + 'bf404078-fe54-4e49-806e-ceedb2c1117c.jpg', face: [12, 80.35, -7],    links: [['b2', 'Bedroom 2'], ['dining', 'Kitchen']] },
   bath2:   { name: 'Shower room', pos: [9.75, 80.35, -7],   photo: CF + '21d890b7-fbb8-43b7-9607-f33197c2a2bd.jpg', face: [9.75, 80.35, -9], links: [['b2', 'Bedroom 2']] },
-  spa:     { name: 'Roof spa',   pos: [10.5, 83.5, -6.5],   photo: CF + '03376625-803e-4295-9058-67169ea97d2c.jpg', face: [10.5, 83.5, -9],   links: [['landing', 'Landing'], ['bar', 'The bar']] },
-  garden:  { name: 'Fire pit',   pos: [-9, 83.5, -4],       photo: CF + '282c1fd5-9681-4de8-b449-229f3af96079.jpg', face: [-12, 83.5, -6],    links: [['landing', 'Landing'], ['terrace', 'Terrace']] },
+  spa:     { name: 'Roof spa',   pos: [10.5, 83.5, -6.5],   photo: CF + '03376625-803e-4295-9058-67169ea97d2c.jpg', face: [5, 83.5, -6.5],   links: [['landing', 'Landing'], ['bar', 'The bar']] },
+  garden:  { name: 'Fire pit',   pos: [-9, 83.5, -4],       photo: CF + '282c1fd5-9681-4de8-b449-229f3af96079.jpg', face: [-11, 83.5, -2.5],    links: [['landing', 'Landing'], ['terrace', 'Terrace']] },
 };
 const cv = document.getElementById('v'), msg = document.getElementById('msg'), fade = document.getElementById('fade');
 const r = new THREE.WebGLRenderer({ canvas: cv, antialias: true });
