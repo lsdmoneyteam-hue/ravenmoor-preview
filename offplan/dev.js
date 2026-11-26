@@ -64,7 +64,9 @@ export function mount(key) {
       <div class="pent-text"><p class="kicker">${esc(C.feature.kicker)}</p><h2>${esc(C.feature.title)}</h2><p class="lede">${esc(C.feature.line)}</p>
         <dl class="numbers">${C.feature.facts.map(([n, l]) => `<div><dt>${esc(l)}</dt><dd>${esc(n)}</dd></div>`).join('')}</dl>
         <div class="row"><button class="btn" type="button" data-pentwalk>Step inside the penthouse</button><button class="btn ghost" type="button" data-pentplan>See its plan</button></div></div></div>
+    <div class="reel-wrap"><button type="button" class="reel-nav prev" data-reel="-1" aria-label="Previous picture">&#8592;</button><button type="button" class="reel-nav next" data-reel="1" aria-label="Next picture">&#8594;</button>
     <div class="reel" tabindex="0" aria-label="${esc(C.feature.title)} in pictures">${C.feature.shots.slice(1).map(([n, t, d]) => `<figure><img src="${img(n)}" alt="${esc(t)}" loading="lazy"><figcaption><strong>${esc(t)}</strong><span>${esc(d)}</span></figcaption></figure>`).join('')}</div>
+    <p class="reel-count" data-reel-count aria-live="polite"></p></div>
   </section>` : `  <section class="inside" id="inside">
     <h2>Step inside</h2><p class="sub">${D.single ? 'Four rooms, as they will be lived in.' : 'Four views of a home here, as it will be lived in.'}</p>
     <div class="arches">${C.rooms.map(([t, n, d], i) => `<button type="button" class="arch" data-room="${i}"><span class="arch-img"><img src="${img(n)}" alt="" loading="lazy"></span><strong>${esc(t)}</strong><span>${esc(d)}</span></button>`).join('')}</div>
@@ -252,3 +254,23 @@ export function mount(key) {
   const bar = $('.bar'); new IntersectionObserver(([en]) => bar.classList.toggle('show', !en.isIntersecting), { rootMargin: '-80px 0px 0px 0px' }).observe($('.story'));
   window.__dev = { showLevel, showUnit, open3d, enter };
 }
+
+
+/* Picture strips: next and previous buttons, a counter, arrow keys, and dragging with a mouse. */
+(function () {
+  const near = (reel) => { const mid = reel.scrollLeft + reel.clientWidth / 2; let b = 0, bd = 1e9; [...reel.children].forEach((f, i) => { const d = Math.abs(f.offsetLeft + f.offsetWidth / 2 - mid); if (d < bd) { bd = d; b = i; } }); return b; };
+  const go = (reel, i) => { const n = reel.children.length; i = Math.max(0, Math.min(n - 1, i)); const f = reel.children[i]; reel.scrollTo({ left: f.offsetLeft + f.offsetWidth / 2 - reel.clientWidth / 2, behavior: 'smooth' }); };
+  const mark = (reel) => { const w = reel.closest('.reel-wrap'); if (!w) return; const i = near(reel), n = reel.children.length; const c = w.querySelector('[data-reel-count]'); if (c) c.textContent = (i + 1) + ' of ' + n; w.querySelector('.prev').disabled = i === 0; w.querySelector('.next').disabled = i === n - 1; };
+  document.addEventListener('click', (e) => { const b = e.target.closest('[data-reel]'); if (!b) return; const reel = b.closest('.reel-wrap').querySelector('.reel'); go(reel, near(reel) + Number(b.dataset.reel)); });
+  document.addEventListener('keydown', (e) => { const reel = e.target.closest && e.target.closest('.reel'); if (!reel || (e.key !== 'ArrowLeft' && e.key !== 'ArrowRight')) return; e.preventDefault(); go(reel, near(reel) + (e.key === 'ArrowRight' ? 1 : -1)); });
+  const wire = () => document.querySelectorAll('.reel-wrap .reel:not([data-wired])').forEach((reel) => {
+    reel.dataset.wired = '1'; let t = 0, down = null;
+    reel.addEventListener('scroll', () => { clearTimeout(t); t = setTimeout(() => mark(reel), 80); }, { passive: true });
+    reel.addEventListener('pointerdown', (e) => { if (e.pointerType !== 'mouse' || e.button !== 0) return; down = { x: e.clientX, l: reel.scrollLeft, moved: false }; });
+    window.addEventListener('pointermove', (e) => { if (!down) return; const dx = e.clientX - down.x; if (Math.abs(dx) > 4) { down.moved = true; reel.classList.add('dragging'); } if (down.moved) reel.scrollLeft = down.l - dx; });
+    window.addEventListener('pointerup', () => { if (!down) return; const m = down.moved; down = null; reel.classList.remove('dragging'); if (m) go(reel, near(reel)); });
+    reel.addEventListener('dragstart', (e) => e.preventDefault());
+    mark(reel);
+  });
+  wire(); new MutationObserver(wire).observe(document.documentElement, { childList: true, subtree: true });
+})();

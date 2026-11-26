@@ -254,3 +254,15 @@ section{padding:clamp(64px,10vw,130px) clamp(20px,6vw,80px)}
 .tod{display:flex;gap:6px;margin-top:16px;flex-wrap:wrap}.tod button{height:36px;padding:0 14px;border-radius:999px;border:1px solid rgba(244,239,230,.4);background:rgba(8,11,13,.35);color:#f4efe6;font:500 13px var(--sans);backdrop-filter:blur(6px);cursor:pointer}.tod button.on,.tod button:hover{background:#f4efe6;color:#0a0d10}
 
 .build{opacity:.55;font-size:11px;margin-left:8px}
+
+/* picture strip: buttons, counter, drag */
+.reel-wrap{position:relative}
+.reel{touch-action:pan-x pan-y;overscroll-behavior-x:contain;-webkit-overflow-scrolling:touch;cursor:grab}
+.reel.dragging{cursor:grabbing;scroll-snap-type:none;user-select:none}
+.reel-nav{position:absolute;z-index:2;top:calc(clamp(24px,5vw,64px) + min(78vw,980px)*.3125);transform:translateY(-50%);width:56px;height:56px;border-radius:50%;border:1px solid rgba(244,239,230,.55);background:rgba(5,7,9,.72);color:#f4efe6;font:400 24px/1 system-ui,sans-serif;cursor:pointer;display:grid;place-items:center;transition:background-color .2s,transform .2s,opacity .2s}
+.reel-nav.prev{left:clamp(8px,2vw,28px)}.reel-nav.next{right:clamp(8px,2vw,28px)}
+.reel-nav:hover{background:#f1c56b;color:#0a0d10;border-color:#f1c56b}
+.reel-nav:focus-visible{outline:2px solid #f1c56b;outline-offset:3px}
+.reel-nav:disabled{opacity:.25;cursor:default;background:rgba(5,7,9,.72);color:#f4efe6;border-color:rgba(244,239,230,.55)}
+.reel-count{margin:-28px 0 0;padding:0 clamp(24px,6vw,80px) clamp(32px,5vw,64px);color:rgba(244,239,230,.7);font-size:14px}
+@media (max-width:700px){.reel-nav{width:46px;height:46px;font-size:20px;top:calc(24px + 84vw*.3125)}}
