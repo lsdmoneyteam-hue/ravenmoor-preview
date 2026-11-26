@@ -17,7 +17,7 @@ html,body{margin:0;height:100%;background:var(--bg);color:var(--ink);font:15px/1
 .top{position:fixed;left:16px;top:14px;right:16px;display:flex;gap:10px;align-items:baseline;pointer-events:none;text-shadow:0 1px 6px #000}
 .top h1{font-size:16px;font-weight:600;margin:0}
 .top span{font-size:13px;opacity:.85}
-.bar{position:fixed;left:50%;bottom:14px;transform:translateX(-50%);display:flex;flex-wrap:wrap;justify-content:center;gap:4px;max-width:calc(100% - 20px);background:rgba(14,15,17,.72);backdrop-filter:blur(8px);padding:5px;border-radius:22px;border:1px solid rgba(255,255,255,.14)}
+.bar{position:fixed;left:50%;bottom:14px;transform:translateX(-50%);display:flex;flex-wrap:nowrap;overflow-x:auto;scrollbar-width:none;gap:4px;max-width:calc(100% - 20px);background:rgba(14,15,17,.72);backdrop-filter:blur(8px);padding:5px;border-radius:22px;border:1px solid rgba(255,255,255,.14)}
 .bar button{font:inherit;color:var(--ink);background:none;border:0;border-radius:18px;padding:10px 14px;min-height:44px;cursor:pointer;white-space:nowrap}
 .bar button.on{background:var(--brass);color:#17191d;font-weight:600}
 .bar .sep{width:1px;background:rgba(255,255,255,.2);margin:6px 2px}
@@ -32,8 +32,17 @@ html,body{margin:0;height:100%;background:var(--bg);color:var(--ink);font:15px/1
 <div class="top"><h1>Halden Tower · the penthouse</h1><span>Demo, fictional development · drag to look, tap a marker on the floor to move</span></div>
 <div class="bar" role="group" aria-label="Where to stand">
   <button type="button" data-spot="gr">Great room</button>
+  <button type="button" data-spot="dining">Kitchen</button>
+  <button type="button" data-spot="b1">Main bedroom</button>
+  <button type="button" data-spot="dress">Dressing room</button>
+  <button type="button" data-spot="bath">Bathroom</button>
+  <button type="button" data-spot="b2">Bedroom 2</button>
+  <button type="button" data-spot="bath2">Shower room</button>
+  <button type="button" data-spot="b3">Bedroom 3</button>
   <button type="button" data-spot="stair">Stair</button>
   <button type="button" data-spot="landing">Landing</button>
+  <button type="button" data-spot="spa">Roof spa</button>
+  <button type="button" data-spot="garden">Fire pit</button>
   <button type="button" data-spot="terrace">Terrace</button>
   <button type="button" data-spot="bar">Bar</button>
   <button type="button" data-spot="pool">Pool</button>
@@ -47,12 +56,21 @@ import * as THREE from '/3d/lib/three.module.js';
 const CF = 'https://d2ol7oe51mr4n9.cloudfront.net/user_3KYm4CUx2KmRR6KYMbDFJRWRKcU/';
 // where each panorama was taken in the 3D model (metres), the photo, and what it links to
 const SPOTS = {
-  gr:      { name: 'Great room', pos: [-10.4, 80.35, 5.2],  photo: CF + '81d24921-49e0-42b7-a359-ecb4357f199d.jpg', face: [-4, 80.35, 1.5],   links: [['stair', 'Stair'], ['landing', 'Up to the landing']] },
+  gr:      { name: 'Great room', pos: [-10.4, 80.35, 5.2],  photo: CF + '81d24921-49e0-42b7-a359-ecb4357f199d.jpg', face: [-4, 80.35, 1.5],   links: [['stair', 'Stair'], ['landing', 'Up to the landing'], ['dining', 'Kitchen and dining'], ['b1', 'Main bedroom']] },
   stair:   { name: 'Stair',      pos: [-12.3, 80.35, 3.7],  photo: CF + 'b3bae532-8fbe-4985-9a75-c7931d0488d0.jpg', face: [-7.6, 83.5, 1.75], links: [['landing', 'Up the stair'], ['gr', 'Great room']] },
-  landing: { name: 'Landing',    pos: [-5.6, 83.5, 1.75],   photo: CF + '63cf148b-1ffa-4af1-9607-535da1513806.jpg', face: [5, 83.5, 3],       links: [['terrace', 'Out to the terrace'], ['stair', 'Down the stair']] },
-  terrace: { name: 'Terrace',    pos: [-1.5, 83.5, 2.0],    photo: CF + '4248b03a-4f47-4fd6-803d-e268b6188b8e.jpg', face: [8, 84, 5],         links: [['bar', 'The bar'], ['pool', 'Up to the pool'], ['landing', 'Back inside']] },
-  bar:     { name: 'Bar',        pos: [6.5, 83.5, -1.0],    photo: CF + '985c48cb-13fe-46dc-855d-df84631a0154.jpg', face: [8, 83.5, -3.5],    links: [['pool', 'Up to the pool'], ['terrace', 'Terrace']] },
+  landing: { name: 'Landing',    pos: [-5.6, 83.5, 1.75],   photo: CF + 'ea63c860-9384-4a89-a6e6-bbbe38dd12e4.jpg', face: [5, 83.5, 3],       links: [['terrace', 'Out to the terrace'], ['stair', 'Down the stair'], ['spa', 'Roof spa'], ['garden', 'Fire pit']] },
+  terrace: { name: 'Terrace',    pos: [-1.5, 83.5, 2.0],    photo: CF + '5e4dd1ce-62fe-43a6-bc10-36fcb917fae9.jpg', face: [8, 84, 5],         links: [['bar', 'The bar'], ['pool', 'Up to the pool'], ['landing', 'Back inside'], ['garden', 'Fire pit']] },
+  bar:     { name: 'Bar',        pos: [6.5, 83.5, -1.0],    photo: CF + '985c48cb-13fe-46dc-855d-df84631a0154.jpg', face: [8, 83.5, -3.5],    links: [['pool', 'Up to the pool'], ['terrace', 'Terrace'], ['spa', 'Roof spa']] },
   pool:    { name: 'Pool',       pos: [7.4, 84.85, 4.95],   photo: CF + '651dd615-0938-4a2b-a031-b3d847ed0803.jpg', face: [14, 84.85, 7],     links: [['bar', 'Down to the bar'], ['terrace', 'Terrace']] },
+  dining:  { name: 'Kitchen',    pos: [1.2, 80.35, 6.2],    photo: CF + 'fccb0113-0925-4a88-805f-183ca1834768.jpg', face: [-1, 80.35, 2],     links: [['gr', 'Great room'], ['b2', 'Bedroom 2'], ['b3', 'Bedroom 3']] },
+  b1:      { name: 'Main bedroom', pos: [-11.25, 80.35, -5.5], photo: CF + '8901c15e-58f6-41d3-bed5-e23b371d26c9.jpg', face: [-8, 80.35, -7],  links: [['bath', 'Bathroom'], ['dress', 'Dressing room'], ['gr', 'Great room']] },
+  bath:    { name: 'Bathroom',   pos: [-5, 80.35, -6.5],    photo: CF + '0052796b-0f12-4358-8285-468d466acd0d.jpg', face: [-3, 80.35, -8],    links: [['b1', 'Main bedroom'], ['dress', 'Dressing room']] },
+  dress:   { name: 'Dressing room', pos: [-6.7, 80.35, -2.75], photo: CF + 'bfc8a432-0720-4efe-9d4a-7085c0193f24.jpg', face: [-3.5, 80.35, -2.75], links: [['b1', 'Main bedroom'], ['bath', 'Bathroom']] },
+  b2:      { name: 'Bedroom 2',  pos: [5.5, 80.35, -5],     photo: CF + 'b22b2e5f-e98c-451a-8fa8-bfcd052d28f8.jpg', face: [7, 80.35, -8],     links: [['bath2', 'Shower room'], ['b3', 'Bedroom 3'], ['dining', 'Kitchen']] },
+  b3:      { name: 'Bedroom 3',  pos: [13.6, 80.35, -2.2],  photo: CF + 'bf404078-fe54-4e49-806e-ceedb2c1117c.jpg', face: [12, 80.35, -7],    links: [['b2', 'Bedroom 2'], ['dining', 'Kitchen']] },
+  bath2:   { name: 'Shower room', pos: [9.75, 80.35, -7],   photo: CF + '21d890b7-fbb8-43b7-9607-f33197c2a2bd.jpg', face: [9.75, 80.35, -9], links: [['b2', 'Bedroom 2']] },
+  spa:     { name: 'Roof spa',   pos: [10.5, 83.5, -6.5],   photo: CF + '03376625-803e-4295-9058-67169ea97d2c.jpg', face: [10.5, 83.5, -9],   links: [['landing', 'Landing'], ['bar', 'The bar']] },
+  garden:  { name: 'Fire pit',   pos: [-9, 83.5, -4],       photo: CF + '282c1fd5-9681-4de8-b449-229f3af96079.jpg', face: [-12, 83.5, -6],    links: [['landing', 'Landing'], ['terrace', 'Terrace']] },
 };
 const cv = document.getElementById('v'), msg = document.getElementById('msg'), fade = document.getElementById('fade');
 const r = new THREE.WebGLRenderer({ canvas: cv, antialias: true });
@@ -102,7 +120,7 @@ async function go(id, keepView) {
   }
   if (!keepView) { const f = D(s.pos, s.face); lon = viewLon(f.lon); lat = Math.max(-20, Math.min(20, f.lat * 180 / Math.PI)); }
   cur = id; dirty = true;
-  document.querySelectorAll('[data-spot]').forEach(b => b.classList.toggle('on', b.dataset.spot === id));
+  document.querySelectorAll('[data-spot]').forEach(b => { b.classList.toggle('on', b.dataset.spot === id); if (b.dataset.spot === id) b.scrollIntoView({ inline: 'center', block: 'nearest' }); });
   try { history.replaceState(null, '', '#' + id); } catch (e) {}
   fade.classList.remove('on');
   for (const [to] of s.links) load(model ? `/3d/pano/${to}_model.jpg` : SPOTS[to].photo).catch(() => {});
