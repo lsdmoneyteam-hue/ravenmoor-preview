@@ -510,7 +510,7 @@ const SOLVE = new Set(['open', 'living', 'kitchen', 'dining', 'bed', 'bath', 'st
 function furnishBest(q, B, segs, rooms, o) {
   const glassZ = []; segs.forEach(g => { if ((g.A === q) === (g.B === q) || (g.A && g.B && !OUTSIDE.has((g.A === q ? g.B : g.A).type))) return; if (g.A && g.B && g.kind !== 'slider') return; const d0 = g.A === q ? g.L - .55 : g.L, d1 = g.A === q ? g.L : g.L + .55; glassZ.push(g.axis === 'x' ? [d0, d1, g.a, g.b] : [g.a, g.b, d0, d1]); });
   const SOFT = new Set(['curtain', 'plant', 'plant2', 'pot', 'flower']);
-  const fixed = !SOLVE.has(q.type) || q.tall || q.look === 'kd' || q.look === 'dress' || q.look === 'spa' || (o.house && o.fi === 0 && q.type === 'hall'), zones = fixed ? [] : doorZones(q, segs);
+  const fixed = !SOLVE.has(q.type) || q.tall || q.look === 'kd' || q.look === 'dress' || q.look === 'spa' || q.look === 'suite' || q.look === 'guest' || q.look === 'ensuite' || (o.house && o.fi === 0 && q.type === 'hall'), zones = fixed ? [] : doorZones(q, segs);
   const tries = fixed ? [{}] : [{}, { swap: 1 }, { flip: 1 }, { flip: 1, swap: 1 }, { face: 'n' }, { face: 'n', flip: 1 }, { face: 's' }, { face: 's', flip: 1 }, { face: 'e' }, { face: 'e', flip: 1 }, { face: 'w' }, { face: 'w', flip: 1 }];
   const real = c => !((c.y1 - c.y0 < .05 && c.y0 < .1) || c.y0 > 2.0);          // not a rug, not something on the ceiling
   let best = null;
@@ -686,6 +686,26 @@ function furnish(q, B, rooms, o) {
       }
       if (U > 6 && V > 6) { rbox('rug', 6, .014, 3.4, U / 2, .007, V / 2, .005); longTable(U / 2, V / 2, 4.4, 12); [-1.4, 0, 1.4].forEach(k => pendant(U / 2 + k, V / 2, .55, .2)); rbox('darkWood', 3.2, .8, .45, U / 2, .4, V - .26, .02); artBack(U / 2, 2.4, 1.2, 1); plant(.6, .6, 1.4); return; } longTable(U / 2, V / 2, Math.min(2.2, U - 1), U < 3.4 ? 4 : 6); beams(); return; }
     case 'bed': {
+      const bedAt = (side, vc, bw, bl = 2.1) => { const hu = side ? U : 0, g = side ? -1 : 1, cu = hu + g * (.14 + bl / 2);          // headboard on a side wall
+        rbox('fabric', .12, 1.15, bw + .3, hu + g * .07, .62, vc, .05); rbox('darkWood', bl + .06, .28, bw + .12, cu, .16, vc, .04); rbox('linen', bl - .08, .24, bw, cu, .42, vc, .08); rbox('throw_', .7, .1, bw + .04, hu + g * (.14 + bl - .5), .52, vc, .04);
+        [-1, 1].forEach(k => { rbox('white', .36, .16, .6, hu + g * .45, .6, vc + k * bw / 4, .07); const sv = vc + k * (bw / 2 + .38); rbox('oak', .4, .5, .46, hu + g * .27, .25, sv, .02); cyl('brass', .07, .02, hu + g * .27, .51, sv); box('brass', .015, .26, .015, hu + g * .27, .64, sv); cyl('lampShade', .12, .16, hu + g * .27, .82, sv, .08); });
+        rbox('fabric', .42, .42, bw * .8, hu + g * (.14 + bl + .42), .22, vc, .06); rbox('rug2', bl + 1.3, .012, bw + 1.7, hu + g * (bl / 2 + .7), .006, vc, .005); };
+      const wardU = (u0, u1, back) => { const L = u1 - u0, wv = back ? V - .31 : .31, fv = back ? V - .604 : .604; box('white', L, 2.3, .58, (u0 + u1) / 2, 1.15, wv); const n = Math.round(L / .55); for (let k = 1; k < n; k++) box('black', .006, 2.25, .006, u0 + k * L / n, 1.15, fv); for (let k = 0; k < n; k++) box('brass', .014, .3, .014, u0 + (k + (k % 2 ? .12 : .88)) * L / n, 1.1, back ? fv - .012 : fv + .012); };
+      const wardV = (v0, v1, side) => { const L = v1 - v0, wu = side ? U - .31 : .31, fu = side ? U - .604 : .604; box('white', .58, 2.3, L, wu, 1.15, (v0 + v1) / 2); const n = Math.round(L / .55); for (let k = 1; k < n; k++) box('black', .006, 2.25, .006, fu, 1.15, v0 + k * L / n); for (let k = 0; k < n; k++) box('brass', .014, .3, .014, side ? fu - .012 : fu + .012, 1.1, v0 + (k + (k % 2 ? .12 : .88)) * L / n); };
+      if (q.look === 'suite') {          // principal bedroom: bed on the solid east wall looking at the glass, a wall of wardrobes on the hall wall, two chairs in the glass corner
+        box('darkWood', .06, 1.7, 3.8, U - .04, 1.0, 2.5); box('led', .02, .02, 3.8, U - .06, 1.87, 2.5); bedAt(1, 2.5, 2.1, 2.2);
+        wardU(3.0, U - .08, 1);
+        rbox('fabric', .9, .42, .9, 1.4, .23, 1.5, .14); rbox('fabric', .9, .5, .2, 1.4, .58, 1.1, .08); rbox('fabric', .9, .42, .9, 3.0, .23, 1.5, .14); rbox('fabric', .9, .5, .2, 3.0, .58, 1.1, .08); cyl('stone', .32, .5, 2.2, .25, 1.6); rbox('rug', 3.4, .012, 2.4, 2.2, .006, 1.55, .005); cyl('brass', .012, 1.5, .7, .75, .75); cyl('lampShade', .15, .22, .7, 1.55, .75, .1);
+        plant(U - .6, 6.6, 1.4); plant(.7, 4.6, 1.3);
+        return;
+      }
+      if (q.look === 'guest') {          // guest bedroom: bed on the solid west wall, wardrobes along the east wall clear of the en-suite door, a dressing table on the hall wall, a chair by the glass
+        bedAt(0, 4.0, 1.8);
+        wardV(2.4, 6.25, 1);
+        rbox('oak', 1.5, .78, .45, 3.9, .39, V - .26, .02); box('mirror', .9, 1.0, .02, 3.9, 1.5, V - .03); rbox('fabric', .45, .42, .45, 3.9, .22, V - .95, .1);
+        rbox('fabric', .8, .4, .8, 1.5, .22, 1.25, .12); rbox('fabric', .8, .5, .18, 1.5, .6, .9, .08); cyl('oak', .2, .5, 2.35, .25, 1.15); floorLamp(.6, .7); plant(3.6, .7, 1.2);
+        return;
+      }
       const bw = U > 6 ? 2.1 : U > 3.3 ? 1.65 : 1.4, bl = U > 6 ? 2.2 : 2.05, bu = U / 2, bv = V - bl / 2 - .12;
       rbox('darkWood', bw + .12, .28, bl + .06, bu, .16, bv, .04); rbox('linen', bw, .24, bl - .08, bu, .42, bv, .08); rbox('throw_', bw + .04, .1, .7, bu, .52, bv - bl / 2 + .5, .04);
       rbox('fabric', bw + .2, 1.05, .12, bu, .6, V - .07, .05); rbox('white', .6, .16, .36, bu - bw / 4, .6, V - .42, .07); rbox('white', .6, .16, .36, bu + bw / 4, .6, V - .42, .07);
@@ -706,6 +726,12 @@ function furnish(q, B, rooms, o) {
       return;
     }
     case 'bath': {
+      if (q.look === 'ensuite') {          // en-suite shower room: door on the west wall by the window, WC and vanity along the east wall, a full-width walk-in shower across the far end
+        box('white', U - .04, .05, 1.2, U / 2, .03, V - .6); box('glass', 1.55, 2.05, .02, U - .78, 1.03, V - 1.2); box('metal', .25, .02, .25, U / 2 + .3, Hc - .12, V - .6); cyl('brass', .015, 1.1, U - .08, 1.3, V - .6);
+        rbox('oak', .46, .5, 1.2, U - .25, .55, 2.0, .02); rbox('stone', .5, .05, 1.24, U - .25, .83, 2.0, .02); rbox('white', .34, .05, .5, U - .25, .875, 2.0, .04); cyl('brass', .014, .2, U - .08, .96, 2.0); box('mirror', .02, 1.0, 1.0, U - .03, 1.6, 2.0);
+        rbox('white', .58, .4, .38, U - .31, .2, .7, .08); box('brass', .02, 1.0, .5, .04, 1.2, 2.1); rbox('linen', .03, .5, .44, .07, 1.0, 2.1, .01); rbox('rug2', .6, .012, .9, 1.55, .006, 2.0, .005);
+        return;
+      }
       if (U * V > 14) {          // a principal bathroom: tub by the window on a stone plinth, double vanity on the back wall, walk-in shower at one end
         rbox('stone', 2.4, .06, 1.35, U / 2, .03, 1.15, .02); rbox('white', 1.8, .58, .85, U / 2, .35, 1.15, .3); cyl('brass', .02, .95, U / 2 + 1.05, .475, 1.15); rbox('oak', .4, .45, .4, U / 2 - 1.45, .23, 1.15, .04); rbox('linen', .32, .08, .3, U / 2 - 1.45, .5, 1.15, .02);
         const vl = Math.min(2.6, U - 2.4); rbox('oak', vl, .5, .5, U / 2, .55, V - .28, .02); rbox('stone', vl + .04, .06, .52, U / 2, .83, V - .28, .02);
@@ -734,11 +760,11 @@ function furnish(q, B, rooms, o) {
       return;
     }
     case 'utility': {
-      if (q.look === 'dress') {          // dressing room: full-height oak wardrobes on both long walls, clear of the door, a stone island and a long mirror on the end wall
-        const L = U - 1.3, lc = 1.2 + L / 2;
-        [V - .31, .31].forEach(v => { box('oak', L, 2.4, .6, lc, 1.2, v); for (let k = 1; k < L / .6; k++) box('black', .004, 2.3, .62, 1.2 + k * .6 - L / 2 + L / 2, 1.2, v); box('led', L, .02, .02, lc, 2.42, v); });
-        rbox('stone', 1.5, .9, .55, lc + .2, .45, V / 2, .02); box('brass', 1.4, .02, .02, lc + .2, .7, V / 2 - .28); rbox('rug2', 2.2, .012, 1.2, lc + .2, .006, V / 2, .005);
-        box('mirror', .03, 1.9, .8, U - .03, 1.1, V / 2); pendant(lc - .2, V / 2, .45, .14); pendant(lc + .6, V / 2, .45, .14);
+      if (q.look === 'dress') {          // dressing room between the bedroom (west door) and the bathroom (north door, west end): oak wardrobes in a U round the other three sides, a stone island, a long mirror by the bedroom door
+        const run = (L, cu, cv, alongU) => { box('oak', alongU ? L : .6, 2.4, alongU ? .6 : L, cu, 1.2, cv); const n = Math.round(L / .6); for (let k = 1; k < n; k++) alongU ? box('black', .005, 2.3, .62, cu - L / 2 + k * L / n, 1.2, cv) : box('black', .62, 2.3, .005, cu, 1.2, cv - L / 2 + k * L / n); };
+        run(U - .2, U / 2, V - .31, 1); run(2.8, 3.0, .31, 1); run(V - 1.22, U - .31, V / 2, 0); box('led', U - .2, .02, .02, U / 2, 2.42, V - .31); box('led', 2.8, .02, .02, 3.0, 2.42, .31);
+        rbox('stone', 1.6, .9, .6, 2.7, .45, V / 2, .02); box('brass', 1.5, .02, .02, 2.7, .7, V / 2 - .31); rbox('rug2', 2.4, .012, 1.3, 2.7, .006, V / 2, .005);
+        box('mirror', .03, 1.9, .8, .03, 1.1, 2.4); pendant(2.3, V / 2, .45, .14); pendant(3.1, V / 2, .45, .14);
         return;
       }
       if (U > 1.1 && V > 1) { const L = Math.min(U - .12, 1.9); box('white', L, .88, .6, L / 2 + .06, .44, V - .32); box('worktop', L + .02, .04, .62, L / 2 + .06, .9, V - .32); box('white', L, .6, .34, L / 2 + .06, 1.9, V - .19); } return; }
