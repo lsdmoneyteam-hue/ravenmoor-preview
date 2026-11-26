@@ -1,6 +1,6 @@
 // Off-plan development page. One template for any development: a tower, a block of flats or a single house.
 // Plans and homes come from /3d/buildings.js, words and pictures from content.js, and the 3D model opens on tap.
-import * as BUILD from '/3d/buildings.js?v=21';
+import * as BUILD from '/3d/buildings.js?v=22';
 import { CONTENT } from './content.js?v=8';
 
 const OUT = new Set(['balcony', 'terrace']), SHARED = new Set(['corridor', 'lobby', 'core']);
@@ -29,7 +29,7 @@ export function mount(key) {
       <iframe class="story-frame" title="${esc(D.name)} being built as you scroll" tabindex="-1" aria-hidden="true"></iframe>
       <div class="story-shade"></div>
       <div class="story-mist" data-mist></div>
-      <div class="cap cap-title" data-cap="-1,.08"><p class="kicker">${esc(D.place)}</p><h1>${esc(D.name)}</h1><p class="cue">Scroll <span class="build">build 21</span></p></div>
+      <div class="cap cap-title" data-cap="-1,.08"><p class="kicker">${esc(D.place)}</p><h1>${esc(D.name)}</h1><p class="cue">Scroll <span class="build">build 22</span></p></div>
       <div class="cap cap-rise" data-cap=".13,.4"><p class="rise" data-rise></p><dl class="numbers">${C.numbers.slice(0, 3).map(([n, l]) => `<div><dt>${esc(l)}</dt><dd>${esc(n)}</dd></div>`).join('')}</dl></div>
       <div class="cap cap-line" data-cap=".44,.57"><p>${esc(C.tagline)}</p></div>
       <div class="cap cap-line" data-cap=".61,.74"><p class="kicker">${esc(C.film[0])}</p><p>${esc(C.film[1])}</p></div>

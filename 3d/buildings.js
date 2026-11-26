@@ -66,8 +66,8 @@ export function tower() {
   ];
   const sky26 = () => [
     r('core', 'core', -2.5, -9, 5, 8, { name: 'Private lift and stairs' }),
-    pq('stairtop', 'hall', -9.5, 1, 6.5, 1.5, 'Stair landing'),
-    pq('void', 'void', -15, 1, 5.5, 8, 'Open to the great room below'), pq('void2', 'void', -9.5, 2.5, 6.5, 6.5, 'Open to the great room below'),
+    pq('stairtop', 'hall', -7.8, 1, 4.8, 1.5, 'Stair landing'),
+    pq('void', 'void', -15, 1, 7.2, 8, 'Open to the great room below'), pq('void2', 'void', -7.8, 2.5, 4.8, 6.5, 'Open to the great room below'),
     pq('poolwalk', 'terrace', -3, 1, 5.5, 8, 'Pool terrace', { blocks: [[0.5, 2.5, 3.2, 5.4]] }),
     pq('pooldeck', 'terrace', 2.5, -4, 12.5, 13, 'Pool terrace and bar', { pool: [3.2, 14.6, 5.4, 9], blocks: [[2.5, 14.6, 3.2, 5.4], [4.6, 14.9, -4, -2.4]], bar: [4.9, 14.6] }),
     pq('bridge', 'terrace', -2.5, -1, 5, 2, 'Terrace'),

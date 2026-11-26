@@ -589,9 +589,9 @@ function furnish(q, B, rooms, o) {
         plant(.6, .6, 1.6); plant(U - 1.2, .7, 1.4);
         // nothing crowds the sofas: a console behind them, a glass wine wall on the back wall, and open floor through to the kitchen
         rbox('darkWood', 2.6, .8, .42, U - 4.3, .4, 6.05, .02); { const [cx, cz] = to(U - 4.3, 6.05); if (!B.prop('Console', cx, y + .8, cz)) { cyl('lampShade', .16, .34, U - 5.2, 1.0, 6.05, .1); cyl('brass', .03, .2, U - 5.2, .86, 6.05); cyl('pot', .1, .3, U - 3.5, .95, 6.05, .07); ball('flower', .16, U - 3.5, 1.22, 6.05, 1.1); } }
-        { const [cx, cz] = to(7.9, V - .3); if (!B.prop('WineWall', cx, y, cz, 0, 3.2, .5, 2.6)) { box('glass', 3.2, 2.6, .5, 7.9, 1.3, V - .3); for (let k = 0; k < 5; k++) box('darkWood', 3.1, .04, .42, 7.9, .35 + k * .5, V - .3); } }
-        // floating oak stair up to the roof, against the back wall
-        { const n = 18, rise = (data_floorH) / n; for (let k = 0; k < n; k++) { const su = .7 + k * .29, sy = rise * (k + 1); box('oak', .3, .06, 1.4, su, sy, V - .75); box('glassRail', .29, 1.0, .02, su, sy + .53, V - 1.47); box('brass', .3, .03, .04, su, sy + 1.05, V - 1.47); } }
+        { const [cx, cz] = to(9.8, V - .3); if (!B.prop('WineWall', cx, y, cz, 0, 3.2, .5, 2.6)) { box('glass', 3.2, 2.6, .5, 9.8, 1.3, V - .3); for (let k = 0; k < 5; k++) box('darkWood', 3.1, .04, .42, 9.8, .35 + k * .5, V - .3); } }
+        // floating oak stair up to the roof, against the back wall; its foot is 2 m in from the glass so you can walk round to it
+        { const n = 18, rise = (data_floorH) / n; for (let k = 0; k < n; k++) { const su = 2.2 + k * .29, sy = rise * (k + 1); box('oak', .3, .06, 1.4, su, sy, V - .75); box('glassRail', .29, 1.0, .02, su, sy + .53, V - 1.47); box('brass', .3, .03, .04, su, sy + 1.05, V - 1.47); } }
         return;
       }
       // where the hall door comes in on the back wall, so the kitchen leaves it clear
@@ -1459,8 +1459,8 @@ export function run(data, root) {
       add(.60, on(.42), aim(on(.42), 105, .3));                     // the south glass
       add(.66, on(.68), aim(on(.68), 50, .6));                      // coming round
       add(.72, on(1), aim(on(1), 8, 1.6));                          // across the living room: sofas, fire, chandelier
-      add(.76, [x0 + 3.2, Y + 2.6, zb + 1.0], aim([x0 + 3.2, Y + 2.6, zb + 1.0], 2, 1.2));          // on the stair
-      add(.81, [x0 + 6.6, yT + 1.55, zb + .75], aim([x0 + 6.6, yT + 1.55, zb + .75], 0, -.1));     // the landing
+      add(.76, [x0 + 4.7, Y + 2.6, zb + 1.0], aim([x0 + 4.7, Y + 2.6, zb + 1.0], 2, 1.2));          // on the stair
+      add(.81, [x0 + 8.1, yT + 1.55, zb + .75], aim([x0 + 8.1, yT + 1.55, zb + .75], 0, -.1));     // the landing
       const bar = pd.bar ? [(pd.bar[0] + pd.bar[1]) / 2, yT + 1.3, pd.z + .9] : aim([x0 + 13.3, yT + 1.6, zb + .85], -42, 0), hT = 1.25, pz = pd.pool[2], pcx = (px0 + px1) / 2;
       const O1 = [x0 + 13.4, yT + 1.6, zb + .85], O2 = [px0 - .4, yT + 1.65, pd.z + 5.4], S0 = [px0 - 2.9, yT + 1.7, pz - 1.1], S1 = [px0 + .9, yT + hT + 1.62, pz - 1.1], E = [pcx - 1.5, yT + hT + 1.7, pz - .45];
       add(.86, O1, bar);                                            // through the doors as they slide open, looking left at the bar

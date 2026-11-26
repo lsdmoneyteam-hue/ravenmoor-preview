@@ -44,7 +44,7 @@ const tex = {}, L = new THREE.TextureLoader(); L.setCrossOrigin('anonymous');
 function load(name, file) {
   return new Promise((ok, bad) => L.load(file, t => { t.colorSpace = THREE.SRGBColorSpace; t.anisotropy = r.capabilities.getMaxAnisotropy(); tex[name] = t; ok(t); }, undefined, bad));
 }
-let lon = 90, lat = 0, fov = 75, dirty = true;
+let lon = 90, lat = 0, fov = innerWidth < innerHeight ? 100 : 75, dirty = true;          // a phone held upright starts wider, so more of the room shows
 function show(name) {
   if (!tex[name]) return;
   mat.map = tex[name]; mat.needsUpdate = true; dirty = true;
@@ -61,12 +61,12 @@ cv.addEventListener('pointermove', e => {
   const p = pts.get(e.pointerId); if (!p) return;
   if (pts.size === 1) { const k = fov / innerHeight; lon -= (e.clientX - p.x) * k; lat += (e.clientY - p.y) * k; }
   p.x = e.clientX; p.y = e.clientY;
-  if (pts.size === 2) { const [a, b] = [...pts.values()]; const d = Math.hypot(a.x - b.x, a.y - b.y); fov = Math.min(100, Math.max(35, fov0 * pinch0 / d)); }
+  if (pts.size === 2) { const [a, b] = [...pts.values()]; const d = Math.hypot(a.x - b.x, a.y - b.y); fov = Math.min(115, Math.max(35, fov0 * pinch0 / d)); }
   dirty = true;
 });
 const up = e => { pts.delete(e.pointerId); };
 cv.addEventListener('pointerup', up); cv.addEventListener('pointercancel', up);
-cv.addEventListener('wheel', e => { e.preventDefault(); fov = Math.min(100, Math.max(35, fov + e.deltaY * .04)); dirty = true; }, { passive: false });
+cv.addEventListener('wheel', e => { e.preventDefault(); fov = Math.min(115, Math.max(35, fov + e.deltaY * .04)); dirty = true; }, { passive: false });
 addEventListener('keydown', e => { const s = 4; if (e.key === 'ArrowLeft') lon -= s; else if (e.key === 'ArrowRight') lon += s; else if (e.key === 'ArrowUp') lat += s; else if (e.key === 'ArrowDown') lat -= s; else return; dirty = true; });
 window.__look = (a, b, f) => { lon = a; lat = b; if (f) fov = f; dirty = true; };
 (function tick() {
