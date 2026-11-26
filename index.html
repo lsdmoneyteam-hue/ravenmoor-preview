@@ -45,7 +45,7 @@ body{margin:0}
 @keyframes mctaNudge{0%,86%,100%{transform:translateY(0)}90%{transform:translateY(-4px)}94%{transform:translateY(0)}97%{transform:translateY(-2px)}}
 @media (hover:none){.btn[data-track="hero-cta"]::after,.mcta .btn::after{animation:btnSheen 4.5s ease-in-out 1.5s infinite}}
 .mcta{box-sizing:border-box;--ink:#0E0F11;--bone:#EDE8DF;--amber:#C8913A;font-family:'Schibsted Grotesk',system-ui,sans-serif;position:fixed;left:0;right:0;bottom:0;z-index:40;display:none;padding:10px 14px calc(10px + env(safe-area-inset-bottom));background:linear-gradient(to top,rgba(14,15,17,.96) 55%,rgba(14,15,17,0));transform:translateY(110%);transition:transform .45s cubic-bezier(.2,.8,.2,1);pointer-events:none}
-.mcta .btn{width:100%;min-height:52px;box-shadow:0 8px 28px rgba(0,0,0,.5);animation:mctaNudge 7s ease-in-out 3s infinite}
+.mcta .btn{box-sizing:border-box;width:100%;min-height:52px;box-shadow:0 8px 28px rgba(0,0,0,.5);animation:mctaNudge 7s ease-in-out 3s infinite}
 .mcta.on{transform:none;pointer-events:auto}
 @media (max-width:899px){.mcta{display:block}}
 @media (prefers-reduced-motion:reduce){.btn,.btn::after,.mcta,.mcta .btn{transition:none;animation:none!important}.btn:hover{transform:none}}
