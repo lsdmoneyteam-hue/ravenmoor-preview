@@ -267,6 +267,7 @@ function makeMaterials() {
   M.water = new THREE.MeshPhysicalMaterial({ color: '#2a4650', roughness: .06, metalness: .25, envMapIntensity: 1.3 });
   const fac = (map, em) => S('#d8d8d8', { map, emissiveMap: em, emissive: new THREE.Color('#ffffff'), emissiveIntensity: 0, roughness: .6 });
   M.nbGlass = fac(T.fmG, T.feG); M.nbBrick = fac(T.fmB, T.feB); M.nbStone = fac(T.fmS, T.feS);
+  Object.entries(M).forEach(([k, m]) => { m.name = k; });          // named so an exported scene keeps its material names
   return M;
 }
 // interior styles: the same rooms in different finishes
