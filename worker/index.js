@@ -9,6 +9,7 @@
 //   GET  /a/*.mp4          video with byte ranges                                  (media.js)
 //   PUT  /api/drop/*       TEMPORARY: hand-over point for the globe artwork         (drop.js)
 //   GET  /globe/t/*        TEMPORARY: tiles for the globe preview page at /globe/   (globe.js)
+//   GET  /offplan/img2/*   the finished off-plan pictures, cut from a pack                (stills.js)
 //   cron 08:00 UTC         yesterday's digest to Telegram, old data removed        (telegram.js)
 //   cron hourly            reminder for an enquiry left on "new" for two hours      (telegram.js)
 //
@@ -26,6 +27,7 @@ import { admin } from './admin.js';
 import { media } from './media.js';
 import { drop } from './drop.js';
 import { globeTile } from './globe.js';
+import { still } from './stills.js';
 import { json, log, errText } from './util.js';
 
 export default {
@@ -41,6 +43,7 @@ export default {
       if (path.startsWith('/api/')) return json({ ok: false, error: 'not_found' }, 404);
       if (path === '/admin' || path.startsWith('/admin/')) return await admin(request, env, ctx, url);
       if (path.startsWith('/a/') && path.endsWith('.mp4')) return await media(request, env, ctx, url);
+      if (path.startsWith('/offplan/img2/')) return await still(request, env, ctx, url);
       if (path.startsWith('/globe/t/')) {
         // Tiles are cut out of large packs: keep each finished tile at Cloudflare's edge so the next visitor gets it at once.
         if (request.method !== 'GET') return await globeTile(request, env);

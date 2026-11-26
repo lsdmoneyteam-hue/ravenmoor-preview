@@ -1,6 +1,6 @@
 // The words and pictures for each off-plan development. The plans, homes and prices come from /3d/buildings.js.
 // To add a development: add its plans to buildings.js, add an entry here, and copy one of the page folders.
-// Pictures in /offplan/img/ are stills from the 3D model. Replace them with finished images (same file names) when they are ready.
+// Pictures: /offplan/img2/<name>.webp are the finished photoreal stills (served by worker/stills.js); /offplan/img/ holds the earlier 3D model stills, used as the fallback.
 export const CONTENT = {
   tower: {
     slug: 'halden-tower', model: 'tower', developer: 'Halden Estates', theme: 'night',

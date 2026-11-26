@@ -9,7 +9,7 @@ const el = (html) => { const t = document.createElement('template'); t.innerHTML
 const sqft = m => Math.round(m * 10.764);
 
 export function mount(key) {
-  const C = CONTENT[key], D = BUILD[C.model](), img = n => `/offplan/img/${C.model}-${n}.webp`;
+  const C = CONTENT[key], D = BUILD[C.model](), img = n => `/offplan/img2/${C.model}-${n}.webp`;
   const units = Object.values(D.units), avail = units.filter(u => u.status === 'Available'), price = u => +u.price.replace(/[^0-9]/g, '');
   document.documentElement.dataset.theme = C.theme;
   const root = document.getElementById('dev');
