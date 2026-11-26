@@ -41,7 +41,15 @@ export default {
       if (path.startsWith('/api/')) return json({ ok: false, error: 'not_found' }, 404);
       if (path === '/admin' || path.startsWith('/admin/')) return await admin(request, env, ctx, url);
       if (path.startsWith('/a/') && path.endsWith('.mp4')) return await media(request, env, ctx, url);
-      if (path.startsWith('/globe/t/')) return await globeTile(request, env);
+      if (path.startsWith('/globe/t/')) {
+        // Tiles are cut out of large packs: keep each finished tile at Cloudflare's edge so the next visitor gets it at once.
+        if (request.method !== 'GET') return await globeTile(request, env);
+        const cache = caches.default, hit = await cache.match(request);
+        if (hit) return hit;
+        const res = await globeTile(request, env);
+        if (res.status === 200) ctx.waitUntil(cache.put(request, res.clone()));
+        return res;
+      }
       return env.ASSETS.fetch(request);
     } catch (err) {
       log('error', 'unhandled', { path, error: errText(err) });

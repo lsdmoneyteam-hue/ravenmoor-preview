@@ -142,6 +142,7 @@ const params = new URLSearchParams(location.search);
    draws each frame, passes the pointer and drags, and lays its own sky and phone over the top. */
 const HERO = params.has('hero');
 if (HERO) document.body.classList.add('hero');
+const HOME = { lat: 45.9139, lon: -2.0547 }; let heroHome = null;
 const heroCam = { lat: 45.9139, lon: -2.0547, h: 0.0843, yaw: -13.1523, pitch: 26.774, roll: 0.0411, fv: 44.3198, covx: 1, covy: 1, A: 16 / 9, run: true, pace: 0.6 };
 
 /* ---------- geometry shared with the artwork pipeline ---------- */
@@ -426,7 +427,7 @@ void main(){
   float lit = smoothstep(0.22, 0.62, peak) * warm;
   float glow = smoothstep(0.06, 0.50, peak) * max(warm, smoothstep(0.25, 0.60, peak) * (1.0 - day));   // every lit pixel, road glow and pale city cores included
   float nearPtr = 0.0;
-  if (uPtr.w > 0.0) { float a = acos(clamp(dot(p, uPtr.xyz), -1.0, 1.0)) / uPtrR; nearPtr = uPtr.w * exp(-a * a * a); }
+  if (uPtr.w > 0.0) { float a = acos(clamp(dot(p, uPtr.xyz), -1.0, 1.0)) / uPtrR; nearPtr = uPtr.w * exp(-a * a); }
   float fp = exp2(${TOP}.0 - zf);
   float glowing = lit * (1.0 - 0.8 * smoothstep(0.82, 1.0, peak));
   /* roads and the faint glow between towns are held back hardest (to about 25%), bright city centres least (about 60%) */
@@ -780,7 +781,11 @@ function draw(time, dt) {
   /* left alone, the camera floats a little, as if in orbit; it settles the moment you touch the globe */
   let cam, fwd, up, E;
   if (HERO) {
-    if (heroCam.run && life) heroCam.lon = wrap(heroCam.lon + heroCam.pace * dt);
+    if (heroHome) {                    // sent back to where the still picture was taken (over Britain), easing in and out
+      const u = Math.min(1, (performance.now() - heroHome.t0) / heroHome.ms), e = u * u * (3 - 2 * u);
+      heroCam.lon = wrap(heroHome.lon + wrap(HOME.lon - heroHome.lon) * e); heroCam.lat = heroHome.lat + (HOME.lat - heroHome.lat) * e;
+      if (u >= 1) heroHome = null;
+    } else if (heroCam.run && life) heroCam.lon = wrap(heroCam.lon + heroCam.pace * dt);
     const hc = heroCam, B = basis(hc.lat, hc.lon), T = B.c, y = hc.yaw * DEG, pt = hc.pitch * DEG, r = hc.roll * DEG;
     cam = T.map(v => v * (1 + hc.h));
     const hd = [0, 1, 2].map(i => Math.cos(y) * B.n[i] + Math.sin(y) * B.e[i]);
@@ -833,7 +838,7 @@ function draw(time, dt) {
   planes(cloudClock); gl.uniform4fv(U.uPl, PLANE_P); gl.uniform4fv(U.uPd, PLANE_D);
   gl.uniform1f(U.uDim, coarse ? 0.8 : 1);
   gl.uniform4f(U.uPtr, ptr.p[0], ptr.p[1], ptr.p[2], ptr.amt);
-  gl.uniform1f(U.uPtrR, 40 * view.dist * 2 * tanV / cssH);   // the glow is about an inch across: bright for 40 px around the pointer, then gone
+  gl.uniform1f(U.uPtrR, 22 * view.dist * 2 * tanV / cssH);   // the glow is about an inch across: bright for 40 px around the pointer, then gone
   let mp = -1;
   if (life && frozenTime === null) {
     if (!meteor && time > nextMeteor) {
@@ -1060,6 +1065,8 @@ if (gl) {
         heroCam.lat = clamp(heroCam.lat + dy * k, 15, 62);
       },
       hold(on) { heroCam.run = !on; },
+      away: () => Math.abs(wrap(heroCam.lon - HOME.lon)) + Math.abs(heroCam.lat - HOME.lat),   // degrees from the starting view
+      home(ms) { heroCam.run = false; heroHome = { t0: performance.now(), ms: Math.max(1, ms), lon: heroCam.lon, lat: heroCam.lat }; },
       pointer(x, y, on) { ptr.on = on; if (on) { ptr.x = x; ptr.y = y; ptr.lastSeen = performance.now(); } },
       cam: () => Object.assign({}, heroCam) } };
 }

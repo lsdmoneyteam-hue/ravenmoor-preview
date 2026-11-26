@@ -397,7 +397,7 @@ function getHi(){
     if(!r.ok||!r.body)throw 0;
     var rd=r.body.getReader(),parts=[],got=0,t0=performance.now(),judged=false;
     function step(){return rd.read().then(function(x){
-      if(x.done)return new Blob(parts,{type:'video/mp4'});
+      if(x.done){var sec=(performance.now()-t0)/1000;if(sec>0.25)window.__rmMbps=got*8/sec/1e6;return new Blob(parts,{type:'video/mp4'})}
       parts.push(x.value);got+=x.value.length;
       // after the first second it must be arriving at 6 Mbps or better (0.75 MB a second)
       if(!judged&&performance.now()-t0>1000){judged=true;if(got<7.5e5){ac.abort();throw 1}}
@@ -900,7 +900,15 @@ class Component extends DCLogic {
     try { return window.matchMedia('(pointer: coarse)').matches && Math.min(window.screen.width, window.screen.height) < 768; } catch (e) { return false; }
   }
   wantHi() {
-    return !this.isPhone();
+    /* the 4K film (94 MB) only for a genuinely large screen on a fast line; everyone else gets 1080p, which starts at once and streams */
+    if (this.isPhone()) return false;
+    try {
+      const c = navigator.connection || {};
+      if (c.saveData) return false;
+      if (Math.max(screen.width, screen.height) * (window.devicePixelRatio || 1) < 3000) return false;
+      if (c.downlink) return c.downlink >= 9;
+      return (window.__rmMbps || 0) >= 50;
+    } catch (e) { return false; }
   }
   mseSrc(v, parts, onFail) {
     const mime = 'video/mp4; codecs="avc1.640033, mp4a.40.2"';
@@ -931,6 +939,13 @@ class Component extends DCLogic {
       sb.addEventListener('error', fail);
       next();
     });
+    /* if the 4K film stops to buffer for more than 2.5 seconds, carry on in 1080p from the same moment */
+    let stallT = 0;
+    const stalled = () => { clearTimeout(stallT); stallT = setTimeout(() => {
+      if (dead || v._cur !== tok || !v._fb || v.paused || v.readyState >= 3) return;
+      const at = v.currentTime || 0; v.addEventListener('loadedmetadata', () => { try { v.currentTime = at; } catch (e) {} }, { once: true }); fail();
+    }, 2500); };
+    v.addEventListener('waiting', stalled); v.addEventListener('playing', () => clearTimeout(stallT));
     v._mse = true;
     return url;
   }
@@ -1257,7 +1272,7 @@ class Component extends DCLogic {
         'float warm=smoothstep(.02,.16,col.r-col.b)*(1.-day);',
         'float lit=smoothstep(.22,.62,peak)*warm;',
         'float glw=smoothstep(.06,.5,peak)*max(warm,smoothstep(.25,.6,peak)*(1.-day));',     // every lit pixel, faint road glow included
-        'vec2 pd=(gl_FragCoord.xy-uPtr.xy)*uPtr.z;float r=length(pd),nearP=uPtr.w*exp(-r*r*r);',
+        'vec2 pd=(gl_FragCoord.xy-uPtr.xy)*uPtr.z;float r=length(pd),nearP=uPtr.w*exp(-r*r);',
         'float glowing=lit*(1.-.8*smoothstep(.82,1.,peak));',
         'vec4 nf=noiseAt(vec2(lon,lat)*22.7),nc=noiseAt(vec2(lon,lat)*2.93+13.);',
         'float shim=(.6*sin(1.7*uTime+25.*nf.r)+.4*sin(3.1*uTime+31.*nf.b)+1.6*pow(max(sin(.55*uTime+44.*nf.g),0.),26.))*.19*(1.-smoothstep(2.,7.,uFp))+sin(.9*uTime+19.*nc.g)*.09;',
@@ -1379,7 +1394,7 @@ class Component extends DCLogic {
         gl.uniform4f(U.uMap, map[0], map[1], map[2], map[3]);
         /* the weather drifts east a third of a degree a second and its wave passes about once in eighty seconds, as on the globe page */
         gl.uniform4f(U.uWx, (2.2 - clock * .0061) % (2 * Math.PI), (clock * .075) % (40 * Math.PI), cloudAmt, T.wisp ? 1 : 0);
-        gl.uniform4f(U.uPtr, px * dpr, (vh - py) * dpr, 1 / (40 * dpr), ptrAmt);
+        gl.uniform4f(U.uPtr, px * dpr, (vh - py) * dpr, 1 / (22 * dpr), ptrAmt);
         planes(clock); gl.uniform4fv(U.uPl, PL_P); gl.uniform4fv(U.uPd, PL_D); gl.uniform1f(U.uDim, fine ? 1 : .8);
         gl.drawArrays(gl.TRIANGLES, 0, 6);
         return !reduce || fade < 1 || Math.abs(cloudAmt - cloudsIn) > .01;
@@ -1829,7 +1844,7 @@ class Component extends DCLogic {
       H.last = now;
       let k = 1, pose = 0, done = false;
       if (H.ease0) {
-        const t = Math.min(1, (now - H.ease0) / 400), e = 1 - Math.pow(1 - t, 3);
+        const t = Math.max(0, Math.min(1, (now - H.ease0) / 400)), e = 1 - Math.pow(1 - t, 3);
         k = 1 - e; pose = e; done = t >= 1;
       }
       if (!H.ready) { if (done) { H.ease0 = 0; cancelAnimationFrame(H.raf); H.raf = 0; this.startFilm(); } return; }
@@ -1862,7 +1877,7 @@ class Component extends DCLogic {
       if (H.G) {
         try {
           /* phones: the Earth is redrawn every other frame, and not at all while the phone is flying in, so the tap animation gets the whole processor */
-          if (!coarse || (!H.ease0 && (H.gf = !H.gf)) || H.live === 0) H.G.frame(now);
+          if (!coarse || (!H.ease0 && (H.gf = !H.gf)) || H.live === 0 || now < H.homing) H.G.frame(now);
           if (H.live === 0 && H.G.ready()) { H.live = 0.001; H.fr.classList.add('on'); }
           if (H.live === 0 && (H.G.failed() || now - H.liveT > 25000)) { H.G = null; }
           if (H.live > 0 && H.live < 1) { H.live = Math.min(1, H.live + dt / 0.9); if (H.live >= 1) H.G.hold(false); }
@@ -1900,7 +1915,7 @@ class Component extends DCLogic {
       heatMat.uniforms.tPrev.value = rtA.texture;
       heatMat.uniforms.uBrush.value.set(H.cu, 1 - H.cv2, H.g > 0.5 && !H.hov ? 1 : 0);
       heatMat.uniforms.uDecay.value = Math.exp(-dt * 3);
-      heatMat.uniforms.uRad.value = 40 * cov.y / Math.max(1, el.clientHeight);   // about an inch across around the pointer
+      heatMat.uniforms.uRad.value = 24 * cov.y / Math.max(1, el.clientHeight);   // about an inch across around the pointer
       R.setRenderTarget(rtB); R.render(heatScene, ortho); R.setRenderTarget(null);
       const sw = rtA; rtA = rtB; rtB = sw;
       U.tHeat.value = rtA.texture;
@@ -1916,8 +1931,10 @@ class Component extends DCLogic {
         H.fc++; H.fs += rawF;
         if (H.fc >= 40 || (H.fc >= 6 && H.fs >= 0.8)) {
           const avg = H.fs / H.fc; H.fc = 0; H.fs = 0;
-          if (avg > 0.0215 && H.qs > 0.5) { H.qs = Math.max(0.5, H.qs * 0.82); H.good = 0; H.measure(); }
-          else if (avg < 0.0175 && H.qs < 1) { if (++H.good >= 3) { H.good = 0; H.qs = Math.min(1, H.qs * 1.12); H.measure(); } }
+          /* changing the picture size is itself a stall, so never more than once every two seconds, and only step back up after a long steady spell */
+          if (now - (H.qT || 0) < 2000) { /* wait */ }
+          else if (avg > 0.0215 && H.qs > 0.5) { H.qs = Math.max(0.5, H.qs * 0.82); H.good = 0; H.qT = now; H.measure(); }
+          else if (avg < 0.0150 && H.qs < 1) { if (++H.good >= 6) { H.good = 0; H.qs = Math.min(1, H.qs * 1.12); H.qT = now; H.measure(); } }
           else H.good = 0;
         }
       }
@@ -1926,9 +1943,16 @@ class Component extends DCLogic {
     H.tick = tick;
     H.warm = () => {
       try {
-        [tBg, tStars, tLights, tMask, tFrame, tScreen, tHalo].forEach((t) => { if (R.initTexture) R.initTexture(t); });
-        R.compile(bgScene, ortho); R.compile(scene, cam); R.compile(cScene, cam);
-        R.setRenderTarget(rtA); R.render(heatScene, ortho); R.setRenderTarget(null);
+        /* one picture at a time with a breath between them, so the opening film is never held up by one long stall */
+        const list = [tBg, tStars, tLights, tMask, tFrame, tScreen, tHalo]; let n = 0;
+        const step = () => {
+          try {
+            if (n < list.length) { if (R.initTexture) R.initTexture(list[n]); n++; setTimeout(step, this.state.loader === 'on' ? 140 : 0); return; }
+            R.compile(bgScene, ortho); R.compile(scene, cam); R.compile(cScene, cam);
+            R.setRenderTarget(rtA); R.render(heatScene, ortho); R.setRenderTarget(null);
+          } catch (e) {}
+        };
+        step();
       } catch (e) {}
     };
     H.run = () => { const on = H.vis && H.shown && this.state.phase === 'idle' && this.state.loader !== 'on'; if (on && !H.raf) { H.last = 0; H.lastT = 0; H.warmF = 0; H.fc = 0; H.fs = 0; H.raf = requestAnimationFrame(tick); } else if (!on && H.raf && !H.ease0) { cancelAnimationFrame(H.raf); H.raf = 0; } };
@@ -2027,7 +2051,11 @@ class Component extends DCLogic {
       H.tap.classList.remove('go'); void H.tap.offsetWidth; H.tap.classList.add('go');
     }
     if (H && H.tick && !this._reduce) {
-      H.hov = false; H.gt = 0; H.ease0 = performance.now();
+      /* if the Earth has turned away from Britain it swings back first, so the fly-in starts from the same picture every time (and the film gets a moment to load) */
+      let wait = 0;
+      try { if (H.G && H.live > 0.5 && H.G.away) { const d = H.G.away(); if (d > 1.5) { wait = Math.min(1100, 320 + d * 9); H.G.home(wait); } } } catch (err) { wait = 0; }
+      H.homing = performance.now() + wait;
+      H.hov = false; H.gt = 0; H.ease0 = performance.now() + wait;
       if (!H.raf) H.raf = requestAnimationFrame(H.tick);
     } else this.startFilm();
   }

@@ -38,3 +38,7 @@
 # The preview address stays out of search engines; only the real domain is indexed.
 https://ravenmoor-preview.tight-frost-6ab6.workers.dev/*
   X-Robots-Tag: noindex, nofollow
+
+# Pictures, scripts and fonts in /a/ are named after their contents, so a browser can keep them for good.
+/a/*
+  Cache-Control: public, max-age=31536000, immutable
