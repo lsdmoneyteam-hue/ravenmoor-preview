@@ -188,7 +188,7 @@ export function block() {
   return {
     key: 'block', name: 'Wharf Row', place: 'Grand Union Canal, Milton Keynes',
     blurb: 'A row of gabled brick wharf houses on the canal. 34 apartments and a roof garden.',
-    style: 'brick', story: { floor: 4, room: '4.06-liv' }, autoDoor: ['4.06-bal|4.06-liv'], floorH: H, size: [36, 18], floors, units,
+    style: 'brick', story: { floor: 4, room: '4.06-liv', hours: [[0, 9], [.4, 14], [.62, 17.5], [.76, 19], [1, 19.75]] }, autoDoor: ['4.06-bal|4.06-liv'], floorH: H, size: [36, 18], floors, units,
     site: { kind: 'canal', water: true },
     roof: 'gables', startHour: 16.5,
     spec: {
