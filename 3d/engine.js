@@ -1129,13 +1129,14 @@ export function run(data, root) {
     });
     const group = new THREE.Group(); group.visible = false; scene.add(group);
     const mats = { frame: new THREE.MeshStandardMaterial({ color: '#c8a26d', roughness: .8, transparent: true }), block: new THREE.MeshStandardMaterial({ color: '#b8b5ad', roughness: .95, transparent: true }), tile: new THREE.MeshStandardMaterial({ color: '#3b4046', roughness: .6, metalness: .1, transparent: true }) };
+    Object.values(mats).forEach(m => { m.clippingPlanes = [clipUp]; });          // the finished house wipes up through the build: below the line render and glass, above it blockwork and slates
     const unit = new THREE.BoxGeometry(1, 1, 1), meshes = {}, col = new THREE.Color();
     for (const k of Object.keys(sets)) { const m = new THREE.InstancedMesh(unit, mats[k], sets[k].length); m.castShadow = true; m.receiveShadow = true; m.frustumCulled = false; sets[k].forEach((pc, i) => m.setColorAt(i, col.setScalar(pc.tint))); meshes[k] = m; group.add(m); }
     const mtx = new THREE.Matrix4(), pos = V(0, 0, 0), quat = new THREE.Quaternion(), scl = V(0, 0, 0), zero = new THREE.Matrix4().makeScale(0, 0, 0);
     kit = { group, last: -1, counts: Object.fromEntries(Object.keys(sets).map(k => [k, sets[k].length])),
       at(k) {
         if (Math.abs(k - this.last) < 1e-4) return; this.last = k;
-        const fade = 1 - clamp((k - .9) / .08, 0, 1);
+        const fade = 1 - clamp((k - .965) / .02, 0, 1);
         for (const name of Object.keys(sets)) { const m = meshes[name], list = sets[name];
           for (let i = 0; i < list.length; i++) { const pc = list[i], u = (k - pc.t0) / pc.dur;
             if (u <= 0) { m.setMatrixAt(i, zero); continue; }
@@ -1663,7 +1664,8 @@ export function run(data, root) {
     const b = sstep(.1, .42, p);
     if (kit) {          // the house is put together piece by piece instead of rising out of the ground
       const kb = clamp((p - .05) / .37, 0, 1); kit.group.visible = kb < .985; if (kit.group.visible) kit.at(kb);
-      cut = cutTo = cutEnd = kb < .9 ? .15 : BIG; clip.constant = cut; clipUp.constant = -cut; ghost.visible = false; scan.visible = false;
+      const fin = sstep(.87, .975, kb);          // render and glaze: the finished walls, windows and roof rise through the blockwork behind a line of light
+      cut = cutTo = cutEnd = kb >= .985 ? BIG : .15 + (st.h + .6) * fin; clip.constant = cut; clipUp.constant = -cut; ghost.visible = false; scan.visible = fin > 0 && fin < 1; if (scan.visible) { scan.position.y = cut; scan.material.opacity = .9; }
     } else
     if (b >= 1) { cut = cutTo = cutEnd = BIG; clip.constant = BIG; clipUp.constant = -BIG; ghost.visible = false; scan.visible = false; }
     else { cut = cutTo = cutEnd = .15 + (st.h + .6) * b; clip.constant = cut; clipUp.constant = -cut; ghost.visible = p > .04; scan.visible = b > 0; scan.position.y = cut; scan.material.opacity = .9; }
