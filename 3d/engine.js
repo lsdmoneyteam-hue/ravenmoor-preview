@@ -1147,7 +1147,8 @@ export function run(data, root) {
   const autoDoors = [];
   plans.forEach((segs, fi) => segs.forEach(sg => { if (!sg.auto) return; const len = sg.b - sg.a, Hd = data.floorH - .42, mk = () => { const m = new THREE.Mesh(new THREE.BoxGeometry(sg.axis === 'x' ? .04 : len / 2, Hd, sg.axis === 'x' ? len / 2 : .04), M.glass); building.add(m); return m; }; autoDoors.push({ sg, fi, len, Hd, a: mk(), b: mk(), open: -1 }); }));
   function doorsTick(dt) { autoDoors.forEach(d => { const sg = d.sg, y = d.fi * data.floorH, mid = (sg.a + sg.b) / 2, cx = sg.axis === 'x' ? sg.L : mid, cz = sg.axis === 'x' ? mid : sg.L, p = camera.position;
-    const want = Math.hypot(p.x - cx, p.z - cz) + Math.abs(p.y - y - 1.5) * 2 < (st ? 11 : 4.4) ? 1 : 0;      // in the film the doors are already open by the top of the stair if (d.open < 0) d.open = want; else if (Math.abs(want - d.open) > .002) { d.open += (want - d.open) * Math.min(1, dt * 2.6); dirty = true; } else if (d.open === d.o2) return; d.o2 = d.open;
+    const want = Math.hypot(p.x - cx, p.z - cz) + Math.abs(p.y - y - 1.5) * 2 < (st ? 11 : 4.4) ? 1 : 0;      // in the film the doors are already open by the top of the stair
+    if (d.open < 0) d.open = want; else if (Math.abs(want - d.open) > .002) { d.open += (want - d.open) * Math.min(1, dt * 2.6); dirty = true; } else if (d.open === d.o2) return; d.o2 = d.open;
     const off = d.len / 4 + d.open * d.len * .47; [[d.a, -off], [d.b, off]].forEach(([m, o]) => { if (sg.axis === 'x') m.position.set(sg.L, y + d.Hd / 2, mid + o); else m.position.set(mid + o, y + d.Hd / 2, sg.L); }); }); }
   const inner = data.floors.map(() => null);
   function ensureInner(i) { if (inner[i]) return inner[i]; const B = new Bucket(M); innerFloor(B, data.floors[i], plans[i], data, i); const g = B.build(new THREE.Group()); g.position.y = i * data.floorH; g.visible = false; building.add(g); inner[i] = g; return g; }
