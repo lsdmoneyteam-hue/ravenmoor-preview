@@ -735,10 +735,11 @@ function furnish(q, B, rooms, o) {
       return;
     }
     case 'bath': {
+      const wc = (w, d, u, v) => { rbox('white', w, .3, d, u, .27, v, .1); rbox('white', w - .04, .035, d - .04, u, .44, v, .015); };          // wall-hung pan clear of the floor, with a seat
       if (q.look === 'ensuite') {          // en-suite shower room: door on the west wall by the window, WC and vanity along the east wall, a full-width walk-in shower across the far end
         box('white', U - .04, .05, 1.2, U / 2, .03, V - .6); box('glass', 1.55, 2.05, .02, U - .78, 1.03, V - 1.2); box('metal', .25, .02, .25, U / 2 + .3, Hc - .12, V - .6); cyl('brass', .015, 1.1, U - .08, 1.3, V - .6);
         rbox('oak', .46, .5, 1.2, U - .25, .55, 2.0, .02); rbox('stone', .5, .05, 1.24, U - .25, .83, 2.0, .02); rbox('white', .34, .05, .5, U - .25, .875, 2.0, .04); cyl('brass', .014, .2, U - .08, .96, 2.0); box('mirror', .02, 1.0, 1.0, U - .03, 1.6, 2.0);
-        rbox('white', .58, .4, .38, U - .31, .2, .7, .08); box('brass', .02, 1.0, .5, .04, 1.2, 2.1); rbox('linen', .03, .5, .44, .07, 1.0, 2.1, .01); rbox('rug2', .6, .012, .9, 1.55, .006, 2.0, .005);
+        wc(.58, .38, U - .31, .7); box('metal', .02, .16, .24, U - .03, 1.0, .7); box('brass', .02, 1.0, .5, .04, 1.2, 2.1); rbox('linen', .03, .5, .44, .07, 1.0, 2.1, .01); rbox('rug2', .6, .012, .9, 1.55, .006, 2.0, .005);
         return;
       }
       if (U * V > 18) {          // a principal bathroom: tub by the window on a stone plinth, double vanity on the back wall, walk-in shower at one end
@@ -746,19 +747,19 @@ function furnish(q, B, rooms, o) {
         const vl = Math.min(2.6, U - 2.4); rbox('oak', vl, .5, .5, U / 2, .55, V - .28, .02); rbox('stone', vl + .04, .06, .52, U / 2, .83, V - .28, .02);
         [-1, 1].forEach(g => { rbox('white', .5, .05, .34, U / 2 + g * vl / 4, .875, V - .28, .04); cyl('brass', .014, .2, U / 2 + g * vl / 4, .96, V - .1); box('mirror', .8, 1.0, .02, U / 2 + g * vl / 4, 1.6, V - .03); });
         box('glass', .02, 2.1, 1.5, 1.4, 1.05, V - .8); box('stone', 1.3, .04, 1.5, .7, .03, V - .8); box('metal', .25, .02, .25, .7, Hc - .12, V - .8);
-        rbox('white', .38, .4, .58, U - .3, .2, V - 1.7, .08); rbox('rug2', 1.8, .012, .7, U / 2, .006, V - .95, .005); plant(U - .5, .6, 1.0); box('metal', .02, .02, .6, U - .05, 1.1, 2.0); rbox('throw_', .03, .55, .5, U - .07, .85, 2.0, .01);
+        wc(.38, .58, U - .3, V - 1.7); rbox('rug2', 1.8, .012, .7, U / 2, .006, V - .95, .005); plant(U - .5, .6, 1.0); box('metal', .02, .02, .6, U - .05, 1.1, 2.0); rbox('throw_', .03, .55, .5, U - .07, .85, 2.0, .01);
         return;
       }
       if (U * V < 5.6) {          // a shower room: everything along the wall opposite the door
         box('glass', .02, 2, .9, .96, 1, V - .47); box('white', .9, .04, .9, .5, .025, V - .47); box('metal', .22, .02, .22, .5, Hc - .12, V - .5);
         if (U > 2.1) { rbox('oak', .6, .5, .42, U / 2 + .22, .5, V - .24, .02); rbox('white', .64, .06, .44, U / 2 + .22, .78, V - .24, .02); box('mirror', .56, .8, .02, U / 2 + .22, 1.45, V - .03); }
-        rbox('white', .38, .4, .56, U - .28, .2, V - .32, .08); if (U > 1.6 && V > 1.9) rbox('rug2', Math.min(.8, U - .8), .012, .5, U / 2, .006, V - 1.3, .005);
+        wc(.38, .56, U - .28, V - .32); if (U > 1.6 && V > 1.9) rbox('rug2', Math.min(.8, U - .8), .012, .5, U / 2, .006, V - 1.3, .005);
         return;
       }
       if (U >= 1.75 && V >= 1.9) { rbox('white', Math.min(1.7, U - .12), .56, .76, Math.min(1.7, U - .12) / 2 + .06, .29, V - .42, .12); box('metal', .03, .3, .03, .25, .72, V - .42); }
       else if (V > 1.6) { box('glass', .9, 2, .02, U / 2, 1, V - .95); box('metal', .25, .02, .25, U / 2, Hc - .1, V - .45); }
       rbox('oak', Math.min(.8, U - .3), .5, .44, U - .46, .5, .26, .02); rbox('white', Math.min(.84, U - .26), .06, .46, U - .46, .78, .26, .02); box('mirror', Math.min(.7, U - .4), .8, .02, U - .46, 1.45, .03); cyl('metal', .014, .16, U - .46, .9, .12); box('metal', .016, .016, .12, U - .46, .97, .18); box('metal', .5, .02, .02, Math.max(.4, U * .28), 1.2, .05); rbox('linen', .44, .5, .03, Math.max(.4, U * .28), .96, .07, .01);
-      if (U > 1.5) rbox('white', .38, .4, .58, Math.max(.3, U * .28), .2, .36, .08);
+      if (U > 1.5) wc(.38, .58, Math.max(.3, U * .28), .36);
       if (V > 2.2) { rbox('rug2', .8, .012, .5, U - .46, .006, .82, .005); rbox('throw_', .44, .2, .03, Math.max(.4, U * .28), 1.08, .075, .01); }
       return;
     }
