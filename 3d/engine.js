@@ -1665,7 +1665,7 @@ export function run(data, root) {
     if (kit) {          // the house is put together piece by piece instead of rising out of the ground
       const kb = clamp((p - .05) / .37, 0, 1); kit.group.visible = kb < .985; if (kit.group.visible) kit.at(kb);
       const fin = sstep(.87, .975, kb);          // render and glaze: the finished walls, windows and roof rise through the blockwork behind a line of light
-      cut = cutTo = cutEnd = kb >= .985 ? BIG : .15 + (st.h + .6) * fin; clip.constant = cut; clipUp.constant = -cut; ghost.visible = false; scan.visible = fin > 0 && fin < 1; if (scan.visible) { scan.position.y = cut; scan.material.opacity = .9; }
+      cut = cutTo = cutEnd = kb >= .985 ? BIG : .15 + (st.h + 2.4) * fin; clip.constant = cut; clipUp.constant = -cut; ghost.visible = false; scan.visible = fin > 0 && fin < 1; if (scan.visible) { scan.position.y = cut; scan.material.opacity = .9; }
     } else
     if (b >= 1) { cut = cutTo = cutEnd = BIG; clip.constant = BIG; clipUp.constant = -BIG; ghost.visible = false; scan.visible = false; }
     else { cut = cutTo = cutEnd = .15 + (st.h + .6) * b; clip.constant = cut; clipUp.constant = -cut; ghost.visible = p > .04; scan.visible = b > 0; scan.position.y = cut; scan.material.opacity = .9; }
