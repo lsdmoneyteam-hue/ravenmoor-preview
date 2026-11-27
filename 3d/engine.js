@@ -857,7 +857,7 @@ function towerRoof(R, data, plate, y) {
   }
   const gd = top.rooms.find(q => q.id && q.id.endsWith('-garden'));
   if (gd) {
-    const gx = gd.x + gd.w / 2, gz = gd.z + gd.d / 2;
+    const gx = gd.x + gd.w / 2 + 3.05, gz = gd.z + gd.d / 2 - 1.1;          // fire pit group sits clear of the pergola posts
     R.cyl('stone', 1.1, .45, gx - 1.5, yT + .22, gz + 1.5, 1.1, 28); R.cyl('black', .8, .06, gx - 1.5, yT + .46, gz + 1.5, .8, 24); R.cyl('fire', .45, .12, gx - 1.5, yT + .52, gz + 1.5, .2, 12);
     [[0, -2.6, 3.6, .9], [-2.6, 0, .9, 3.6], [2.6, 0, .9, 3.0]].forEach(([dx, dz, sw, sdp]) => { R.rbox('fabric', sw, .42, sdp, gx - 1.5 + dx, yT + .25, gz + 1.5 + dz, .1); R.rbox('fabric', dx ? .25 : sw, .5, dx ? sdp : .25, gx - 1.5 + dx * 1.13, yT + .62, gz + 1.5 + dz * 1.13, .08); });
     for (let k = 0; k < 4; k++) { const tx = gd.x + 1.6 + k * (gd.w - 3.2) / 3, tz = gd.z + 1.5; R.rbox('pot', 1.3, .8, 1.3, tx, yT + .4, tz, .05); R.cyl('trunk', .09, 1.6, tx, yT + 1.6, tz); R.ball('plant', 1.0, tx, yT + 2.9, tz, 1.1, 2); R.ball('plant2', .7, tx + .4, yT + 3.3, tz + .2, 1, 2); }
