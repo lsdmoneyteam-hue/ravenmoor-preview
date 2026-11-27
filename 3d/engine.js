@@ -1611,7 +1611,8 @@ export function run(data, root) {
       T[0] = v(cx, 1.2, cz); T[1] = v(cx, 2.6, cz); T[2] = v(cx, 3.4, cz); T[3] = v(cx, 3.8, cz);
       // inside, keep to the clear floor between the garden doors and the island (the old path floated over the worktop): walk the length of the room looking in, then turn to the garden
       P[7] = at(-.7, g); P[8] = at(-.7, g * .3); P[9] = at(-.9, -g * .3); P[10] = at(-1.3, -g * .62);
-      T[7] = at(-dep + .8, g * .2, .1); T[8] = at(-dep + .8, -g * .5, .05); T[9] = at(-2.6, -len / 2 - 2.2, -.25); T[10] = P[10].clone().addScaledVector(f, 60).setY(eye - 4);
+      { const up = innerHeight > innerWidth ? .55 : 0;          // on a tall phone screen the island filled the lower half: look a little higher
+        T[7] = at(-dep + .8, g * .2, .1 + up); T[8] = at(-dep + .8, -g * .5, .05 + up); } T[9] = at(-2.6, -len / 2 - 2.2, -.25); T[10] = P[10].clone().addScaledVector(f, 60).setY(eye - 4);
     }
     if (data.style === 'brick') {          // the flat: come in at the TV end, walk the clear strip inside the glass looking at the sofa and then the kitchen, turn past the TV and finish on the view
       P[5] = at(11, -g * .4, 1.7); P[6] = at(2.6, -g * .6, .25); P[7] = at(-.75, -g * .6); P[8] = at(-.75, -g * .2); P[9] = at(-.75, g * .2); P[10] = at(-.9, g * .3);
