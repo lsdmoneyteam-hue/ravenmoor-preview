@@ -1172,6 +1172,39 @@ export function run(data, root) {
           m.instanceMatrix.needsUpdate = true; mats[name].opacity = name === 'frame' ? Math.min(1, fade * 3) : fade; mats[name].depthWrite = fade > .5; }
       } };
   }
+  // ---------- tower cranes for the flats' build: they stand behind the block and lift loads up to the working floor as it rises ----------
+  let cranes = null;
+  function makeCranes() {
+    const yel = new THREE.MeshStandardMaterial({ color: '#e8b21e', roughness: .55, metalness: .3 }), dark = new THREE.MeshStandardMaterial({ color: '#2b2e33', roughness: .7 }), conc = new THREE.MeshStandardMaterial({ color: '#b9b6ae', roughness: .95 }), brickM = new THREE.MeshStandardMaterial({ color: '#a4553c', roughness: .9 });
+    const unit = new THREE.BoxGeometry(1, 1, 1), group = new THREE.Group(); group.visible = false; scene.add(group);
+    const bx = (parent, mat, w, h, d, x, y, z) => { const m = new THREE.Mesh(unit, mat); m.scale.set(w, h, d); m.position.set(x, y, z); m.castShadow = true; parent.add(m); return m; };
+    const Hm = topY + roofH + 9, J = Math.max(plate.d + 9, 24), list = [];
+    [[plate.cx - plate.w * .3, 0], [plate.cx + plate.w * .3, .5]].forEach(([x, ph], ci) => {
+      const g = new THREE.Group(); g.position.set(x, 0, plate.cz - plate.d / 2 - 3.2); group.add(g);
+      bx(g, conc, 4, .5, 4, 0, .25, 0);
+      [[-.55, -.55], [.55, -.55], [-.55, .55], [.55, .55]].forEach(([dx, dz]) => bx(g, yel, .14, Hm, .14, dx, Hm / 2, dz));          // lattice mast: four legs, rings and braces
+      for (let y = 1.5; y < Hm; y += 1.5) { bx(g, yel, 1.24, .08, .08, 0, y, -.55); bx(g, yel, 1.24, .08, .08, 0, y, .55); bx(g, yel, .08, .08, 1.24, -.55, y, 0); bx(g, yel, .08, .08, 1.24, .55, y, 0); const d = bx(g, yel, 1.7, .06, .06, 0, y - .75, .55); d.rotation.z = (Math.round(y / 1.5) % 2 ? 1 : -1) * .9; }
+      const top = new THREE.Group(); top.position.y = Hm; g.add(top);
+      bx(top, dark, 1.6, .5, 1.6, 0, .25, 0); bx(top, yel, 1.3, 1.5, 1.2, .9, 1.1, -1.1); bx(top, dark, 1.0, .7, .05, .9, 1.25, -1.72);          // slewing ring and the cab
+      bx(top, yel, .16, 4.2, .16, 0, 2.6, 0);                                                                                                // the peak
+      bx(top, yel, .5, .5, J, 0, .9, J / 2 + .6); for (let z = 2; z < J; z += 2) bx(top, yel, .7, .06, .06, 0, .62, z + .6);                  // jib
+      bx(top, yel, .5, .5, 8, 0, .9, -4.6); bx(top, conc, 1.4, 1.5, 2.2, 0, .3, -7.6);                                                     // counter-jib and its weights
+      const tie = (len, zc, ang) => { const t = bx(top, dark, .05, .05, len, 0, 2.9, zc); t.rotation.x = ang; }; tie(Math.hypot(J * .7, 3.6), J * .35, Math.atan2(3.6, J * .7)); tie(Math.hypot(7, 3.6), -3.5, -Math.atan2(3.6, 7));
+      const trolley = bx(top, dark, .7, .25, .9, 0, .55, 8), cable = bx(top, dark, .04, 1, .04, 0, 0, 8), hook = new THREE.Group(); top.add(hook);
+      bx(hook, dark, .3, .4, .3, 0, .2, 0); const slab = new THREE.Group(), pal = new THREE.Group(); hook.add(slab, pal);
+      bx(slab, conc, 5.2, .22, 1.8, 0, -1.3, 0); [-2.2, 2.2].forEach(dx => [-.7, .7].forEach(dz => { const c = bx(slab, dark, .03, 1.5, .03, dx * .5, -.55, dz * .5); c.rotation.z = -dx * .32; c.rotation.x = dz * .4; }));
+      bx(pal, brickM, 1.2, .9, 1.0, 0, -1.2, 0); bx(pal, dark, 1.3, .1, 1.1, 0, -1.7, 0); [-.5, .5].forEach(dx => { const c = bx(pal, dark, .03, .9, .03, dx * .5, -.35, 0); c.rotation.z = -dx * .5; });
+      list.push({ g, top, trolley, cable, hook, slab, pal, ph, base: ci ? -.5 : .5 });
+    });
+    cranes = { group, at(b, cutY) {          // b: how far the block has risen (0 to 1); cutY: the height of the working floor
+      list.forEach((c, ci) => { const t = (b * 7 + c.ph) % 1, lift = Math.floor(b * 7 + c.ph), away = Math.PI * (ci ? -.62 : .62), over = (ci ? .22 : -.22) + Math.sin(lift * 2.1) * .2;
+        // one lift: hoist the load off the ground behind the block, swing it over, lower it onto the working floor, swing back empty
+        const sw = t < .2 ? 0 : t < .55 ? sstep(.2, .55, t) : t < .75 ? 1 : 1 - sstep(.75, 1, t), ang = away + (over - away) * sw;
+        const r = 9 + (plate.d * .5 + 3.2 - 9 + 4 + Math.sin(lift * 1.3) * 3) * sw, loaded = t < .72;
+        const hookWorld = t < .2 ? 1.9 + (cutY + 5 - 1.9) * sstep(0, .2, t) : t < .55 ? cutY + 5 : t < .72 ? cutY + 5 - 3.1 * sstep(.55, .72, t) : cutY + 1.9 + 3.1 * sstep(.72, .85, t), hy = Math.min(hookWorld - Hm, .2);
+        c.top.rotation.y = ang; c.trolley.position.z = r; c.hook.position.set(0, hy, r); c.cable.position.set(0, (hy + .55) / 2 + .2, r); c.cable.scale.y = Math.max(.1, .55 - hy - .4);
+        c.slab.visible = loaded && lift % 2 === 0; c.pal.visible = loaded && lift % 2 === 1; }); } };
+  }
   const autoDoors = [];
   plans.forEach((segs, fi) => segs.forEach(sg => { if (!sg.auto) return; const len = sg.b - sg.a, Hd = data.floorH - .42, lw = sg.oxxo ? len / 4 : len / 2, mk = () => { const m = new THREE.Mesh(new THREE.BoxGeometry(sg.axis === 'x' ? .04 : lw, Hd, sg.axis === 'x' ? lw : .04), M.glass); building.add(m); return m; }; autoDoors.push({ sg, fi, len, Hd, a: mk(), b: mk(), open: -1 }); }));
   function doorsTick(dt) { autoDoors.forEach(d => { const sg = d.sg, y = d.fi * data.floorH, mid = (sg.a + sg.b) / 2, cx = sg.axis === 'x' ? sg.L : mid, cz = sg.axis === 'x' ? mid : sg.L, p = camera.position;
@@ -1695,7 +1728,9 @@ export function run(data, root) {
       cut = cutTo = cutEnd = kb >= .985 ? BIG : .15 + (st.h + 2.4) * fin; clip.constant = cut; clipUp.constant = -cut; ghost.visible = false; scan.visible = fin > 0 && fin < 1; if (scan.visible) { scan.position.y = cut; scan.material.opacity = .9; }
     } else
     if (b >= 1) { cut = cutTo = cutEnd = BIG; clip.constant = BIG; clipUp.constant = -BIG; ghost.visible = false; scan.visible = false; }
-    else { cut = cutTo = cutEnd = .15 + (st.h + .6) * b; clip.constant = cut; clipUp.constant = -cut; ghost.visible = p > .04; scan.visible = b > 0; scan.position.y = cut; scan.material.opacity = .9; }
+    else { const nL = nF + 1, lv = b * nL, stepped = data.style === 'brick' ? Math.min(st.h + .6, data.floorH * (Math.floor(lv) + sstep(0, .45, lv % 1))) : (st.h + .6) * b;          // the flats go up a storey at a time, the way they are built
+      cut = cutTo = cutEnd = .15 + stepped; clip.constant = cut; clipUp.constant = -cut; ghost.visible = p > .04; scan.visible = b > 0; scan.position.y = cut; scan.material.opacity = .9; }
+    if (data.style === 'brick') { if (!cranes) makeCranes(); const on = p > .06 && p < .47; cranes.group.visible = on; if (on) { cranes.group.position.y = -Math.max(0, (p - .43) / .04) * 60; cranes.at(sstep(.1, .42, p), Math.min(cut, st.h)); } }
     if (p > .44 && !st.inside) { st.inside = true; showInner(data.single ? data.floors.map((x, i) => i) : [st.fi]); const sv = walk; walk = { unit: st.q.unit }; setRoomLights(st.fi, st.q.unit); walk = sv; }
     const HK = data.story && data.story.hours; let hr;
     if (HK) { let i = 0; while (i < HK.length - 2 && p0 > HK[i + 1][0]) i++; const a = HK[i], b = HK[i + 1]; hr = Math.round((a[1] + (b[1] - a[1]) * sstep(a[0], b[0], p0)) * 8) / 8 % 24; }      // a full day and night go by over the film
@@ -1719,7 +1754,7 @@ export function run(data, root) {
   // the page hands the scene over: fly from wherever the scroll left the camera to the balcony, then walk in
   let stHold = null;
   function storyEnter(m) {
-    if (!st) return; stHold = st; st = null; if (kit) kit.group.visible = false; hoverGroup.clear(); root.classList.remove('story'); root.classList.add('taken'); controls.enabled = true;
+    if (!st) return; stHold = st; st = null; if (kit) kit.group.visible = false; if (cranes) cranes.group.visible = false; hoverGroup.clear(); root.classList.remove('story'); root.classList.add('taken'); controls.enabled = true;
     cut = cutTo = cutEnd = BIG; clip.constant = BIG; clipUp.constant = -BIG; ghost.visible = false; scan.visible = false; reframe();
     const u = m.unit && data.units[m.unit];
     if (u) { const fi = u.floor, rs = data.floors[fi].rooms.filter(q => q.unit === u.id), liv = rs.find(q => q.type === 'open' || q.type === 'living') || rs[0]; selUnit = null; enterWalk(fi, liv, true); }
