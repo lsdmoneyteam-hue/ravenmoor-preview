@@ -1601,6 +1601,10 @@ export function run(data, root) {
     const P = [v(cx + s * .2, h + s * 3.6, cz + s * .9), v(cx + s * 1.2, h * .6 + s * 1.9, cz + s * 2.2), v(cx + s * 1.9, h * .45 + s * .7, cz + s * 1.5), v(cx + s * .9, h * .75 + s * .25, cz + s * 2),
       v(cx, 0, cz).addScaledVector(f, plate.d / 2 + s * .95).addScaledVector(sd, s * .3).setY(yF + 7), at(11, g * .6, 1.7), at(2.6, g, .25), A, W, B, C];
     const T = [v(cx, 0, cz), v(cx, h * .1, cz), v(cx, h * .3, cz), v(cx, h * .5, cz), v(cx, Math.max(2, yF - 3), cz), wc.clone(), at(-3, g * .5, -.1), at(-2.4, -g, -.15), at(-2.6, -g, -.2), at(-dep + .8, -g * .85, -.25), C.clone().addScaledVector(f, 60).setY(eye - 4)];
+    if (kit) {          // the house: start low on the street looking at the empty plot, then one slow rising sweep round the west side and over the garden while it is built
+      P[0] = v(cx - 10, 2.2, cz - 24); P[1] = v(cx - 14.5, 12.5, cz - 9); P[2] = v(cx - 16, 12.5, cz + 11); P[3] = v(cx - 7, 9, cz + 23);
+      T[0] = v(cx, 1.2, cz); T[1] = v(cx, 2.6, cz); T[2] = v(cx, 3.4, cz); T[3] = v(cx, 3.8, cz);
+    }
     // where there is a pool on the roof, the film carries on: up through the height of the room, out onto the terrace, and ends over the water
     const pd = data.floors[nF - 1].rooms.find(r => r.pool); let sc = pd && fi < nF - 1 ? .8 : 1, K = KP.map(k => k * sc), outAt = sc;
     if (q.tall && pd) {
