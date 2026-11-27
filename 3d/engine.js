@@ -1607,6 +1607,9 @@ export function run(data, root) {
     if (kit) {          // the house: start low on the street looking at the empty plot, then one slow rising sweep round the west side and over the garden while it is built
       P[0] = v(cx - 10, 2.2, cz - 24); P[1] = v(cx - 14.5, 12.5, cz - 9); P[2] = v(cx - 16, 12.5, cz + 11); P[3] = v(cx - 7, 9, cz + 23);
       T[0] = v(cx, 1.2, cz); T[1] = v(cx, 2.6, cz); T[2] = v(cx, 3.4, cz); T[3] = v(cx, 3.8, cz);
+      // inside, keep to the clear floor between the garden doors and the island (the old path floated over the worktop): walk the length of the room looking in, then turn to the garden
+      P[7] = at(-.7, g); P[8] = at(-.7, g * .3); P[9] = at(-.9, -g * .3); P[10] = at(-1.3, -g * .62);
+      T[7] = at(-dep + .8, g * .2, .1); T[8] = at(-dep + .8, -g * .5, .05); T[9] = at(-2.6, -len / 2 - 2.2, -.25); T[10] = P[10].clone().addScaledVector(f, 60).setY(eye - 4);
     }
     // where there is a pool on the roof, the film carries on: up through the height of the room, out onto the terrace, and ends over the water
     const pd = data.floors[nF - 1].rooms.find(r => r.pool); let sc = pd && fi < nF - 1 ? .8 : 1, K = KP.map(k => k * sc), outAt = sc;
