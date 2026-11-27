@@ -56,21 +56,21 @@ import * as THREE from '/3d/lib/three.module.js';
 const CF = 'https://d2ol7oe51mr4n9.cloudfront.net/user_3KYm4CUx2KmRR6KYMbDFJRWRKcU/';
 // where each panorama was taken in the 3D model (metres), the photo, and what it links to
 const SPOTS = {
-  gr:      { name: 'Great room', pos: [-10.4, 80.35, 5.2],  photo: CF + '3cfc8044-3655-485b-8b98-774adcd6231d.jpg', face: [-4, 80.35, 1.5],   links: [['stair', 'Stair'], ['landing', 'Up to the landing'], ['dining', 'Kitchen and dining'], ['b1', 'Main bedroom']] },
-  stair:   { name: 'Stair',      pos: [-12.3, 80.35, 3.7],  photo: CF + 'ac8109f5-4ecc-4917-9d48-1af7c120fb0d.jpg', face: [-7.6, 83.5, 1.75], links: [['landing', 'Up the stair'], ['gr', 'Great room']] },
-  landing: { name: 'Landing',    pos: [-5.6, 83.5, 1.75],   photo: CF + '27df8fd8-d076-4fd5-9899-1b69bac63ebd.jpg', face: [5, 83.5, 3],       links: [['terrace', 'Out to the terrace'], ['stair', 'Down the stair'], ['spa', 'Roof spa'], ['garden', 'Fire pit']] },
-  terrace: { name: 'Terrace',    pos: [-1.5, 83.5, 2.0],    photo: CF + '6f55bd2f-80ce-4f92-834c-4fa9ba32fb93.jpg', face: [8, 84, 5],         links: [['bar', 'The bar'], ['pool', 'Up to the pool'], ['landing', 'Back inside'], ['garden', 'Fire pit']] },
-  bar:     { name: 'Bar',        pos: [6.5, 83.5, -1.0],    photo: CF + '890c603b-3625-4cbd-a997-c5e4d1d7e91b.jpg', face: [8, 83.5, -3.5],    links: [['pool', 'Up to the pool'], ['terrace', 'Terrace'], ['spa', 'Roof spa']] },
-  pool:    { name: 'Pool',       pos: [5.9, 84.71, 4.6],    photo: CF + '4d6c5464-ca9a-4136-a10c-4c98ec7077ad.jpg', face: [12, 84.71, 7],     links: [['bar', 'Down to the bar'], ['terrace', 'Terrace']] },
-  dining:  { name: 'Kitchen',    pos: [1.2, 80.35, 6.2],    photo: CF + '9a836680-fd4d-41aa-8180-7b1882a41fe3.jpg', face: [4.6, 80.35, 3.5],     links: [['gr', 'Great room'], ['b2', 'Bedroom 2'], ['b3', 'Bedroom 3']] },
+  gr:      { name: 'Great room', pos: [-10.4, 80.35, 5.2],  photo: CF + 'fdfd51b0-3fa6-4ece-9103-1400a0e73a04.jpg', face: [-4, 80.35, 1.5],   links: [['stair', 'Stair'], ['landing', 'Up to the landing'], ['dining', 'Kitchen and dining'], ['b1', 'Main bedroom']] },
+  stair:   { name: 'Stair',      pos: [-12.3, 80.35, 3.7],  photo: CF + '34eb7425-f4ce-44bf-be59-07ef057ad6e0.jpg', face: [-7.6, 83.5, 1.75], links: [['landing', 'Up the stair'], ['gr', 'Great room']] },
+  landing: { name: 'Landing',    pos: [-5.6, 83.5, 1.75],   photo: CF + '79b02824-3c79-45be-8590-221aad9c0b7a.jpg', face: [5, 83.5, 3],       links: [['terrace', 'Out to the terrace'], ['stair', 'Down the stair'], ['spa', 'Roof spa'], ['garden', 'Fire pit']] },
+  terrace: { name: 'Terrace',    pos: [-1.5, 83.5, 2.0],    photo: CF + 'c517a16b-09cd-42e1-9e8a-03fd11b7ff49.jpg', face: [8, 84, 5],         links: [['bar', 'The bar'], ['pool', 'Pool'], ['landing', 'Back inside'], ['garden', 'Fire pit']] },
+  bar:     { name: 'Bar',        pos: [6.5, 83.5, -1.0],    photo: CF + '4165fcef-168e-47a2-a5c0-5b6db95d64af.jpg', face: [8, 83.5, -3.5],    links: [['pool', 'Pool'], ['terrace', 'Terrace'], ['spa', 'Roof spa']] },
+  pool:    { name: 'Pool',       pos: [8.9, 83.52, 4.2],    photo: CF + '58412607-ca0a-4620-8237-d700aa2c5bef.jpg', face: [12, 83.52, 7],     links: [['bar', 'Bar'], ['terrace', 'Terrace']] },
+  dining:  { name: 'Kitchen',    pos: [1.2, 80.35, 6.2],    photo: CF + '2d53d3c0-31ff-4b68-9c5b-838ce6ce0c25.jpg', face: [4.6, 80.35, 3.5],     links: [['gr', 'Great room'], ['b2', 'Bedroom 2'], ['b3', 'Bedroom 3']] },
   b1:      { name: 'Main bedroom', pos: [-11.8, 80.35, -4.4], photo: CF + '7d7cca54-46ac-4713-886b-2430afa3b67d.jpg', face: [-8, 80.35, -6.5],  links: [['dress', 'Dressing room'], ['gr', 'Great room']] },
   bath:    { name: 'Bathroom',   pos: [-5.3, 80.35, -7.3],    photo: CF + '09dc5ec2-30a9-4ab8-b2b0-7460df745cb2.jpg', face: [-3, 80.35, -8],    links: [['b1', 'Main bedroom'], ['dress', 'Dressing room']] },
-  dress:   { name: 'Dressing room', pos: [-6.7, 80.35, -2.75], photo: CF + '3d50a119-5a90-4852-a68e-b31fad17e3b2.jpg', face: [-3.5, 80.35, -2.75], links: [['b1', 'Main bedroom'], ['bath', 'Bathroom']] },
+  dress:   { name: 'Dressing room', pos: [-6.7, 80.35, -2.75], photo: CF + '33e6987e-112b-490f-88d9-f9cf6ce80d46.jpg', face: [-3.5, 80.35, -2.75], links: [['b1', 'Main bedroom'], ['bath', 'Bathroom']] },
   b2:      { name: 'Bedroom 2',  pos: [6.4, 80.35, -6.0],     photo: CF + '1d6be4e8-35e3-44af-8496-618b93f8b4db.jpg', face: [3, 80.35, -5],     links: [['bath2', 'Shower room'], ['b3', 'Bedroom 3'], ['dining', 'Kitchen']] },
-  b3:      { name: 'Bedroom 3',  pos: [13.6, 80.35, -2.2],  photo: CF + 'd8e9dd06-d267-4ab9-bd9b-fcf6cd91bc11.jpg', face: [12, 80.35, -7],    links: [['b2', 'Bedroom 2'], ['dining', 'Kitchen']] },
-  bath2:   { name: 'Shower room', pos: [9.3, 80.35, -6.9],   photo: CF + '8638479d-b221-469f-8774-6952afbd046a.jpg', face: [10.9, 80.35, -7], links: [['b2', 'Bedroom 2']] },
-  spa:     { name: 'Roof spa',   pos: [8.2, 83.5, -6.6],   photo: CF + '3e68551e-8616-4bf1-8879-14ae72331494.jpg', face: [8.2, 83.5, -9],   links: [['landing', 'Landing'], ['bar', 'The bar']] },
-  garden:  { name: 'Fire pit',   pos: [-7.2, 83.5, -1.3],   photo: CF + 'a0e975dd-4475-4a91-a08a-6618ea486510.jpg', face: [-7.2, 83.5, -3.6],    links: [['landing', 'Landing'], ['terrace', 'Terrace']] },
+  b3:      { name: 'Bedroom 3',  pos: [13.6, 80.35, -2.2],  photo: CF + 'e99258db-32fe-4b6e-8844-765c94a6b2b9.jpg', face: [12, 80.35, -7],    links: [['b2', 'Bedroom 2'], ['dining', 'Kitchen']] },
+  bath2:   { name: 'Shower room', pos: [9.3, 80.35, -6.9],   photo: CF + 'a09bcc7c-b8bd-4fcf-8135-981f266da34d.jpg', face: [10.9, 80.35, -7], links: [['b2', 'Bedroom 2']] },
+  spa:     { name: 'Roof spa',   pos: [8.2, 83.5, -6.6],   photo: CF + 'd9d645aa-0a1d-42d7-8baa-057d0ea58a44.jpg', face: [8.2, 83.5, -9],   links: [['landing', 'Landing'], ['bar', 'The bar']] },
+  garden:  { name: 'Fire pit',   pos: [-7.2, 83.5, -1.3],   photo: CF + '61c6a42e-ad43-469d-b1bc-0dba3067ce7e.jpg', face: [-7.2, 83.5, -3.6],    links: [['landing', 'Landing'], ['terrace', 'Terrace']] },
 };
 const cv = document.getElementById('v'), msg = document.getElementById('msg'), fade = document.getElementById('fade');
 const r = new THREE.WebGLRenderer({ canvas: cv, antialias: true });
