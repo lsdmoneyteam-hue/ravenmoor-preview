@@ -211,9 +211,9 @@ export function house() {
     r('study', 'study', 1.4, -4.5, 4.6, 2.8, { unit: 'house', name: 'Study' }),
     r('wc', 'bath', 1.4, -1.7, 1.8, 1.4, { unit: 'house', name: 'Cloakroom' }),
     r('util', 'utility', 3.2, -1.7, 2.8, 1.4, { unit: 'house', name: 'Utility' }),
-    r('kitchen', 'kitchen', 1.4, -0.3, 4.6, 4.8, { unit: 'house', name: 'Kitchen' }),
-    r('dining', 'dining', -1.2, -0.3, 2.6, 4.8, { unit: 'house', name: 'Dining' }),
-    r('family', 'living', -6, -0.3, 4.8, 4.8, { unit: 'house', name: 'Family room' }),
+    r('kitchen', 'kitchen', 1.4, -0.3, 4.6, 4.8, { unit: 'house', name: 'Kitchen', face: 's' }),          // cabinets on the solid north wall, never across the opening to the dining room
+    r('dining', 'dining', -2.0, -0.3, 3.4, 4.8, { unit: 'house', name: 'Dining', face: 's' }),          // wide enough for a table for six with a clear walk either side
+    r('family', 'living', -6, -0.3, 4.0, 4.8, { unit: 'house', name: 'Family room' }),
   ];
   const first = [
     r('land', 'hall', -1.2, -4.5, 2.6, 5.7, { unit: 'house', name: 'Landing' }),
@@ -257,7 +257,7 @@ export function house() {
     blurb: 'A modern barn-style family home with a glazed gable over the garden. Walk through every room.',
     style: 'house', story: { floor: 0, room: 'kitchen' }, floorH: H, size: [12, 9], floors, units, notes,
     site: { kind: 'suburb' }, roof: 'barn', startHour: 15.5, single: true,
-    doorAt: { 'hall|study': 0.2 }, wallKind: { 'dining|kitchen': 'none', 'dining|family': 'door' },
+    doorAt: { 'hall|study': 0.2, 'dining|family': 0.15, 'kitchen|wc': 0.1, 'kitchen|util': 0.9 }, wallKind: { 'dining|kitchen': 'none', 'dining|family': 'door', 'dining|living': 'solid' },
     spec: {
       materials: 'White lime render with black charred-timber cladding on the gables, a natural slate roof and an oak-framed porch. The back gable is glazed to the ridge.',
       finishes: 'Oak floors, a quartz island kitchen, a wood burner in the living room and stone-tiled bathrooms. Try the Style button to see other finishes.',

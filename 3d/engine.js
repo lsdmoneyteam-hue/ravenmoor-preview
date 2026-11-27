@@ -514,7 +514,7 @@ function furnishBest(q, B, segs, rooms, o) {
   const glassZ = []; segs.forEach(g => { if ((g.A === q) === (g.B === q) || (g.A && g.B && !OUTSIDE.has((g.A === q ? g.B : g.A).type))) return; if (g.A && g.B && g.kind !== 'slider') return; const d0 = g.A === q ? g.L - .55 : g.L, d1 = g.A === q ? g.L : g.L + .55; glassZ.push(g.axis === 'x' ? [d0, d1, g.a, g.b] : [g.a, g.b, d0, d1]); });
   const SOFT = new Set(['curtain', 'plant', 'plant2', 'pot', 'flower']);
   const fixed = !SOLVE.has(q.type) || q.tall || q.look === 'kd' || q.look === 'dress' || q.look === 'spa' || q.look === 'suite' || q.look === 'guest' || q.look === 'ensuite' || (o.house && o.fi === 0 && q.type === 'hall'), zones = fixed ? [] : doorZones(q, segs);
-  const tries = fixed ? [{}] : [{}, { swap: 1 }, { flip: 1 }, { flip: 1, swap: 1 }, { face: 'n' }, { face: 'n', flip: 1 }, { face: 's' }, { face: 's', flip: 1 }, { face: 'e' }, { face: 'e', flip: 1 }, { face: 'w' }, { face: 'w', flip: 1 }];
+  const tries = fixed ? [{}] : q.face ? [{ face: q.face }, { face: q.face, flip: 1 }] : [{}, { swap: 1 }, { flip: 1 }, { flip: 1, swap: 1 }, { face: 'n' }, { face: 'n', flip: 1 }, { face: 's' }, { face: 's', flip: 1 }, { face: 'e' }, { face: 'e', flip: 1 }, { face: 'w' }, { face: 'w', flip: 1 }];
   const real = c => !((c.y1 - c.y0 < .05 && c.y0 < .1) || c.y0 > 2.0);          // not a rug, not something on the ceiling
   if (!fixed && q.type === 'bed') tries.push(...tries.flatMap(t => [{ ...t, bs: -1 }, { ...t, bs: 1 }]));          // then the same again with the bed slid along its wall, clear of a door
   let best = null;
@@ -674,7 +674,7 @@ function furnish(q, B, rooms, o) {
       art(1, V / 2, 1.5, .9, 1); floorLamp(U - .4, V - .5); plant(U - .5, .5, 1.1); curtains(); beams();
       return;
     }
-    case 'kitchen': { kitchen(.06, U - .06); island(U / 2, Math.max(1.5, V - 2.3), Math.min(2.4, U - 1.8)); plant(.4, .4, .9); beams(); return; }
+    case 'kitchen': { { const f = freeRun(V - .5); kitchen(f[0] + (f[0] > .1 ? .08 : 0), f[1] - (f[1] < U - .1 ? .08 : 0)); } island(U / 2, Math.max(1.5, V - 2.3), Math.min(2.4, U - 1.8)); plant(.4, .4, .9); beams(); return; }
     case 'dining': {
       if (q.look === 'kd') {          // kitchen along the back wall with a long island; the table by the glass, well clear of both
         kitchen(.9, 7.9); box('cabinet', 4.6, .9, 1.15, 4.4, .45, V - 2.5); rbox('worktop', 4.8, .06, 1.3, 4.4, .93, V - 2.5, .02);
