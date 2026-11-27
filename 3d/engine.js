@@ -1613,6 +1613,10 @@ export function run(data, root) {
       P[7] = at(-.7, g); P[8] = at(-.7, g * .3); P[9] = at(-.9, -g * .3); P[10] = at(-1.3, -g * .62);
       T[7] = at(-dep + .8, g * .2, .1); T[8] = at(-dep + .8, -g * .5, .05); T[9] = at(-2.6, -len / 2 - 2.2, -.25); T[10] = P[10].clone().addScaledVector(f, 60).setY(eye - 4);
     }
+    if (data.style === 'brick') {          // the flat: come in at the TV end, walk the clear strip inside the glass looking at the sofa and then the kitchen, turn past the TV and finish on the view
+      P[5] = at(11, -g * .4, 1.7); P[6] = at(2.6, -g * .6, .25); P[7] = at(-.75, -g * .6); P[8] = at(-.75, -g * .2); P[9] = at(-.75, g * .2); P[10] = at(-.9, g * .3);
+      T[6] = at(-1.9, g * 1.3, -.1); T[7] = at(-1.9, g * 1.3, -.2); T[8] = at(-dep + .5, g * .4, -.15); T[9] = at(-2.2, -g * 1.4, -.1); T[10] = P[10].clone().addScaledVector(f, 60).setY(eye - 4);
+    }
     // where there is a pool on the roof, the film carries on: up through the height of the room, out onto the terrace, and ends over the water
     const pd = data.floors[nF - 1].rooms.find(r => r.pool); let sc = pd && fi < nF - 1 ? .8 : 1, K = KP.map(k => k * sc), outAt = sc;
     if (q.tall && pd) {
