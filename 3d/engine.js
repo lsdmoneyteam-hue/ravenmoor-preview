@@ -606,12 +606,14 @@ function furnish(q, B, rooms, o) {
         for (let k = 0; k < 14; k++) { const a = k * 2.4, rr = .25 + (k % 5) * .22, dr = 1.2 + (k * .37 % 2.6); box('black', .01, dr, .01, U - 4.3 + Math.cos(a) * rr, H2 - dr / 2, 3.4 + Math.sin(a) * rr); ball('lampShade', .11, U - 4.3 + Math.cos(a) * rr, H2 - dr - .08, 3.4 + Math.sin(a) * rr, 1); }
         // a grand piano in the glass corner
         rbox('black', 1.5, .3, 2.1, 2.0, .82, 2.0, .3); box('black', 1.4, .03, 1.9, 2.05, 1.25, 2.0, 0, 0); box('black', .06, .7, .06, 1.45, .35, 1.2); box('black', .06, .7, .06, 2.55, .35, 1.2); box('black', .06, .7, .06, 2.0, .35, 2.9); box('white', 1.2, .03, .16, 2.0, .7, .9); rbox('fabric', .7, .1, .4, 2.0, .48, .45, .04); box('black', .05, .46, .05, 1.72, .23, .45); box('black', .05, .46, .05, 2.28, .23, .45);
-        plant(.6, .6, 1.6); plant(U - 1.2, .7, 1.4);
-        // nothing crowds the sofas: a console behind them, a glass wine wall on the back wall, and open floor through to the kitchen
-        rbox('darkWood', 2.6, .8, .42, U - 4.3, .4, 6.05, .02); { const [cx, cz] = to(U - 4.3, 6.05); if (!B.prop('Console', cx, y + .8, cz)) { cyl('lampShade', .16, .34, U - 5.2, 1.0, 6.05, .1); cyl('brass', .03, .2, U - 5.2, .86, 6.05); cyl('pot', .1, .3, U - 3.5, .95, 6.05, .07); ball('flower', .16, U - 3.5, 1.22, 6.05, 1.1); } }
+        { const tree = (u, v, palm) => { cyl('stone', .34, .6, u, .3, v, .4); if (palm) { for (let k = 0; k < 7; k++) { const a = k * .9; cyl('trunk', .018, 1.5 + (k % 3) * .25, u + Math.cos(a) * .06, 1.3 + (k % 3) * .12, v + Math.sin(a) * .06); ball('plant', .34, u + Math.cos(a) * .42, 2.0 + (k % 3) * .22, v + Math.sin(a) * .42, .45); } ball('plant2', .3, u, 2.5, v, .6); } else { cyl('trunk', .06, 1.5, u, 1.3, v, .04); ball('plant2', .7, u, 2.55, v, .8); ball('plant', .5, u + .35, 2.85, v - .15, .8); ball('plant', .45, u - .3, 2.7, v + .25, .8); } }; tree(.7, .7, false); tree(U - 1.2, .7, true); }
+        // nothing crowds the sofas: a glass wine wall on the back wall, and open floor through to the kitchen
         { const [cx, cz] = to(9.8, V - .3); if (!B.prop('WineWall', cx, y, cz, 0, 3.2, .5, 2.6)) { box('glass', 3.2, 2.6, .5, 9.8, 1.3, V - .3); for (let k = 0; k < 5; k++) box('darkWood', 3.1, .04, .42, 9.8, .35 + k * .5, V - .3); } }
         // floating oak stair up to the roof, against the back wall; its foot is 2 m in from the glass so you can walk round to it
-        { const n = 18, rise = (data_floorH) / n; for (let k = 0; k < n; k++) { const su = 2.2 + k * .29, sy = rise * (k + 1); box('oak', .3, .06, 1.4, su, sy, V - .75); box('glassRail', .29, 1.0, .02, su, sy + .53, V - 1.47); box('brass', .3, .03, .04, su, sy + 1.05, V - 1.47); } }
+        { const n = 18, rise = (data_floorH) / n; for (let k = 0; k < n; k++) { const su = 2.2 + k * .29, sy = rise * (k + 1); box('oak', .3, .06, 1.4, su, sy, V - .75); }
+          const run = n * .29, a = Math.atan2(data_floorH, run), L = Math.hypot(run, data_floorH), [ax, az] = to(2.05, V - 1.47), [bx, bz] = to(2.05 + run, V - 1.47), mx = (ax + bx) / 2, mz = (az + bz) / 2, ym = y + data_floorH / 2 + rise / 2;
+          const sl = (m, h, t, yy) => { if (Math.abs(bx - ax) > Math.abs(bz - az)) B.box(m, L, h, t, mx, ym + yy, mz, 0, 0, a * Math.sign(bx - ax)); else B.box(m, t, h, L, mx, ym + yy, mz, 0, -a * Math.sign(bz - az), 0); };
+          sl('glassRail', 1.0, .02, .5); sl('rail', .04, .05, 1.03); }
         return;
       }
       // where the hall door comes in on the back wall, so the kitchen leaves it clear
@@ -648,13 +650,14 @@ function furnish(q, B, rooms, o) {
         const fb = (n, w, h, d, u, y, v) => box(n, w, h, d, U - u, y, V - v), frb = (n, w, h, d, u, y, v, r) => rbox(n, w, h, d, U - u, y, V - v, r), fc = (n, r, h, u, y, v, e) => cyl(n, r, h, U - u, y, V - v, e), fp = (u, v, k) => plant(U - u, V - v, k);
         [.75, V - .75].forEach(v => { fb('oak', .5, 2.2, 1.2, .25, 1.1, v); fb('black', .004, 2.1, .02, .51, 1.1, v); });
         frb('oak', .45, .45, 1.2, 1.0, .23, .85, .02); frb('fabric', .45, .06, 1.2, 1.0, .48, .85, .02);
-        // two walk-in rain showers: stone back and sides, clear glass front, a bench of towels between them and the sauna
-        fb('stone', 2.4, 2.3, .12, 3.3, 1.15, V - .06); fb('stone', .12, 2.3, 1.4, 2.1, 1.15, V - .7); fb('stone', .1, 2.3, 1.4, 3.3, 1.15, V - .7); fb('stone', .12, 2.3, 1.4, 4.5, 1.15, V - .7);
-        fb('glass', 2.2, 2.0, .02, 3.3, 1.0, V - 1.4); fb('stone', 2.36, .04, 1.3, 3.3, .02, V - .7);
-        [2.7, 3.9].forEach(u => { fb('brass', .03, .5, .03, u, 2.05, V - .3); fc('brass', .14, .02, u, 2.18, V - .55); });
-        // sauna cabin: cedar walls, glass front facing the room, two tiers of benches inside
-        const su = 6.1; fb('oak', 2.4, 2.2, .1, su, 1.1, V - .05); fb('oak', .1, 2.2, 1.6, su - 1.2, 1.1, V - .8); fb('oak', .1, 2.2, 1.6, su + 1.2, 1.1, V - .8); fb('oak', 2.4, .1, 1.6, su, 2.2, V - .8);
-        fb('glass', 2.3, 2.1, .02, su, 1.05, V - 1.6); fb('darkWood', 2.2, .06, .55, su, .45, V - .35); fb('darkWood', 2.2, .06, .5, su, .9, V - .6); fb('black', .5, .4, .4, su + .8, .2, V - 1.2);
+        // one long sauna: timber box, a single glass front with a glass door at one end, two bench tiers, heater with stones, bucket and ladle
+        { const su = 4.7, sw = 5.2, e0 = su - sw / 2, e1 = su + sw / 2;
+          fb('oak', sw, 2.2, .1, su, 1.1, V - .05); fb('oak', .1, 2.2, 1.6, e0, 1.1, V - .8); fb('oak', .1, 2.2, 1.6, e1, 1.1, V - .8); fb('oak', sw, .1, 1.6, su, 2.2, V - .8); fb('oak', sw - .2, .05, 1.5, su, .025, V - .8);
+          fb('oak', 4.1, .08, .48, e0 + 2.15, .92, V - .36); fb('oak', 4.1, .4, .04, e0 + 2.15, .7, V - .58); fb('oak', 4.1, .08, .38, e0 + 2.15, .46, V - .77); fb('oak', 4.1, .4, .04, e0 + 2.15, .24, V - .94);
+          [1.2, 1.35, 1.5].forEach(yy => fb('oak', 3.7, .09, .035, e0 + 2.15, yy, V - .12)); fb('led', 4.0, .03, .02, e0 + 2.15, .86, V - .59); fb('led', 4.6, .03, .02, su, 2.12, V - .12);
+          fb('black', .55, .62, .55, e1 - .45, .33, V - .5); for (let k = 0; k < 14; k++) ball('black', .07, U - (e1 - .65 + (k % 4) * .13), .68 + (k % 3) * .04, .68 - Math.floor(k / 4) * .12, .75);
+          fb('oak', .04, .75, .7, e1 - .8, .4, V - .5); fc('oak', .13, .22, e1 - 1.25, .61, V - .75); fb('brass', .3, .02, .025, e1 - 1.45, .73, V - .75); fb('white', .45, .08, .3, e0 + .9, 1.0, V - .36); fb('white', .45, .08, .26, e0 + 2.4, .54, V - .77);
+          fb('glass', sw - 1.16, 2.1, .02, e0 + 1.06 + (sw - 1.16) / 2, 1.06, V - 1.6); fb('glass', .9, 2.08, .02, e0 + .55, 1.05, V - 1.6); fb('oak', .04, .5, .1, e0 + .9, 1.05, V - 1.6); }
         // cold plunge in stone, steps of clear floor all round
         frb('stone', 1.7, .75, 1.0, 8.85, .375, V - 1.45, .06); fb('pool', 1.5, .02, .8, 8.85, .7, V - 1.45);
         // two loungers at the glass, a massage table behind a slatted oak screen at the far end
@@ -853,16 +856,17 @@ function towerRoof(R, data, plate, y) {
   top.rooms.forEach(q => { if (OUTSIDE.has(q.type)) return; R.box('wave', q.w + 1.6, .32, q.d + 1.6, q.x + q.w / 2, y - .1, q.z + q.d / 2); });
   const deck = top.rooms.find(q => q.pool);
   if (deck) {
-    const [x0, x1, z0] = deck.pool, z1 = plate.z1 + 3.8, cx = (x0 + x1) / 2, cz = (z0 + z1) / 2, w = x1 - x0, d = z1 - z0, hT = 1.25;
-    // glass tank: the outer half hangs past the edge of the tower, with a glass floor you can see the street through
-    R.box('glass', w, .1, d, cx, yT + .05, cz); R.box('pool', w - .16, hT - .22, d - .16, cx, yT + .1 + (hT - .22) / 2, cz);
-    R.box('glass', w, hT, .08, cx, yT + hT / 2, z0); R.box('glass', w, hT, .08, cx, yT + hT / 2, z1); R.box('glass', .08, hT, d, x0, yT + hT / 2, cz); R.box('glass', .08, hT, d, x1, yT + hT / 2, cz);
-    R.box('metal', w + .1, .05, .1, cx, yT + hT, z0); R.box('metal', w + .1, .05, .1, cx, yT + hT, z1); R.box('metal', .1, .05, d, x0, yT + hT, cz); R.box('metal', .1, .05, d, x1, yT + hT, cz);
-    for (let x = x0 + .6; x < x1; x += (w - 1.2) / 4) { R.box('bronze', .16, .5, z1 - plate.z1 + 1.2, x, yT - .32, (z1 + plate.z1) / 2 - .6); }
-    // raised sun deck behind it, steps up, loungers
-    R.box('deck', w + 1.2, hT - .04, 2.2, cx - .6, yT + (hT - .04) / 2, z0 - 1.1); for (let k = 0; k < 4; k++) R.box('deck', .34, hT * (k + 1) / 5, 2.2, x0 - 1.37 - k * .34, yT + hT * (k + 1) / 10, z0 - 1.1);
+    const [x0, x1, z0] = deck.pool, z1 = plate.z1 + 3.8, cx = (x0 + x1) / 2, cz = (z0 + z1) / 2, w = x1 - x0, d = z1 - z0, hT = 1.1, zi = plate.z1, dT = 1.2;
+    // the pool is flush with the terrace: water level with pale stone paving and a stone coping. The outer half still hangs past the edge of the tower as a glass tank, its walls rising 1.1 m as the guard
+    R.box('stone', w + 1.5, .03, zi - z0 + 2.4, cx - .75, yT + .015, (z0 - 2.4 + zi) / 2);
+    R.box('pool', w - .3, .05, zi - z0 - .15, cx, yT + .06, (z0 + .15 + zi) / 2);
+    R.box('worktop', w, .08, .15, cx, yT + .05, z0 + .075); R.box('worktop', .15, .08, zi - z0, x0 + .075, yT + .05, (z0 + zi) / 2); R.box('worktop', .15, .08, zi - z0, x1 - .075, yT + .05, (z0 + zi) / 2);
+    { const od = z1 - zi, oz = (zi + z1) / 2; R.box('glass', w, .1, od, cx, yT - dT + .05, oz); R.box('pool', w - .16, dT - .02, od - .08, cx, yT - dT + .1 + (dT - .02) / 2, oz - .04);
+      R.box('glass', w, dT + hT, .08, cx, yT + (hT - dT) / 2, z1); R.box('glass', .08, dT + hT, od, x0, yT + (hT - dT) / 2, oz); R.box('glass', .08, dT + hT, od, x1, yT + (hT - dT) / 2, oz);
+      R.box('metal', w + .1, .05, .1, cx, yT + hT, z1); R.box('metal', .1, .05, od, x0, yT + hT, oz); R.box('metal', .1, .05, od, x1, yT + hT, oz); }
+    for (let x = x0 + .6; x < x1; x += (w - 1.2) / 4) { R.box('bronze', .16, .5, z1 - plate.z1 + 1.2, x, yT - dT - .32, (z1 + plate.z1) / 2 - .6); }
     for (let k = 0; k < 4; k++) {          // teak loungers on legs: mattress, tilted back, towel, side table; a parasol by every other one
-      const lx = x0 + 1.2 + k * (w - 2.4) / 3, D = yT + hT - .04, lz = z0 - 1.15, t = .56;
+      const lx = x0 + 1.2 + k * (w - 2.4) / 3, D = yT + .03, lz = z0 - 1.15, t = .56;
       [[-.3, -.85], [.3, -.85], [-.3, .85], [.3, .85]].forEach(([a, b]) => R.cyl('oak', .025, .24, lx + a, D + .12, lz + b));
       R.box('oak', .72, .05, 2.0, lx, D + .265, lz); R.rbox('linen', .66, .1, 1.25, lx, D + .34, lz + .36, .03);
       R.box('linen', .66, .1, .74, lx, D + .34 + Math.sin(t) * .37, lz - .27 - Math.cos(t) * .37, 0, t); R.box('oak', .72, .04, .76, lx, D + .27 + Math.sin(t) * .37, lz - .3 - Math.cos(t) * .37, 0, t);
@@ -870,8 +874,8 @@ function towerRoof(R, data, plate, y) {
       R.cyl('oak', .22, .03, lx - .62, D + .42, lz - .3); R.cyl('metal', .025, .4, lx - .62, D + .2, lz - .3);
       if (k % 2 === 0) { const px = lx + .75, pz = lz - .75; R.cyl('stone', .28, .08, px, D + .04, pz); R.cyl('metal', .028, 2.5, px, D + 1.25, pz); R.cyl('fabric', 1.45, .45, px, D + 2.55, pz, .04, 8); }
     }
-    for (let k = 0; k < 6; k++) { R.cyl('downlight', .09, .02, x0 + .9 + k * (w - 1.8) / 5, yT + .12, z0 + 1.2, .09, 12); R.cyl('downlight', .09, .02, x0 + .9 + k * (w - 1.8) / 5, yT + .12, z1 - 1.2, .09, 12); }          // lights under the water
-    { const px = x0 - 4.9, pz2 = plate.z1 - 1.3; R.rbox('pot', 1.2, .7, 1.2, px, yT + .35, pz2, .05); R.ball('plant', .8, px, yT + 1.5, pz2, 1.2, 2); R.ball('plant2', .5, px + .4, yT + 2.1, pz2 + .2, 1.1, 2); }
+    for (let k = 0; k < 6; k++) R.cyl('downlight', .09, .02, x0 + .9 + k * (w - 1.8) / 5, yT - dT + .12, z1 - 1.2, .09, 12);          // lights under the water
+    { const px = x0 - 4.9, pz2 = plate.z1 - 1.3; R.cyl('stone', .5, .45, px, yT + .225, pz2, .7, 24); for (let k = 0; k < 9; k++) { const g = k * 2.4, rr = k ? .28 : 0; R.cyl(k % 2 ? 'plant' : 'plant2', .03, .75 + (k % 3) * .12, px + Math.cos(g) * rr, yT + .8, pz2 + Math.sin(g) * rr, .16, 8); } }          // a stone bowl of grasses
   }
   if (deck && deck.bar) {
     const [b0, b1] = deck.bar, bc = (b0 + b1) / 2, bw = b1 - b0, bz = deck.z;          // against the glass of the landing, facing the pool
