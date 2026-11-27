@@ -1095,7 +1095,7 @@ export function run(data, root) {
   // ---------- the house builds itself in the opening film: a timber frame, then blockwork course by course, then the roof slates one by one ----------
   // Every piece is one instance with a place to end up, somewhere to fly in from, and a moment to start. kitAt(k) sets them all for k = 0..1.
   let kit = null;
-  if ((data.style === 'house' || data.style === 'brick') && roofPlanes) {
+  if ((data.style === 'house' || (data.style === 'brick' && data.story && data.story.pieces)) && roofPlanes) {          // the flats' piece-by-piece build is switched off (Ell preferred the outline that fills in); `story.pieces: true` brings it back
     let seed = 0x51F15E; const rnd = () => (seed = (Math.imul(seed, 1664525) + 1013904223) >>> 0) / 4294967296;
     const V = (x, y, z) => new THREE.Vector3(x, y, z), E = new THREE.Euler(), one = V(1, 1, 1);
     const sets = { frame: [], block: [], tile: [] };
@@ -1762,9 +1762,9 @@ export function run(data, root) {
       cut = cutTo = cutEnd = kb >= .985 ? BIG : .15 + (st.h + 2.4) * fin; clip.constant = cut; clipUp.constant = -cut; ghost.visible = false; scan.visible = fin > 0 && fin < 1; if (scan.visible) { scan.position.y = cut; scan.material.opacity = .9; }
     } else
     if (b >= 1) { cut = cutTo = cutEnd = BIG; clip.constant = BIG; clipUp.constant = -BIG; ghost.visible = false; scan.visible = false; }
-    else { const nL = nF + 1, lv = b * nL, stepped = data.style === 'brick' ? Math.min(st.h + .6, data.floorH * (Math.floor(lv) + sstep(0, .45, lv % 1))) : (st.h + .6) * b;          // the flats go up a storey at a time, the way they are built
+    else { const nL = nF + 1, lv = b * nL, stepped = (st.h + .6) * b;          // the flats go up a storey at a time, the way they are built
       cut = cutTo = cutEnd = .15 + stepped; clip.constant = cut; clipUp.constant = -cut; ghost.visible = p > .04; scan.visible = b > 0; scan.position.y = cut; scan.material.opacity = .9; }
-    if (data.style === 'brick') { if (!cranes) makeCranes(); const on = p > .06 && p < .47; cranes.group.visible = on; if (on) { cranes.group.position.y = -Math.max(0, (p - .43) / .04) * 60; cranes.at(clamp((p - .07) / .37, 0, 1), Math.min(cut, topY) + 2.6); } }
+    if (data.style === 'brick' && data.story && data.story.cranes) { if (!cranes) makeCranes(); const on = p > .06 && p < .47; cranes.group.visible = on; if (on) { cranes.group.position.y = -Math.max(0, (p - .43) / .04) * 60; cranes.at(clamp((p - .07) / .37, 0, 1), Math.min(cut, topY) + 2.6); } }
     if (p > .44 && !st.inside) { st.inside = true; showInner(data.single ? data.floors.map((x, i) => i) : [st.fi]); const sv = walk; walk = { unit: st.q.unit }; setRoomLights(st.fi, st.q.unit); walk = sv; }
     const HK = data.story && data.story.hours; let hr;
     if (HK) { let i = 0; while (i < HK.length - 2 && p0 > HK[i + 1][0]) i++; const a = HK[i], b = HK[i + 1]; hr = Math.round((a[1] + (b[1] - a[1]) * sstep(a[0], b[0], p0)) * 8) / 8 % 24; }      // a full day and night go by over the film
