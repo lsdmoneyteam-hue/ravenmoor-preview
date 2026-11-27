@@ -778,6 +778,7 @@ function furnish(q, B, rooms, o) {
       }
       if (U > 1.1 && V > 1) { const L = Math.min(U - .12, 1.9); box('white', L, .88, .6, L / 2 + .06, .44, V - .32); box('worktop', L + .02, .04, .62, L / 2 + .06, .9, V - .32); box('white', L, .6, .34, L / 2 + .06, 1.9, V - .19);
         // a washer and a dryer under the worktop, a sink and tap on top, a laundry basket: so it reads as a utility room and not an empty cupboard
+        if (!/util/i.test(q.id)) return;          // only real utility rooms: store cupboards and the house's wardrobe room share this case and must not get a washing machine
         const nA = L > 1.5 ? 2 : 1; for (let k = 0; k < nA; k++) { const au = .06 + .36 + k * .64; box('steel', .58, .8, .02, au, .44, V - .63); box('black', .4, .4, .015, au, .42, V - .645); box('glass', .3, .3, .012, au, .42, V - .655); box('black', .5, .06, .012, au, .76, V - .645); }
         if (L > 1.5) { box('steel', .42, .02, .36, L - .25, .925, V - .32); box('brass', .03, .22, .03, L - .25, 1.03, V - .14); box('brass', .03, .03, .14, L - .25, 1.13, V - .2); }
         if (U > 1.6 && V > 1.5) { rbox('oak', .42, .5, .34, U - .35, .25, .35, .04); rbox('fabric', .36, .06, .28, U - .35, .52, .35, .03); } } return; }
