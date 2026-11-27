@@ -255,7 +255,7 @@ export function house() {
   return {
     key: 'house', name: 'Ashcombe House', place: 'Newport Pagnell, Milton Keynes',
     blurb: 'A modern barn-style family home with a glazed gable over the garden. Walk through every room.',
-    style: 'house', story: { floor: 0, room: 'kitchen' }, floorH: H, size: [12, 9], floors, units, notes,
+    style: 'house', story: { floor: 0, room: 'kitchen', hours: [[0, 7.5], [.42, 13], [.6, 17], [.7, 18.75], [1, 19.75]] }, floorH: H, size: [12, 9], floors, units, notes,
     site: { kind: 'suburb' }, roof: 'barn', startHour: 15.5, single: true,
     doorAt: { 'hall|study': 0.2, 'hall|living': 0.1, 'dining|family': 0.15, 'kitchen|wc': 0.1, 'kitchen|util': 0.9 }, wallKind: { 'dining|kitchen': 'none', 'dining|family': 'door', 'dining|living': 'solid' },
     spec: {
