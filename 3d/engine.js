@@ -623,13 +623,13 @@ function furnish(q, B, rooms, o) {
       const side = (big ? (kc > U / 2 ? 0 : 1) : (kc > U / 2 ? 1 : 0)) ^ (o.swap && !big ? 1 : 0), Lw = big ? 4.4 : U, lc = side ? U - Lw / 2 : Lw / 2, tvU = big ? (side ? U - Lw : Lw) : (side ? .22 : U - .22), dir = side ? 1 : -1;
       if ((V > 5.6 || (big && V > 4.7)) && kB - kA > 2.4) island(kc, V - 2.0, Math.min(big ? 2.6 : 2, kB - kA - .6));
       const tight = !big && V - 2.2 < lv + 1.9;          // not deep enough for a table for four behind the sofa: a table for two by the kitchen instead, clear of the rug and the TV
-      rbox('rug', Math.min(Lw - 1.2, 2.8), .012, tight ? 2.0 : 2.4, lc, .006, lv, .005);
+      rbox('rug', Math.min(Lw - 1.2, 2.8), .012, tight ? 1.7 : 2.4, lc, .006, tight ? lv - .12 : lv, .005);
       sofa(side, lv, sl); cyl('oak', .42, .04, lc, .36, lv); cyl('black', .03, .34, lc, .18, lv); box('books', .26, .05, .19, lc - .1, .405, lv + .08); cyl('pot', .05, .16, lc + .16, .46, lv - .1, .035); ball('plant2', .09, lc + .16, .6, lv - .1, 1.2);
       if (big) { box('wallInt', .14, Hc, 2.6, tvU, Hc / 2, lv); rbox('darkWood', .4, .42, 1.9, tvU + dir * .28, .23, lv, .02); box('screen', .05, .75, 1.4, tvU + dir * .1, 1.3, lv); rbox('sofa', 1.7, .4, .85, lc, .22, lv + 1.75, .09); rbox('sofa', 1.7, .5, .22, lc, .58, lv + 2.1, .09); }
       else { rbox('darkWood', .4, .42, 1.7, tvU, .23, lv, .02); box('screen', .05, .7, 1.25, side ? .06 : U - .06, 1.25, lv); }
       art(side, lv, 1.3, .8, x + z + fi); floorLamp(side ? U - .4 : .4, lv + sl / 2 + .4); plant(side ? U - .45 : .45, .45);
       if (big) { longTable(side ? U - Lw - 1.7 : Lw + 1.7, 1.4, 2.4, 6); plant(side ? .5 : U - .5, .5, 1.3); }
-      else if (V > 4.4) { if (tight) roundTable(clamp(kc, 1.2, U - 1.2), V - 1.95, .4, 2); else roundTable(side ? U * .32 : U * .68, Math.min(V - 2.2, lv + 2.4), .5, 4); }
+      else if (V > 4.4) { if (tight) roundTable(clamp(kc, side ? 1.2 : 2.1, side ? U - 2.1 : U - 1.2), V - 1.95, .4, 2); else roundTable(side ? U * .32 : U * .68, Math.min(V - 2.2, lv + 2.4), .5, 4); }
       curtains();
       return;
     }
