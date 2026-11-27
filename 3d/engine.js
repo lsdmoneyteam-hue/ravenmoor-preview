@@ -1087,13 +1087,23 @@ export function run(data, root) {
       for (let u = -pl.lx / 2 + .3; u < pl.lx / 2; u += .6) { const loc = V(u, -pl.t / 2 - .09, 0).applyQuaternion(q); piece('frame', V(pl.p[0] + loc.x, pl.p[1] + loc.y, pl.p[2] + loc.z), q.clone(), V(.06, .16, pl.lz), V((rnd() - .5) * 4, 8 + rnd() * 5, (side ? 1 : -1) * (5 + rnd() * 6)), .17 + .08 * (u + pl.lx / 2) / pl.lx, .09, .3); }
     });
     piece('frame', V(cx, roofPlanes[0].ridge - .1, cz), Q0.clone(), V(plate.w, .2, .08), V(0, 14, 0), .16, .1, .1);
+    // last of all the oak: the garden pergola and the porch posts, so nothing is left to pop in with the finished house
+    { const tx0 = -1.2, tx1 = 6, tz = z1 + 3.2, tc = (tx0 + tx1) / 2, late = .8;
+      [tx0 + .2, tc, tx1 - .2].forEach((x, i) => piece('frame', V(x, 1.0, tz), Q0.clone(), V(.18, 2.6, .18), V(0, 9 + rnd() * 3, 4 + rnd() * 3), late + i * .012, .07, .2));
+      [tz, z1 + .12].forEach((z, i) => piece('frame', V(tc, 2.4, z), Q0.clone(), V(tx1 - tx0 + .4, .2, .16), V((i ? -1 : 1) * 12, 3, 5), late + .03 + i * .01, .07, .15));
+      let j = 0; for (let x = tx0 + .2; x <= tx1 - .1; x += .6) piece('frame', V(x, 2.58, z1 + 1.65), Q0.clone(), V(.07, .16, 3.4), V((rnd() - .5) * 3, 6 + rnd() * 4, 7 + rnd() * 5), late + .045 + .035 * (j++ / 12), .06, .3);
+      [-1, 1].forEach(a => piece('frame', V(.1 + a * 1.25, 1.0, z0 - 1.5), Q0.clone(), V(.16, 2.6, .16), V(a * 3, 9, -5), late + .02, .07, .2)); piece('frame', V(.1, 2.38, z0 - 1.5), Q0.clone(), V(2.9, .18, .16), V(0, 5, -9), late + .05, .07, .15); }
     // 2. blockwork: every outside wall that is not glass, course by course from the ground, each block arriving from outside and above
     const BL = .44, BH = .215, GLASS = new Set(['slider', 'bifold', 'glassWall', 'curtain']), nCourse = Math.ceil((wallTop + .3) / BH);
     plans.forEach((segs, fi) => segs.forEach(sg => {
       if ((sg.A && sg.B) || GLASS.has(sg.kind) || sg.kind === 'none' || sg.kind === 'rail') return;
       const out = sg.A && !sg.B ? 1 : -1, len = sg.b - sg.a, n = Math.max(1, Math.round(len / BL)), bl = len / n, yA = fi * data.floorH - (fi ? .3 : .3), yB = (fi + 1) * data.floorH - .3;
+      // leave the window openings out of the blockwork, exactly where the finished windows are
+      const rm = sg.A || sg.B, small = rm.type === 'bath' || rm.type === 'utility', sill = small ? 1.3 : .75, head = 2.15, bays = Math.max(1, Math.round(len / 2.5)), bw = len / bays, ww = Math.min(small ? .8 : 1.4, bw - .6);
+      const inWindow = (at, yl) => sg.kind === 'punched' && ww >= .5 && yl > sill && yl < head && Math.abs(((at - sg.a) % bw) - bw / 2) < ww / 2 + .02;
       for (let c = Math.round((yA + .3) / BH); (c + 1) * BH - .3 <= yB + .01; c++) for (let i = 0; i < n; i++) {
         const at = sg.a + (i + .5 + (c % 2 ? .5 : 0)) * bl; if (at > sg.b - bl * .2) continue;
+        if (inWindow(at, c * BH - .3 + BH / 2 - fi * data.floorH)) continue;
         const y = c * BH - .3 + BH / 2, px = sg.axis === 'x' ? sg.L + out * .17 : at, pz = sg.axis === 'x' ? at : sg.L + out * .17;
         const nx = sg.axis === 'x' ? out : 0, nz = sg.axis === 'x' ? 0 : out, side = (rnd() - .5) * 9;
         piece('block', V(px, y, pz), Q0.clone().setFromEuler(E.set(0, sg.axis === 'x' ? Math.PI / 2 : 0, 0)), V(bl - .012, BH - .012, .1), V(nx * (5 + rnd() * 7) + nz * side, 2 + rnd() * 6, nz * (5 + rnd() * 7) + nx * side), .2 + .38 * c / nCourse + rnd() * .035, .085);
