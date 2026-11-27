@@ -16,18 +16,23 @@ function flat(unit, x0, z0, w, d, face, beds, opts = {}) {
   // the living room takes as much of the frontage as the bedrooms can spare (each bedroom keeps at least 3 m), so it never feels squeezed
   const liv = beds === 0 ? w : Math.max(beds === 1 ? 4.5 : 4, Math.round(Math.min(w * (beds >= 3 ? 0.4 : beds === 2 ? 0.5 : 0.58), w - beds * 3) * 4) / 4);
   const L = opts.livingLeft, livX = L ? x0 : x0 + w - liv, add = (id, type, x, z, ww, dd, name) => rooms.push(r(unit + '-' + id, type, x, z, ww, dd, { unit, name }));
-  add('liv', 'open', livX, fz, liv, front, 'Living, kitchen and dining');
+  add('liv', 'open', livX, fz, liv, front, opts.bay ? 'Living room' : 'Living, kitchen and dining'); if (opts.bay) rooms[rooms.length - 1].bay = true;
   const bw = (w - liv) / Math.max(beds, 1), bedX = i => L ? x0 + liv + i * bw : x0 + w - liv - (i + 1) * bw;       // main bedroom is next to the living room
   for (let i = 0; i < beds; i++) add('b' + (i + 1), 'bed', bedX(i), fz, bw, front, i === 0 ? 'Main bedroom' : 'Bedroom ' + (i + 1));
   const eX = L ? livX + liv - eW : livX;
   add('hall', 'hall', eX, zb(0, back), eW, back, 'Hall');
-  add('bath', 'bath', L ? livX : livX + eW, zb(0, back), liv - eW, back, 'Bathroom');
+  // with `bay`, the kitchen gets a room of its own behind the living room, open to it across a breakfast island, and the bathroom moves next to the store.
+  // That gives the sofa the whole front room and puts about three metres of clear floor between it and the kitchen.
+  if (opts.bay) rooms.push(r(unit + '-kit', 'kitchen', L ? livX : livX + eW, zb(0, back), liv - eW, back, { unit, name: 'Kitchen', look: 'bay', face, ret: L ? 'w' : 'e' }));
+  else add('bath', 'bath', L ? livX : livX + eW, zb(0, back), liv - eW, back, 'Bathroom');
   if (beds > 0) {
     const sX = L ? x0 + liv : x0, sW = w - liv;
     add('hall2', 'hall', sX, zb(svc, strip), sW, strip, 'Hall');
     const ens = beds >= 2 && sW >= 3.8 ? 2.4 : 0;
     if (ens) add('ens', 'bath', L ? sX : sX + sW - ens, zb(0, svc), ens, svc, 'En-suite');
-    add('store', 'utility', L ? sX + ens : sX, zb(0, svc), sW - ens, svc, ens ? 'Utility and storage' : 'Storage');
+    const bW = opts.bay ? Math.min(2.2, sW - ens - 1.2) : 0;
+    if (bW) add('bath', 'bath', L ? sX + ens : sX + sW - ens - bW, zb(0, svc), bW, svc, 'Bathroom');
+    add('store', 'utility', L ? sX + ens + bW : sX, zb(0, svc), sW - ens - bW, svc, ens ? 'Utility and storage' : 'Storage');
   }
   if (opts.balcony) {
     const bd = 1.6, by = face === 's' ? z0 + d : z0 - bd;
@@ -153,14 +158,14 @@ export function block() {
       r('corr', 'corridor', -18, -1, 36, 2, { name: 'Corridor' }),
       r('core', 'core', -2, -9, 4, 8, { name: 'Lifts and stairs' }),
     ];
-    rooms.push(...flat(u(1), -18, -9, 8, 8, 'n', 1, { livingLeft: true }));
-    rooms.push(...flat(u(2), -10, -9, 8, 8, 'n', 1));
-    rooms.push(...flat(u(3), 2, -9, 8, 8, 'n', 1, { livingLeft: true }));
-    rooms.push(...flat(u(4), 10, -9, 8, 8, 'n', 1));
+    rooms.push(...flat(u(1), -18, -9, 8, 8, 'n', 1, { livingLeft: true, bay: true }));
+    rooms.push(...flat(u(2), -10, -9, 8, 8, 'n', 1, { bay: true }));
+    rooms.push(...flat(u(3), 2, -9, 8, 8, 'n', 1, { livingLeft: true, bay: true }));
+    rooms.push(...flat(u(4), 10, -9, 8, 8, 'n', 1, { bay: true }));
     if (f === 0) rooms.push(r('lobby', 'lobby', -18, 1, 12, 8, { name: 'Entrance and bike store' }));
-    else rooms.push(...flat(u(5), -18, 1, 12, 8, 's', 2, { livingLeft: true, balcony: true }));
-    rooms.push(...flat(u(6), -6, 1, 12, 8, 's', 2, { balcony: f > 0 }));
-    rooms.push(...flat(u(7), 6, 1, 12, 8, 's', 2, { livingLeft: true, balcony: f > 0 }));
+    else rooms.push(...flat(u(5), -18, 1, 12, 8, 's', 2, { livingLeft: true, balcony: true, bay: true }));
+    rooms.push(...flat(u(6), -6, 1, 12, 8, 's', 2, { balcony: f > 0, bay: true }));
+    rooms.push(...flat(u(7), 6, 1, 12, 8, 's', 2, { livingLeft: true, balcony: f > 0, bay: true }));
     return rooms;
   };
   const floors = [];
@@ -185,10 +190,11 @@ export function block() {
       };
     });
   });
+  const bayWalls = {}; floors.forEach(f => f.rooms.forEach(q => { if (q.look === 'bay') { bayWalls[`${q.unit}-kit|${q.unit}-liv`] = 'none'; bayWalls[`${q.unit}-hall|${q.unit}-kit`] = 'solid'; } }));
   return {
     key: 'block', name: 'Wharf Row', place: 'Grand Union Canal, Milton Keynes',
     blurb: 'A row of gabled brick wharf houses on the canal. 34 apartments and a roof garden.',
-    style: 'brick', story: { floor: 4, room: '4.06-liv', hours: [[0, 9], [.4, 14], [.62, 17.5], [.76, 19], [1, 19.75]] }, autoDoor: ['4.06-bal|4.06-liv'], floorH: H, size: [36, 18], floors, units,
+    style: 'brick', story: { floor: 4, room: '4.06-liv', hours: [[0, 9], [.4, 14], [.62, 17.5], [.76, 19], [1, 19.75]] }, autoDoor: ['4.06-bal|4.06-liv'], wallKind: bayWalls, floorH: H, size: [36, 18], floors, units,
     site: { kind: 'canal', water: true },
     roof: 'gables', startHour: 16.5,
     spec: {

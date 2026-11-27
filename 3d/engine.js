@@ -333,6 +333,7 @@ function planFloor(fl, data, fi) {
   rooms.forEach(q => {
     if (COMMUNAL.has(q.type) || q.type === 'core' || OUTSIDE.has(q.type)) return;
     const mine = segs.filter(s => (s.A === q || s.B === q) && s.A && s.B);
+    if (q.look === 'bay') return;          // a kitchen bay is open to its living room; it needs no door of its own
     if (mine.some(s => ((s.kind === 'door' || s.kind === 'entry') && s.b - s.a >= 1.3) || s.kind === 'slider')) return;
     const cand = mine.filter(s => s.kind === 'solid' && s.A.unit === s.B.unit && !COMMUNAL.has((s.A === q ? s.B : s.A).type) && s.b - s.a >= 1.3).sort((x, y) => (y.b - y.a) - (x.b - x.a))[0];
     if (cand) cand.kind = 'door';
@@ -345,6 +346,7 @@ function planFloor(fl, data, fi) {
     if (s.B && !s.A) s.B.ext[s.axis === 'x' ? 'w' : 'n'] = true;
     if (s.kind === 'slider') { const q = OUTSIDE.has(s.A.type) ? s.B : s.A; q.ext[s.axis === 'x' ? (q === s.A ? 'e' : 'w') : (q === s.A ? 's' : 'n')] = true; }
     if (s.A && s.B && data.autoDoor && data.autoDoor.includes([s.A.id, s.B.id].sort().join('|'))) s.auto = true;
+    if (s.auto && data.style === 'brick') s.oxxo = true;
     if (s.kind === 'bifold' && (s.A || s.B).type === 'kitchen') s.fold = true;          // the kitchen's garden doors stand folded open, so the film never passes through glass
     if (s.kind === 'door' || s.kind === 'entry') { const t = (data.doorAt && data.doorAt[[s.A.id, s.B.id].sort().join('|')]) ?? (data.style !== 'house' && (s.A.type === 'bed' || s.B.type === 'bed') ? .2 : .5); const dw = Math.min(.95, s.b - s.a - .3); s.dw = dw; s.dc = clamp(s.a + (s.b - s.a) * t, s.a + dw / 2 + .12, s.b - dw / 2 - .12); }
   });
@@ -394,7 +396,9 @@ function shellFloor(S, fl, segs, data, fi, plate, lit) {
       case 'door': wallWithDoor('wallInt', .12); return;
       case 'entry': wallWithDoor('wallInt', .14); if (len >= 1.3) put('door', s.dw, 2.1, .05, s.dc, 1.05); return;
       case 'slider': {
-        put('frame', len, .08, .1, mid, H - .04); if (s.auto) { put('frame', .06, H, .1, s.a, H / 2); put('frame', .06, H, .1, s.b, H / 2); return; }          // these doors are separate, so they can slide open
+        put('frame', len, .08, .1, mid, H - .04); if (s.auto) { put('frame', .06, H, .1, s.a, H / 2); put('frame', .06, H, .1, s.b, H / 2);          // these doors are separate, so they can slide open
+          if (s.oxxo) { [s.a + len / 8, s.b - len / 8].forEach(c => { put('glass', len / 4, H - .1, .03, c, (H - .1) / 2, outSign * .05); }); [s.a + len / 4, s.b - len / 4].forEach(c => put('frame', .05, H, .06, c, H / 2, outSign * .05)); put('frame', len, .05, .14, mid, .025); }          // a real four-panel slider: the outer two panes are fixed, the middle two slide across in front of them. Nothing goes into the wall.
+          return; }
         put('glass', len, H - .1, .03, mid, (H - .1) / 2);
         const n = Math.max(2, Math.round(len / 1.5)); for (let i = 0; i <= n; i++) put('frame', .05, H, .08, s.a + i * len / n, H / 2);
         return;
@@ -617,19 +621,19 @@ function furnish(q, B, rooms, o) {
       { const f = freeRun(V - .5); kA = f[0] + (f[0] > .1 ? .08 : 0); kB = f[1] - (f[1] < U - .1 ? .08 : 0); }
       const big = U > 8, kMax = big ? 4.6 : 3.6;
       if (kB - kA > kMax) { if (kA < .1) kB = kA + kMax; else kA = kB - kMax; }
-      kitchen(kA, kB);
-      const kc = (kA + kB) / 2, sl = Math.min(2.3, V * .42), lv = Math.min(2.0, V * .36);
+      if (!q.bay) kitchen(kA, kB);          // `bay`: the kitchen is a room of its own behind this one, so here it is all sitting room
+      const kc = q.bay ? U / 2 : (kA + kB) / 2, sl = Math.min(2.3, V * .42), lv = Math.min(2.0, V * .36);
       // a big room is three places: kitchen with an island at one end, a long table in the middle, the sofas at the far end behind a media wall
       const side = (big ? (kc > U / 2 ? 0 : 1) : (kc > U / 2 ? 1 : 0)) ^ (o.swap && !big ? 1 : 0), Lw = big ? 4.4 : U, lc = side ? U - Lw / 2 : Lw / 2, tvU = big ? (side ? U - Lw : Lw) : (side ? .22 : U - .22), dir = side ? 1 : -1;
-      if ((V > 5.6 || (big && V > 4.7)) && kB - kA > 2.4) island(kc, V - 2.0, Math.min(big ? 2.6 : 2, kB - kA - .6));
-      const tight = !big && V - 2.2 < lv + 1.9;          // not deep enough for a table for four behind the sofa: a table for two by the kitchen instead, clear of the rug and the TV
+      if (!q.bay && (V > 5.6 || (big && V > 4.7)) && kB - kA > 2.4) island(kc, V - 2.0, Math.min(big ? 2.6 : 2, kB - kA - .6));
+      const tight = !big && !q.bay && V - 2.2 < lv + 1.9;          // not deep enough for a table for four behind the sofa: a table for two by the kitchen instead, clear of the rug and the TV
       rbox('rug', Math.min(Lw - 1.2, 2.8), .012, tight ? 1.7 : 2.4, lc, .006, tight ? lv - .12 : lv, .005);
       sofa(side, lv, sl); cyl('oak', .42, .04, lc, .36, lv); cyl('black', .03, .34, lc, .18, lv); box('books', .26, .05, .19, lc - .1, .405, lv + .08); cyl('pot', .05, .16, lc + .16, .46, lv - .1, .035); ball('plant2', .09, lc + .16, .6, lv - .1, 1.2);
       if (big) { box('wallInt', .14, Hc, 2.6, tvU, Hc / 2, lv); rbox('darkWood', .4, .42, 1.9, tvU + dir * .28, .23, lv, .02); box('screen', .05, .75, 1.4, tvU + dir * .1, 1.3, lv); rbox('sofa', 1.7, .4, .85, lc, .22, lv + 1.75, .09); rbox('sofa', 1.7, .5, .22, lc, .58, lv + 2.1, .09); }
       else { rbox('darkWood', .4, .42, 1.7, tvU, .23, lv, .02); box('screen', .05, .7, 1.25, side ? .06 : U - .06, 1.25, lv); }
       art(side, lv, 1.3, .8, x + z + fi); floorLamp(side ? U - .4 : .4, lv + sl / 2 + .4); plant(side ? U - .45 : .45, .45);
       if (big) { longTable(side ? U - Lw - 1.7 : Lw + 1.7, 1.4, 2.4, 6); plant(side ? .5 : U - .5, .5, 1.3); }
-      else if (V > 4.4) { if (tight) roundTable(clamp(kc, side ? 1.2 : 2.1, side ? U - 2.1 : U - 1.2), V - 1.95, .4, 2); else roundTable(side ? U * .32 : U * .68, Math.min(V - 2.2, lv + 2.4), .5, 4); }
+      else if (V > 4.4 && !q.bay) { if (tight) roundTable(clamp(kc, side ? 1.2 : 2.1, side ? U - 2.1 : U - 1.2), V - 1.95, .4, 2); else roundTable(side ? U * .32 : U * .68, Math.min(V - 2.2, lv + 2.4), .5, 4); }
       curtains();
       return;
     }
@@ -678,7 +682,16 @@ function furnish(q, B, rooms, o) {
       art(1, V / 2, 1.5, .9, 1); floorLamp(U - .4, V - .5); plant(U - .5, .5, 1.1); curtains(); beams();
       return;
     }
-    case 'kitchen': { { const f = freeRun(V - .5); kitchen(f[0] + (f[0] > .1 ? .08 : 0), f[1] - (f[1] < U - .1 ? .08 : 0)); } island(U / 2, Math.max(1.5, V - 2.3), Math.min(2.4, U - 1.8)); plant(.4, .4, .9); beams(); return; }
+    case 'kitchen': {
+      if (q.look === 'bay') {          // a flat's kitchen bay: units along the back wall, a return down one side, and a breakfast island with stools across the open side
+        const lowU0 = (to(.3, V / 2)[0] < to(U - .3, V / 2)[0]) === (q.ret === 'w'), su = lowU0 ? .36 : U - .36, Lv = V - 1.5, vc = V - .64 - Lv / 2;
+        kitchen(lowU0 ? .68 : .06, lowU0 ? U - .06 : U - .68);
+        box('cabinet', .6, .88, Lv, su, .44, vc); box('worktop', .64, .04, Lv + .02, su, .9, vc); box('cabinet', .34, .62, Lv, lowU0 ? .2 : U - .2, 1.9, vc); box('worktop', .02, .5, Lv, lowU0 ? .03 : U - .03, 1.17, vc);
+        for (let v = vc - Lv / 2 + .3; v < vc + Lv / 2 - .1; v += .6) box('brass', .014, .014, .16, lowU0 ? .665 : U - .665, .78, v);
+        island(clamp(U / 2 + (lowU0 ? .45 : -.45), 1.9, U - 1.9), 1.0, Math.min(2.4, U - 2.3));
+        return;
+      }
+      { const f = freeRun(V - .5); kitchen(f[0] + (f[0] > .1 ? .08 : 0), f[1] - (f[1] < U - .1 ? .08 : 0)); } island(U / 2, Math.max(1.5, V - 2.3), Math.min(2.4, U - 1.8)); plant(.4, .4, .9); beams(); return; }
     case 'dining': {
       if (q.look === 'kd') {          // kitchen along the back wall with a long island; the table by the glass, well clear of both
         kitchen(.9, 7.9); box('cabinet', 4.6, .9, 1.15, 4.4, .45, V - 2.5); rbox('worktop', 4.8, .06, 1.3, 4.4, .93, V - 2.5, .02);
@@ -1160,11 +1173,12 @@ export function run(data, root) {
       } };
   }
   const autoDoors = [];
-  plans.forEach((segs, fi) => segs.forEach(sg => { if (!sg.auto) return; const len = sg.b - sg.a, Hd = data.floorH - .42, mk = () => { const m = new THREE.Mesh(new THREE.BoxGeometry(sg.axis === 'x' ? .04 : len / 2, Hd, sg.axis === 'x' ? len / 2 : .04), M.glass); building.add(m); return m; }; autoDoors.push({ sg, fi, len, Hd, a: mk(), b: mk(), open: -1 }); }));
+  plans.forEach((segs, fi) => segs.forEach(sg => { if (!sg.auto) return; const len = sg.b - sg.a, Hd = data.floorH - .42, lw = sg.oxxo ? len / 4 : len / 2, mk = () => { const m = new THREE.Mesh(new THREE.BoxGeometry(sg.axis === 'x' ? .04 : lw, Hd, sg.axis === 'x' ? lw : .04), M.glass); building.add(m); return m; }; autoDoors.push({ sg, fi, len, Hd, a: mk(), b: mk(), open: -1 }); }));
   function doorsTick(dt) { autoDoors.forEach(d => { const sg = d.sg, y = d.fi * data.floorH, mid = (sg.a + sg.b) / 2, cx = sg.axis === 'x' ? sg.L : mid, cz = sg.axis === 'x' ? mid : sg.L, p = camera.position;
     const want = Math.hypot(p.x - cx, p.z - cz) + Math.abs(p.y - y - 1.5) * 2 < (st ? 11 : 4.4) ? 1 : 0;      // in the film the doors are already open by the top of the stair
     if (d.open < 0) d.open = want; else if (Math.abs(want - d.open) > .002) { d.open += (want - d.open) * Math.min(1, dt * 2.6); dirty = true; } else if (d.open === d.o2) return; d.o2 = d.open;
-    const off = d.len / 4 + d.open * d.len * .47; [[d.a, -off], [d.b, off]].forEach(([m, o]) => { if (sg.axis === 'x') m.position.set(sg.L, y + d.Hd / 2, mid + o); else m.position.set(mid + o, y + d.Hd / 2, sg.L); }); }); }
+    const off = sg.oxxo ? d.len / 8 + d.open * d.len * .235 : d.len / 4 + d.open * d.len * .47;          // four-panel sliders stop over their fixed panes
+    [[d.a, -off], [d.b, off]].forEach(([m, o]) => { if (sg.axis === 'x') m.position.set(sg.L, y + d.Hd / 2, mid + o); else m.position.set(mid + o, y + d.Hd / 2, sg.L); }); }); }
   const inner = data.floors.map(() => null);
   function ensureInner(i) { if (inner[i]) return inner[i]; const B = new Bucket(M); innerFloor(B, data.floors[i], plans[i], data, i); const g = B.build(new THREE.Group()); g.position.y = i * data.floorH; g.visible = false; building.add(g); inner[i] = g; return g; }
   function showInner(list) { inner.forEach((g, i) => { if (g) g.visible = list.includes(i); }); list.forEach(i => { const g = ensureInner(i); g.visible = true; g.children.forEach(m => { m.visible = furnished || FINISH.some(k => m.material === M[k]); }); }); dirty = true; }
@@ -1629,7 +1643,7 @@ export function run(data, root) {
         T[7] = at(-dep + .8, g * .2, .1 + up); T[8] = at(-dep + .8, -g * .5, .05 + up); } T[9] = at(-2.6, -len / 2 - 2.2, -.25); T[10] = P[10].clone().addScaledVector(f, 60).setY(eye - 4);
     }
     if (data.style === 'brick') {          // the flat: come in at the TV end, walk the clear strip inside the glass looking at the sofa and then the kitchen, turn past the TV and finish on the view
-      P[5] = at(11, -g * .4, 1.7); P[6] = at(2.6, -g * .6, .25); P[7] = at(-.75, -g * .6); P[8] = at(-.75, -g * .2); P[9] = at(-.75, g * .2); P[10] = at(-.9, g * .3);
+      P[5] = at(11, 0, 1.7); P[6] = at(2.6, 0, .25); P[7] = at(-.8, -g * .15); P[8] = at(-1.0, -g * .3); P[9] = at(-1.0, g * .1); P[10] = at(-.9, 0);          // in through the middle, where the two sliding leaves part
       T[6] = at(-1.9, g * 1.3, -.1); T[7] = at(-1.9, g * 1.3, -.2); T[8] = at(-dep + .5, g * .4, -.15); T[9] = at(-2.2, -g * 1.4, -.1); T[10] = P[10].clone().addScaledVector(f, 60).setY(eye - 4);
     }
     // where there is a pool on the roof, the film carries on: up through the height of the room, out onto the terrace, and ends over the water
