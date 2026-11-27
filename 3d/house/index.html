@@ -10,7 +10,7 @@
 <link rel="icon" href="/favicon.svg" type="image/svg+xml">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Cormorant+Garamond:wght@400;500;600&amp;family=Schibsted+Grotesk:wght@400;500;600&amp;display=swap">
-<link rel="stylesheet" href="/3d/viewer.css?v=26">
+<link rel="stylesheet" href="/3d/viewer.css?v=27">
 <script type="importmap">{"imports":{"three":"/3d/lib/three.module.js"}}</script>
 </head>
 <body>
@@ -72,8 +72,8 @@
   <div class="nogl" data-nogl><p>This demo needs WebGL, which this browser has switched off.</p></div>
 </main>
 <script type="module">
-import { run } from '/3d/engine.js?v=26';
-import { house } from '/3d/buildings.js?v=26';
+import { run } from '/3d/engine.js?v=27';
+import { house } from '/3d/buildings.js?v=27';
 const root = document.getElementById('rv'), q = new URLSearchParams(location.search);
 if (q.has('embed')) root.classList.add('embed');
 try {

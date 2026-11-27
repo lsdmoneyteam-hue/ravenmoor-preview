@@ -847,8 +847,15 @@ function towerRoof(R, data, plate, y) {
     for (let x = x0 + .6; x < x1; x += (w - 1.2) / 4) { R.box('bronze', .16, .5, z1 - plate.z1 + 1.2, x, yT - .32, (z1 + plate.z1) / 2 - .6); }
     // raised sun deck behind it, steps up, loungers
     R.box('deck', w + 1.2, hT - .04, 2.2, cx - .6, yT + (hT - .04) / 2, z0 - 1.1); for (let k = 0; k < 4; k++) R.box('deck', .34, hT * (k + 1) / 5, 2.2, x0 - 1.37 - k * .34, yT + hT * (k + 1) / 10, z0 - 1.1);
-    for (let k = 0; k < 4; k++) { const lx = x0 + 1.2 + k * (w - 2.4) / 3; R.rbox('white', .7, .1, 1.9, lx, yT + hT + .22, z0 - 1.15, .04); R.rbox('fabric', .62, .08, 1.3, lx, yT + hT + .31, z0 - .9, .03); R.rbox('fabric', .62, .08, .6, lx, yT + hT + .42, z0 - 1.82, .03); }
-    for (let k = 0; k < 4; k++) { const lx = x0 + 1.2 + k * (w - 2.4) / 3; R.rbox(k % 2 ? 'throw_' : 'linen', .5, .03, .7, lx, yT + hT + .37, z0 - .7, .01); if (k % 2 === 0) { R.cyl('metal', .03, 2.3, lx + .75, yT + hT + 1.15, z0 - 1.6); R.cyl('fabric', 1.25, .5, lx + .75, yT + hT + 2.45, z0 - 1.6, .05, 24); } }
+    for (let k = 0; k < 4; k++) {          // teak loungers on legs: mattress, tilted back, towel, side table; a parasol by every other one
+      const lx = x0 + 1.2 + k * (w - 2.4) / 3, D = yT + hT - .04, lz = z0 - 1.15, t = .56;
+      [[-.3, -.85], [.3, -.85], [-.3, .85], [.3, .85]].forEach(([a, b]) => R.cyl('oak', .025, .24, lx + a, D + .12, lz + b));
+      R.box('oak', .72, .05, 2.0, lx, D + .265, lz); R.rbox('linen', .66, .1, 1.25, lx, D + .34, lz + .36, .03);
+      R.box('linen', .66, .1, .74, lx, D + .34 + Math.sin(t) * .37, lz - .27 - Math.cos(t) * .37, 0, t); R.box('oak', .72, .04, .76, lx, D + .27 + Math.sin(t) * .37, lz - .3 - Math.cos(t) * .37, 0, t);
+      R.rbox(k % 2 ? 'throw_' : 'white', .5, .03, .6, lx, D + .405, lz + .6, .01);
+      R.cyl('oak', .22, .03, lx - .62, D + .42, lz - .3); R.cyl('metal', .025, .4, lx - .62, D + .2, lz - .3);
+      if (k % 2 === 0) { const px = lx + .75, pz = lz - .75; R.cyl('stone', .28, .08, px, D + .04, pz); R.cyl('metal', .028, 2.5, px, D + 1.25, pz); R.cyl('fabric', 1.45, .45, px, D + 2.55, pz, .04, 8); }
+    }
     for (let k = 0; k < 6; k++) { R.cyl('downlight', .09, .02, x0 + .9 + k * (w - 1.8) / 5, yT + .12, z0 + 1.2, .09, 12); R.cyl('downlight', .09, .02, x0 + .9 + k * (w - 1.8) / 5, yT + .12, z1 - 1.2, .09, 12); }          // lights under the water
     { const px = x0 - 4.9, pz2 = plate.z1 - 1.3; R.rbox('pot', 1.2, .7, 1.2, px, yT + .35, pz2, .05); R.ball('plant', .8, px, yT + 1.5, pz2, 1.2, 2); R.ball('plant2', .5, px + .4, yT + 2.1, pz2 + .2, 1.1, 2); }
   }
