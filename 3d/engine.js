@@ -346,7 +346,7 @@ function planFloor(fl, data, fi) {
     if (s.B && !s.A) s.B.ext[s.axis === 'x' ? 'w' : 'n'] = true;
     if (s.kind === 'slider') { const q = OUTSIDE.has(s.A.type) ? s.B : s.A; q.ext[s.axis === 'x' ? (q === s.A ? 'e' : 'w') : (q === s.A ? 's' : 'n')] = true; }
     if (s.A && s.B && data.autoDoor && data.autoDoor.includes([s.A.id, s.B.id].sort().join('|'))) s.auto = true;
-    if (s.auto && data.style === 'brick') s.oxxo = true;
+    if (s.auto) s.oxxo = true;          // every sliding door is a real four-panel one: outer panes fixed, the middle two slide over them
     if (s.kind === 'bifold' && (s.A || s.B).type === 'kitchen') s.fold = true;          // the kitchen's garden doors stand folded open, so the film never passes through glass
     if (s.kind === 'door' || s.kind === 'entry') { const t = (data.doorAt && data.doorAt[[s.A.id, s.B.id].sort().join('|')]) ?? (data.style !== 'house' && (s.A.type === 'bed' || s.B.type === 'bed') ? .2 : .5); const dw = Math.min(.95, s.b - s.a - .3); s.dw = dw; s.dc = clamp(s.a + (s.b - s.a) * t, s.a + dw / 2 + .12, s.b - dw / 2 - .12); }
   });
@@ -1090,12 +1090,12 @@ export function run(data, root) {
   S.build(building);
   const roofG = new THREE.Group(); building.add(roofG);
   let roofPlanes = null;
-  { const R = new Bucket(M); if (data.roof === 'crown') { towerRoof(R, data, plate, topY); roofH = 2; } else if (data.roof === 'gables') { blockRoof(R, data, plate, topY); roofH = 5; } else { R.planes = []; roofH = houseRoof(R, data, plate, topY) + 2.5; roofPlanes = R.planes; } R.build(roofG); }
+  { const R = new Bucket(M); if (data.roof === 'crown') { towerRoof(R, data, plate, topY); roofH = 2; } else if (data.roof === 'gables') { R.planes = []; blockRoof(R, data, plate, topY); roofH = 5; roofPlanes = R.planes; } else { R.planes = []; roofH = houseRoof(R, data, plate, topY) + 2.5; roofPlanes = R.planes; } R.build(roofG); }
 
   // ---------- the house builds itself in the opening film: a timber frame, then blockwork course by course, then the roof slates one by one ----------
   // Every piece is one instance with a place to end up, somewhere to fly in from, and a moment to start. kitAt(k) sets them all for k = 0..1.
   let kit = null;
-  if (data.style === 'house' && roofPlanes) {
+  if ((data.style === 'house' || data.style === 'brick') && roofPlanes) {
     let seed = 0x51F15E; const rnd = () => (seed = (Math.imul(seed, 1664525) + 1013904223) >>> 0) / 4294967296;
     const V = (x, y, z) => new THREE.Vector3(x, y, z), E = new THREE.Euler(), one = V(1, 1, 1);
     const sets = { frame: [], block: [], tile: [] };
@@ -1104,6 +1104,30 @@ export function run(data, root) {
       sets[set].push({ pos, quat, scale, from, q0, t0, dur, tint: .86 + rnd() * .2 });
     };
     const Q0 = new THREE.Quaternion(), { x0, x1, z0, z1, cx, cz } = plate, wallTop = topY - .3;
+    if (data.style === 'brick') {
+      // The flats go up the way a block is built: for each storey concrete columns drop in, floor planks swing in from the sides, then brick panels
+      // fly in to close the walls, and the finished storey takes their place. Last, the zinc roof sheets land one by one.
+      // Times are in storeys (L); storyAt turns scroll into L and raises the finished building one storey behind the pieces.
+      const FH = data.floorH, NL = nF + 1.6, tt = L => clamp(L / NL, 0, 1), dd = .75 / NL;
+      for (let fi = 0; fi < nF; fi++) {
+        const yb = fi * FH;
+        for (let gx = x0; gx <= x1 + .01; gx += 6) [z0 + .25, cz, z1 - .25].forEach((gz, k) => piece('frame', V(clamp(gx, x0 + .25, x1 - .25), yb + FH / 2 - .15, gz), Q0.clone(), V(.4, FH - .3, .4), V((rnd() - .5) * 2, 14 + rnd() * 8, (rnd() - .5) * 2), tt(fi + .0 + rnd() * .12 + (gx - x0) / plate.w * .12), dd, .15));
+        for (let gx = x0; gx < x1 - .01; gx += 3) for (let k = 0; k < 3; k++) { const pz = z0 + (k + .5) * plate.d / 3, far = (k === 0 ? -1 : k === 2 ? 1 : (rnd() < .5 ? -1 : 1)) * (16 + rnd() * 10);
+          piece('frame', V(gx + 1.5, yb + FH - .15, pz), Q0.clone(), V(2.94, .26, plate.d / 3 - .06), V((rnd() - .5) * 6, 10 + rnd() * 8, far), tt(fi + .22 + rnd() * .14 + (gx - x0) / plate.w * .1), dd, .2); }
+        // brick panels round the outside: two rows a storey, each from straight out and above
+        const PW = 1.5, rows = 2, ph = (FH - .3) / rows;
+        [[x0, x1, z0, 0, -1], [x0, x1, z1, 0, 1], [z0, z1, x0, 1, -1], [z0, z1, x1, 1, 1]].forEach(([a, b, Lw, turn, out]) => {
+          const n = Math.round((b - a) / PW), w = (b - a) / n;
+          for (let r = 0; r < rows; r++) for (let i = 0; i < n; i++) { const at = a + (i + .5) * w, y = yb - .3 + (r + .5) * ph + .3, side = (rnd() - .5) * 10;
+            piece('block', turn ? V(Lw + out * .1, y, at) : V(at, y, Lw + out * .1), Q0.clone().setFromEuler(E.set(0, turn ? Math.PI / 2 : 0, 0)), V(w - .03, ph - .03, .16), turn ? V(out * (9 + rnd() * 10), 3 + rnd() * 9, side) : V(side, 3 + rnd() * 9, out * (9 + rnd() * 10)), tt(fi + .42 + r * .08 + rnd() * .16), dd * .9); }
+        });
+      }
+      // zinc roof sheets on every gable, eaves to ridge
+      roofPlanes.forEach(pl => { const q = new THREE.Quaternion().setFromEuler(E.set(pl.rx, 0, pl.rz)), alongX = pl.rz === 0, LU = alongX ? pl.lx : pl.lz, LV = alongX ? pl.lz : pl.lx, nu = Math.max(1, Math.round(LU / 1.2)), nv = Math.max(1, Math.round(LV / .9)), du = LU / nu, dv = LV / nv;
+        for (let r = 0; r < nv; r++) for (let c = 0; c < nu; c++) { const u = -LU / 2 + (c + .5) * du, v = -LV / 2 + (r + .5) * dv, loc = (alongX ? V(u, pl.t / 2 + .02, v) : V(v, pl.t / 2 + .02, u)).applyQuaternion(q), pos = V(pl.p[0] + loc.x, pl.p[1] + loc.y, pl.p[2] + loc.z);
+          const up = clamp((pos.y - topY) / (pl.ridge - topY), 0, 1), a = rnd() * Math.PI * 2, far = 8 + rnd() * 12;
+          piece('tile', pos, q.clone(), alongX ? V(du - .03, .03, dv - .03) : V(dv - .03, .03, du - .03), V(Math.cos(a) * far, 6 + rnd() * 10, Math.sin(a) * far), tt(nF + .05 + up * .5 + rnd() * .12), dd, 1.4); } });
+    } else {
     // 1. the frame: posts round the outside, plates at each level, first-floor joists, then rafters and a ridge
     const per = 2 * (plate.w + plate.d), ring = d => { d = ((d % per) + per) % per; if (d < plate.w) return [x0 + d, z0]; d -= plate.w; if (d < plate.d) return [x1, z0 + d]; d -= plate.d; if (d < plate.w) return [x1 - d, z1]; d -= plate.w; return [x0, z1 - d]; };
     const nPost = Math.round(per / 1.5);
@@ -1153,8 +1177,9 @@ export function run(data, root) {
         piece('tile', pos, q.clone(), alongX ? V(du - .014, .016, dv + .05) : V(dv + .05, .016, du - .014), V(Math.cos(a) * far, 5 + rnd() * 9, Math.sin(a) * far), .55 + .27 * up + rnd() * .03, .08, 1.6);
       }
     });
-    const group = new THREE.Group(); group.visible = false; scene.add(group);
-    const mats = { frame: new THREE.MeshStandardMaterial({ color: '#c8a26d', roughness: .8, transparent: true }), block: new THREE.MeshStandardMaterial({ color: '#b8b5ad', roughness: .95, transparent: true }), tile: new THREE.MeshStandardMaterial({ color: '#3b4046', roughness: .6, metalness: .1, transparent: true }) };
+    }
+    const group = new THREE.Group(); group.visible = false; scene.add(group); const brickKit = data.style === 'brick';
+    const mats = { frame: new THREE.MeshStandardMaterial({ color: brickKit ? '#b7b4ac' : '#c8a26d', roughness: brickKit ? .95 : .8, transparent: true }), block: new THREE.MeshStandardMaterial({ color: brickKit ? '#b3745a' : '#b8b5ad', roughness: .95, transparent: true }), tile: new THREE.MeshStandardMaterial({ color: brickKit ? '#4a5058' : '#3b4046', roughness: .6, metalness: brickKit ? .35 : .1, transparent: true }) };
     Object.values(mats).forEach(m => { m.clippingPlanes = [clipUp]; });          // the finished house wipes up through the build: below the line render and glass, above it blockwork and slates
     const unit = new THREE.BoxGeometry(1, 1, 1), meshes = {}, col = new THREE.Color();
     for (const k of Object.keys(sets)) { const m = new THREE.InstancedMesh(unit, mats[k], sets[k].length); m.castShadow = true; m.receiveShadow = true; m.frustumCulled = false; sets[k].forEach((pc, i) => m.setColorAt(i, col.setScalar(pc.tint))); meshes[k] = m; group.add(m); }
@@ -1667,13 +1692,17 @@ export function run(data, root) {
     const P = [v(cx + s * .2, h + s * 3.6, cz + s * .9), v(cx + s * 1.2, h * .6 + s * 1.9, cz + s * 2.2), v(cx + s * 1.9, h * .45 + s * .7, cz + s * 1.5), v(cx + s * .9, h * .75 + s * .25, cz + s * 2),
       v(cx, 0, cz).addScaledVector(f, plate.d / 2 + s * .95).addScaledVector(sd, s * .3).setY(yF + 7), at(11, g * .6, 1.7), at(2.6, g, .25), A, W, B, C];
     const T = [v(cx, 0, cz), v(cx, h * .1, cz), v(cx, h * .3, cz), v(cx, h * .5, cz), v(cx, Math.max(2, yF - 3), cz), wc.clone(), at(-3, g * .5, -.1), at(-2.4, -g, -.15), at(-2.6, -g, -.2), at(-dep + .8, -g * .85, -.25), C.clone().addScaledVector(f, 60).setY(eye - 4)];
-    if (kit) {          // the house: start low on the street looking at the empty plot, then one slow rising sweep round the west side and over the garden while it is built
+    if (kit && data.style === 'house') {          // the house: start low on the street looking at the empty plot, then one slow rising sweep round the west side and over the garden while it is built
       P[0] = v(cx - 10, 2.2, cz - 24); P[1] = v(cx - 14.5, 12.5, cz - 9); P[2] = v(cx - 16, 12.5, cz + 11); P[3] = v(cx - 7, 9, cz + 23);
       T[0] = v(cx, 1.2, cz); T[1] = v(cx, 2.6, cz); T[2] = v(cx, 3.4, cz); T[3] = v(cx, 3.8, cz);
       // inside, keep to the clear floor between the garden doors and the island (the old path floated over the worktop): walk the length of the room looking in, then turn to the garden
       P[7] = at(-.7, g); P[8] = at(-.7, g * .3); P[9] = at(-.9, -g * .3); P[10] = at(-1.3, -g * .62);
       { const up = innerHeight > innerWidth ? .55 : 0;          // on a tall phone screen the island filled the lower half: look a little higher
         T[7] = at(-dep + .8, g * .2, .1 + up); T[8] = at(-dep + .8, -g * .5, .05 + up); } T[9] = at(-2.6, -len / 2 - 2.2, -.25); T[10] = P[10].clone().addScaledVector(f, 60).setY(eye - 4);
+    }
+    if (kit && data.style === 'brick') {          // the flats' build: a slow sweep along the canal side, close enough to see every piece arrive
+      P[0] = v(cx - 36, 9, cz + 36); P[1] = v(cx - 20, 17, cz + 44); P[2] = v(cx + 4, 21, cz + 46); P[3] = v(cx + 24, 17, cz + 40);
+      T[0] = v(cx, 3, cz); T[1] = v(cx, 6, cz); T[2] = v(cx, 8.5, cz); T[3] = v(cx, 9, cz);
     }
     if (data.style === 'brick') {          // the flat: come in at the TV end, walk the clear strip inside the glass looking at the sofa and then the kitchen, turn past the TV and finish on the view
       P[5] = at(11, 0, 1.7); P[6] = at(2.6, 0, .25); P[7] = at(-.8, -g * .15); P[8] = at(-1.0, -g * .3); P[9] = at(-1.0, g * .1); P[10] = at(-.9, 0);          // in through the middle, where the two sliding leaves part
@@ -1722,6 +1751,11 @@ export function run(data, root) {
     const fov = storyFov(p); if (Math.abs(fov - camera.fov) > .05) { camera.fov = fov; camera.updateProjectionMatrix(); }
     const p0 = p; p = Math.min(1, p / st.sc);
     const b = sstep(.1, .42, p);
+    if (kit && data.style === 'brick') {          // the flats: pieces fly in a storey ahead of the finished building, which rises behind them a storey at a time
+      const NL = nF + 1.6, kb = clamp((p - .07) / .37, 0, 1), L = kb * NL - .75, fl = Math.floor(L), stepped = L < 0 ? 0 : fl >= nF ? topY + (roofH + 1.2) * sstep(0, .8, L - nF) : data.floorH * (fl + sstep(0, .5, L - fl));
+      kit.group.visible = kb < .995; if (kit.group.visible) kit.at(Math.min(kb, .96));
+      cut = cutTo = cutEnd = kb >= .995 ? BIG : .15 + stepped; clip.constant = cut; clipUp.constant = -cut; ghost.visible = false; scan.visible = false;
+    } else
     if (kit) {          // the house is put together piece by piece instead of rising out of the ground
       const kb = clamp((p - .05) / .37, 0, 1); kit.group.visible = kb < .985; if (kit.group.visible) kit.at(kb);
       const fin = sstep(.87, .975, kb);          // render and glaze: the finished walls, windows and roof rise through the blockwork behind a line of light
@@ -1730,7 +1764,7 @@ export function run(data, root) {
     if (b >= 1) { cut = cutTo = cutEnd = BIG; clip.constant = BIG; clipUp.constant = -BIG; ghost.visible = false; scan.visible = false; }
     else { const nL = nF + 1, lv = b * nL, stepped = data.style === 'brick' ? Math.min(st.h + .6, data.floorH * (Math.floor(lv) + sstep(0, .45, lv % 1))) : (st.h + .6) * b;          // the flats go up a storey at a time, the way they are built
       cut = cutTo = cutEnd = .15 + stepped; clip.constant = cut; clipUp.constant = -cut; ghost.visible = p > .04; scan.visible = b > 0; scan.position.y = cut; scan.material.opacity = .9; }
-    if (data.style === 'brick') { if (!cranes) makeCranes(); const on = p > .06 && p < .47; cranes.group.visible = on; if (on) { cranes.group.position.y = -Math.max(0, (p - .43) / .04) * 60; cranes.at(sstep(.1, .42, p), Math.min(cut, st.h)); } }
+    if (data.style === 'brick') { if (!cranes) makeCranes(); const on = p > .06 && p < .47; cranes.group.visible = on; if (on) { cranes.group.position.y = -Math.max(0, (p - .43) / .04) * 60; cranes.at(clamp((p - .07) / .37, 0, 1), Math.min(cut, topY) + 2.6); } }
     if (p > .44 && !st.inside) { st.inside = true; showInner(data.single ? data.floors.map((x, i) => i) : [st.fi]); const sv = walk; walk = { unit: st.q.unit }; setRoomLights(st.fi, st.q.unit); walk = sv; }
     const HK = data.story && data.story.hours; let hr;
     if (HK) { let i = 0; while (i < HK.length - 2 && p0 > HK[i + 1][0]) i++; const a = HK[i], b = HK[i + 1]; hr = Math.round((a[1] + (b[1] - a[1]) * sstep(a[0], b[0], p0)) * 8) / 8 % 24; }      // a full day and night go by over the film
