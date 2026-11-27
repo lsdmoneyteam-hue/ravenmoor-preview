@@ -167,7 +167,9 @@ body{margin:0}
 .pl li{padding:18px 0;border-bottom:1px solid var(--rule-d)}
 .pl h3{font-family:'Cormorant Garamond',Georgia,serif;font-weight:500;font-size:28px;line-height:1.1;margin:0}
 .pl p{margin:6px 0 0;color:var(--mute-d);font-size:15px}
-.pl-cta{margin:32px 0 0}
+.pl-cta{margin:32px 0 0;display:flex;flex-wrap:wrap;gap:12px;align-items:center}
+.btn.line{background:transparent;color:inherit;box-shadow:inset 0 0 0 1.5px currentColor}.btn.line::after{display:none}
+.pl-try{margin:28px 0 0;padding:18px 20px;border-left:3px solid var(--amber);background:rgba(200,145,58,.1)}.pl-try strong{display:block;font-size:18px;margin-bottom:4px}.pl-try span{display:block;margin-bottom:14px}
 .dev-vis{position:relative;aspect-ratio:4/3;overflow:hidden;background:#8E8E8C}
 .scn{position:absolute;inset:0}
 .scn div{position:absolute}
@@ -535,7 +537,8 @@ window.__ldReady=Promise.race([getHi(),new Promise(function(r){setTimeout(r,1200
 <li><h3>The walk-through</h3><p>A presenter arrives at the finished building and shows people round.</p></li>
 <li><h3>The investor film</h3><p>The whole scheme from the air, set in its real surroundings.</p></li>
 </ul>
-<p class="pl-cta"><a class="btn" href="#sample" onClick="{{askPlans}}" data-track="plans-quote">Ask for a quote</a></p>
+<div class="pl-try" data-rv=""><strong>Try one now.</strong><span>Walk round a penthouse that doesn't exist yet. It opens on your phone, nothing to install.</span><a class="btn" href="/3d/pano/" data-track="plans-walk">Walk round the penthouse &rarr;</a></div>
+<p class="pl-cta"><a class="btn line" href="/offplan/" data-track="plans-demos">See three demo developments</a><a class="btn line" href="#sample" onClick="{{askPlans}}" data-track="plans-quote">Ask for a quote</a></p>
 </div>
 <div>
 <div class="d3-wrap" ref="{{setDevRef}}">
@@ -2403,7 +2406,7 @@ window.__ldReady.then(function(){ mountDC(Component, { agency: new URLSearchPara
 <div class="mcta" id="mcta" aria-hidden="true"><a class="btn" href="#sample" data-track="sticky-cta" tabindex="-1">Book a free sample reel</a></div>
 <script>
 (function(){var bar=document.getElementById('mcta');if(!bar||!('IntersectionObserver' in window))return;
-var heroSeen=true,formSeen=false,set=function(){var ck=document.querySelector('.cookie'),on=!heroSeen&&!formSeen&&!document.querySelector('.loader')&&!(ck&&ck.offsetParent!==null&&ck.getBoundingClientRect().height>0);bar.classList.toggle('on',on);bar.setAttribute('aria-hidden',on?'false':'true');bar.firstChild.tabIndex=on?0:-1};
+var heroSeen=true,formSeen=false,set=function(){var ck=document.querySelector('.cookie'),on=!heroSeen&&!formSeen&&!document.querySelector('.loader')&&!(ck&&getComputedStyle(ck).display!=='none'&&ck.getBoundingClientRect().height>0);bar.classList.toggle('on',on);bar.setAttribute('aria-hidden',on?'false':'true');bar.firstChild.tabIndex=on?0:-1};
 var tries=0,wire=function(){var cta=document.querySelector('#main > section'),form=document.getElementById('sample');
   if(!cta||!form){if(++tries<60)setTimeout(wire,500);return}
   new IntersectionObserver(function(es){heroSeen=es[0].isIntersecting;set()}).observe(cta);

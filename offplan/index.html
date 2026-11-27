@@ -28,8 +28,9 @@ h1{font:500 clamp(46px,8.5vw,96px)/.96 'Cormorant Garamond',Georgia,serif;letter
 .dev img{display:block;width:100%;height:auto;aspect-ratio:16/10;object-fit:cover;border-radius:3px}
 .dev h2{font:500 clamp(40px,6vw,72px)/.95 'Cormorant Garamond',Georgia,serif;margin:6px 0 12px}
 .dev p{margin:0;color:var(--mute)}.dev .kind{font-size:14px}
-.dev .go{display:inline-block;margin-top:16px;color:var(--amber);font-weight:500}
-.dev:hover .go{text-decoration:underline;text-underline-offset:5px}
+.dev .go{display:inline-flex;align-items:center;min-height:46px;margin-top:18px;padding:0 20px;border:1.5px solid var(--amber);border-radius:2px;color:var(--amber);font-weight:600;transition:background-color .2s,color .2s}
+.dev:hover .go,.dev:focus-visible .go{background:var(--amber);color:var(--ink)}
+.acts{display:flex;flex-wrap:wrap;gap:12px;margin:28px 0 0}.btn.line{background:transparent;color:var(--bone);box-shadow:inset 0 0 0 1.5px rgba(237,232,223,.55)}.btn.line:hover{box-shadow:inset 0 0 0 1.5px var(--amber);color:var(--amber)}.btn:not(.line):hover{background:#d9a24a}
 .what{border-top:1px solid var(--rule);padding-top:40px;display:grid;grid-template-columns:1fr 1.4fr;gap:clamp(24px,5vw,70px)}
 .what h2{font:500 clamp(32px,4.5vw,50px)/1.02 'Cormorant Garamond',Georgia,serif;margin:0}
 .what ul{list-style:none;margin:0;padding:0}
@@ -46,10 +47,11 @@ h1{font:500 clamp(46px,8.5vw,96px)/.96 'Cormorant Garamond',Georgia,serif;letter
 <main>
   <h1>Sell it before it’s built.</h1>
   <p class="lede">A full sales website for a development that only exists on paper. Buyers choose a level, open a plan and walk round their home in 3D, from their phone.</p>
+  <div class="acts"><a class="btn" href="/#sample">Get this for your development</a><a class="btn line" href="/3d/pano/?from=/offplan/">Walk round the penthouse &rarr;</a></div>
   <section class="devs" aria-label="Demonstration developments">
-    <a class="dev" href="/offplan/halden-tower/"><img src="/offplan/img2/tower-hero.webp" alt="Halden Tower at dusk" width="1600" height="1000"><div><p class="kind">Tower · 120 homes</p><h2>Halden Tower</h2><p>Twenty-six floors wrapped in rippling balconies above Campbell Park.</p><span class="go">Open the development</span></div></a>
-    <a class="dev" href="/offplan/wharf-row/"><img src="/offplan/img2/block-hero.webp" alt="Wharf Row on the canal at dusk" width="1600" height="1000" loading="lazy"><div><p class="kind">Apartments · 34 homes</p><h2>Wharf Row</h2><p>A row of gabled brick wharf houses on the Grand Union Canal.</p><span class="go">Open the development</span></div></a>
-    <a class="dev" href="/offplan/ashcombe-house/"><img src="/offplan/img2/house-hero.webp" alt="Ashcombe House from the garden at dusk" width="1600" height="1000" loading="lazy"><div><p class="kind">New home · 4 bedrooms</p><h2>Ashcombe House</h2><p>A modern barn with a wall of glass to the garden.</p><span class="go">Open the development</span></div></a>
+    <a class="dev" href="/offplan/halden-tower/"><img src="/offplan/img2/tower-hero.webp" alt="Halden Tower at dusk" width="1600" height="1000"><div><p class="kind">Tower · 120 homes</p><h2>Halden Tower</h2><p>Twenty-six floors wrapped in rippling balconies above Campbell Park.</p><span class="go">Open the development &rarr;</span></div></a>
+    <a class="dev" href="/offplan/wharf-row/"><img src="/offplan/img2/block-hero.webp" alt="Wharf Row on the canal at dusk" width="1600" height="1000" loading="lazy"><div><p class="kind">Apartments · 34 homes</p><h2>Wharf Row</h2><p>A row of gabled brick wharf houses on the Grand Union Canal.</p><span class="go">Open the development &rarr;</span></div></a>
+    <a class="dev" href="/offplan/ashcombe-house/"><img src="/offplan/img2/house-hero.webp" alt="Ashcombe House from the garden at dusk" width="1600" height="1000" loading="lazy"><div><p class="kind">New home · 4 bedrooms</p><h2>Ashcombe House</h2><p>A modern barn with a wall of glass to the garden.</p><span class="go">Open the development &rarr;</span></div></a>
   </section>
   <section class="what">
     <h2>What every development gets</h2>

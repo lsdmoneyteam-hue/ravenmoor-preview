@@ -31,7 +31,9 @@ h1{font:500 clamp(44px,8vw,84px)/.98 'Cormorant Garamond',Georgia,serif;letter-s
 .demo div{padding:18px 20px 22px;display:flex;flex-direction:column;gap:6px;flex:1}
 .demo h2{margin:0;font:500 32px/1.05 'Cormorant Garamond',Georgia,serif}
 .demo p{margin:0;color:var(--mute);font-size:15px}
-.demo .go{margin-top:auto;padding-top:12px;color:var(--amber);font-weight:500}
+.demo .go{align-self:flex-start;display:inline-flex;align-items:center;min-height:46px;margin-top:auto;padding:0 20px;border:1.5px solid var(--amber);border-radius:2px;color:var(--amber);font-weight:600;transition:background-color .2s,color .2s}.demo p{margin-bottom:14px}
+.demo:hover .go,.demo:focus-visible .go{background:var(--amber);color:var(--ink)}
+.acts{display:flex;flex-wrap:wrap;gap:12px;margin:24px 0 0}.btn.line{background:transparent;color:var(--bone);box-shadow:inset 0 0 0 1.5px rgba(237,232,223,.55)}.btn.line:hover{box-shadow:inset 0 0 0 1.5px var(--amber);color:var(--amber)}.btn:not(.line):hover{background:#d9a24a}
 .how{display:grid;grid-template-columns:repeat(3,1fr);gap:28px;border-top:1px solid var(--rule);padding-top:36px}
 .how h3{font:500 26px/1.1 'Cormorant Garamond',Georgia,serif;margin:0 0 8px}
 .how p{margin:0;color:var(--mute);font-size:15px}
@@ -47,10 +49,11 @@ h1{font:500 clamp(44px,8vw,84px)/.98 'Cormorant Garamond',Georgia,serif;letter-s
   <h1>Walk round a home before it&rsquo;s built.</h1>
   <p class="lede">Open any floor, see which flats are left, step inside and watch the light move through the day. It runs in the browser on any phone, with nothing to install.</p>
   <p class="meta">These three are demos. The buildings, prices and availability are made up.</p>
+  <div class="acts"><a class="btn" href="/#sample">Get this for your development</a><a class="btn line" href="/3d/pano/?from=/3d/">Walk round the penthouse &rarr;</a></div>
   <section class="grid" aria-label="Demos">
-    <a class="demo" href="/3d/tower/"><img src="/offplan/img2/tower-hero.webp" alt="Halden Tower, a 26-storey tower with wave balconies, at dusk" width="2000" height="1250"><div><h2>Halden Tower</h2><p>26 storeys wrapped in rippling balconies. X-ray down to any floor, check availability flat by flat, step inside.</p><span class="go">Explore the tower</span></div></a>
-    <a class="demo" href="/3d/block/"><img src="/offplan/img2/block-hero.webp" alt="Wharf Row, gabled brick apartments on a canal" width="2000" height="1250"><div><h2>Wharf Row</h2><p>Gabled brick wharf houses on the canal. X-ray to a floor, pick a flat, then look out over the water.</p><span class="go">Explore the block</span></div></a>
-    <a class="demo" href="/3d/house/"><img src="/offplan/img2/house-hero.webp" alt="Ashcombe House from the garden at dusk" width="2000" height="1250"><div><h2>Ashcombe House</h2><p>A four-bedroom modern barn. X-ray through the roof, then walk it room by room.</p><span class="go">Walk through the house</span></div></a>
+    <a class="demo" href="/3d/tower/"><img src="/offplan/img2/tower-hero.webp" alt="Halden Tower, a 26-storey tower with wave balconies, at dusk" width="2000" height="1250"><div><h2>Halden Tower</h2><p>26 storeys wrapped in rippling balconies. X-ray down to any floor, check availability flat by flat, step inside.</p><span class="go">Explore the tower &rarr;</span></div></a>
+    <a class="demo" href="/3d/block/"><img src="/offplan/img2/block-hero.webp" alt="Wharf Row, gabled brick apartments on a canal" width="2000" height="1250"><div><h2>Wharf Row</h2><p>Gabled brick wharf houses on the canal. X-ray to a floor, pick a flat, then look out over the water.</p><span class="go">Explore the block &rarr;</span></div></a>
+    <a class="demo" href="/3d/house/"><img src="/offplan/img2/house-hero.webp" alt="Ashcombe House from the garden at dusk" width="2000" height="1250"><div><h2>Ashcombe House</h2><p>A four-bedroom modern barn. X-ray through the roof, then walk it room by room.</p><span class="go">Walk through the house &rarr;</span></div></a>
   </section>
   <section class="how" aria-label="What buyers can do">
     <div><h3>Find the right home</h3><p>Every flat is coloured by availability. Tap one for its price, size, aspect and room sizes.</p></div>

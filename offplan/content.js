@@ -19,7 +19,7 @@ export const CONTENT = {
       ['The view', 'view', 'The city by day, the lights by night.'],
     ],
     feature: {
-      unit: '25.03', kicker: 'Level 25 and the roof · one home', title: 'The Penthouse',
+      unit: '25.03', pano: '/3d/pano/', kicker: 'Level 25 and the roof · one home', title: 'The Penthouse',
       line: 'The whole top floor and the roof above it. A great room six metres high, a private lift, and a glass-bottomed pool that hangs out over the edge of the tower.',
       facts: [['560 m²', 'inside'], ['3', 'bedroom suites'], ['2', 'levels and a roof garden'], ['£19,500,000', 'guide price']],
       shots: [['pent-dusk', 'The great room at dusk'], ['pent-living', 'Great room', 'Six metres of glass on two sides, a stone chimney and a floating stair.'], ['pent-kitchen', 'Kitchen', 'A four-metre island under the double-height ceiling.'], ['pent-bed', 'Main bedroom', 'Sixty square metres, with its own dressing room and bathroom.'], ['pent-terrace', 'The pool', 'Swim out past the edge of the building, with the street 80 metres below the glass.']],

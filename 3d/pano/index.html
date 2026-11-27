@@ -22,6 +22,12 @@ html,body{margin:0;height:100%;background:var(--bg);color:var(--ink);font:15px/1
 .bar button.on{background:var(--brass);color:#17191d;font-weight:600}
 .bar .sep{width:1px;background:rgba(255,255,255,.2);margin:6px 2px}
 .bar button:focus-visible{outline:2px solid var(--brass);outline-offset:2px}
+.back{pointer-events:auto;display:inline-flex;align-items:center;min-height:44px;margin:-10px 0 -6px -6px;padding:0 6px;color:var(--ink);text-decoration:none;font-size:14px;opacity:.9}
+.back:hover{color:var(--brass)}
+.get{position:fixed;right:14px;top:14px;display:inline-flex;align-items:center;min-height:44px;padding:0 18px;border-radius:22px;background:var(--brass);color:#17191d;font-weight:600;font-size:14px;text-decoration:none;box-shadow:0 6px 22px rgba(0,0,0,.45);transition:transform .2s,background-color .2s}
+.get:hover{background:#dab46c;transform:translateY(-1px)}.get:active{transform:scale(.97)}
+.back:focus-visible,.get:focus-visible{outline:2px solid #fff;outline-offset:2px}
+.top{right:190px;flex-direction:column;gap:2px;align-items:flex-start}
 #msg{position:fixed;inset:0;display:grid;place-items:center;pointer-events:none;font-size:14px;opacity:.85}
 @media(max-width:600px){.top{flex-direction:column;gap:2px}.top span{font-size:12px}.bar button{padding:9px 11px;font-size:14px}}
 </style>
@@ -29,7 +35,8 @@ html,body{margin:0;height:100%;background:var(--bg);color:var(--ink);font:15px/1
 <body>
 <canvas id="v" aria-label="360 degree view of the penthouse. Drag to look around; tap an arrow to move."></canvas>
 <div id="fade"></div>
-<div class="top"><h1>Halden Tower · the penthouse</h1><span>Demo, fictional development · drag to look, tap a marker on the floor to move</span></div>
+<div class="top"><a class="back" id="back" href="/offplan/halden-tower/#inside">&larr; Halden Tower</a><h1>The penthouse</h1><span>Drag to look, tap a gold marker to move. Demo, fictional development.</span></div>
+<a class="get" href="/#sample">Get this for yours</a>
 <div class="bar" role="group" aria-label="Where to stand">
   <button type="button" data-spot="gr">Great room</button>
   <button type="button" data-spot="dining">Kitchen</button>
@@ -126,6 +133,7 @@ async function go(id, keepView) {
   for (const [to] of s.links) load(model ? `/3d/pano/${to}_model.jpg` : SPOTS[to].photo).catch(() => {});
 }
 document.querySelectorAll('[data-spot]').forEach(b => b.onclick = () => go(b.dataset.spot));
+{ const f = new URLSearchParams(location.search).get('from'), b = document.getElementById('back'); if (f === '/offplan/') { b.href = '/offplan/'; b.textContent = '\u2190 Developments'; } else if (f === '/3d/' || f === '/3d/tower/') { b.href = f; b.textContent = f === '/3d/' ? '\u2190 3D demos' : '\u2190 3D model'; } else if (!f && document.referrer && new URL(document.referrer).pathname === '/') { b.href = '/#plans'; b.textContent = '\u2190 Ravenmoor'; } }
 const lookBtn = document.getElementById('b-look');
 lookBtn.onclick = () => { model = !model; lookBtn.classList.toggle('on', model); go(cur, true); };
 function size() { const w = innerWidth, h = innerHeight; r.setSize(w, h, false); cam.aspect = w / h; cam.updateProjectionMatrix(); dirty = true; }

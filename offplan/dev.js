@@ -1,7 +1,7 @@
 // Off-plan development page. One template for any development: a tower, a block of flats or a single house.
 // Plans and homes come from /3d/buildings.js, words and pictures from content.js, and the 3D model opens on tap.
 import * as BUILD from '/3d/buildings.js?v=29';
-import { CONTENT } from './content.js?v=8';
+import { CONTENT } from './content.js?v=9';
 
 const OUT = new Set(['balcony', 'terrace']), SHARED = new Set(['corridor', 'lobby', 'core']);
 const esc = s => String(s).replace(/[&<>"]/g, c => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;' }[c]));
@@ -63,7 +63,7 @@ export function mount(key) {
     <div class="pent-hero"><img src="${img(C.feature.shots[0][0])}" alt="${esc(C.feature.shots[0][1])}" loading="lazy">
       <div class="pent-text"><p class="kicker">${esc(C.feature.kicker)}</p><h2>${esc(C.feature.title)}</h2><p class="lede">${esc(C.feature.line)}</p>
         <dl class="numbers">${C.feature.facts.map(([n, l]) => `<div><dt>${esc(l)}</dt><dd>${esc(n)}</dd></div>`).join('')}</dl>
-        <div class="row"><button class="btn" type="button" data-pentwalk>Step inside the penthouse</button><button class="btn ghost" type="button" data-pentplan>See its plan</button></div></div></div>
+        <div class="row">${C.feature.pano ? `<a class="btn" href="${C.feature.pano}?from=${encodeURIComponent(location.pathname)}">Walk through the penthouse &rarr;</a><button class="btn ghost" type="button" data-pentwalk>Open it in 3D</button>` : `<button class="btn" type="button" data-pentwalk>Step inside the penthouse</button>`}<button class="btn ghost" type="button" data-pentplan>See its plan</button></div></div></div>
     <div class="reel-wrap"><button type="button" class="reel-nav prev" data-reel="-1" aria-label="Previous picture">&#8592;</button><button type="button" class="reel-nav next" data-reel="1" aria-label="Next picture">&#8594;</button>
     <div class="reel" tabindex="0" aria-label="${esc(C.feature.title)} in pictures">${C.feature.shots.slice(1).map(([n, t, d]) => `<figure><img src="${img(n)}" alt="${esc(t)}" loading="lazy"><figcaption><strong>${esc(t)}</strong><span>${esc(d)}</span></figcaption></figure>`).join('')}</div>
     <p class="reel-count" data-reel-count aria-live="polite"></p></div>
