@@ -345,6 +345,7 @@ function planFloor(fl, data, fi) {
     if (s.B && !s.A) s.B.ext[s.axis === 'x' ? 'w' : 'n'] = true;
     if (s.kind === 'slider') { const q = OUTSIDE.has(s.A.type) ? s.B : s.A; q.ext[s.axis === 'x' ? (q === s.A ? 'e' : 'w') : (q === s.A ? 's' : 'n')] = true; }
     if (s.A && s.B && data.autoDoor && data.autoDoor.includes([s.A.id, s.B.id].sort().join('|'))) s.auto = true;
+    if (s.kind === 'bifold' && (s.A || s.B).type === 'kitchen') s.fold = true;          // the kitchen's garden doors stand folded open, so the film never passes through glass
     if (s.kind === 'door' || s.kind === 'entry') { const t = (data.doorAt && data.doorAt[[s.A.id, s.B.id].sort().join('|')]) ?? (data.style !== 'house' && (s.A.type === 'bed' || s.B.type === 'bed') ? .2 : .5); const dw = Math.min(.95, s.b - s.a - .3); s.dw = dw; s.dc = clamp(s.a + (s.b - s.a) * t, s.a + dw / 2 + .12, s.b - dw / 2 - .12); }
   });
   return segs;
@@ -422,6 +423,8 @@ function shellFloor(S, fl, segs, data, fi, plate, lit) {
       }
       case 'bifold': {
         xp(len, H - 2.35, mid, 2.35 + (H - 2.35) / 2);
+        if (s.fold) { put('frame', len - .2, .06, .09, mid, 2.32); put('frame', .06, 2.35, .09, s.a + .1, 1.17); put('frame', .06, 2.35, .09, s.b - .1, 1.17); put('plinth', len + .04, .3, .36, mid, -.15);
+          for (let i = 0; i < 4; i++) { const at = s.b - .22 - i * .075; put('glassLit', .025, 2.24, .8, at, 1.15, outSign * .5); put('frame', .05, 2.3, .05, at, 1.16, outSign * .9); put('frame', .05, .05, .8, at, 2.28, outSign * .5); put('frame', .05, .05, .8, at, .04, outSign * .5); } return; }
         put('glassLit', len - .2, 2.3, .03, mid, 1.15);
         const n = Math.max(3, Math.round(len / .95)); for (let i = 0; i <= n; i++) put('frame', .05, 2.35, .09, s.a + .1 + i * (len - .2) / n, 1.17);
         put('frame', len - .2, .06, .09, mid, 2.32); put('frame', len - .2, .05, .09, mid, .03); put('plinth', len + .04, .3, .36, mid, -.15);
